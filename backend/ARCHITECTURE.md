@@ -94,18 +94,21 @@ against the sources:
 - the grounding counts are taken.
 
 `analysis/claim_gate.py` runs `trace/claim_validation.py` after binding, in a worker
-thread. The pinned mDeBERTa compares each complete Claim with all its resolved
-supporting Source passages, including multiple units/documents. Only entailment
-at or above `claim_support_threshold` (default 0.8) is admitted. Neutral,
-contradiction and low scores are withheld; unresolved, conflicting, uncertain or
-over-length inputs are unassessed and withheld without truncation. Verifier
-unavailability fails the analysis. The threshold is a conservative policy,
-not a calibrated factual-confidence score. Every Claim and its verdict remains
-in the saved trace; grounding records admission counts, verifier calls and latency.
-No admitted Claims produces a recorded abstention without Views/Judgement calls.
+thread. Frozen B1-LR selects resolved Source units with pinned multilingual
+MPNet cosine >=0.20, retaining the first maximum when none pass. Original
+retained units are joined with a single newline. Pinned mDeBERTa applies
+longest-first truncation512 and returns E/N/C probabilities; the frozen WiCE
+TRAIN-fitted LR admits at0.50. This is a task-specific decision boundary,
+not calibrated factual confidence. Structural blockers still withhold missing,
+unresolved, conflicting or uncertain support before inference. Unavailable
+models fail the analysis. All Claims/citations remain stored, with selected
+indices/IDs, probabilities, LR score, artifact hash and truncation diagnostics.
+Grounding counts admission, selection, calls and duration. Zero admission
+abstains without Views/Judgement. Historical .80 verdicts remain historical.
+See [the exact method and experiments](../research/attribution_benchmark/B1_INTEGRATION.md).
 
 `analysis/views.py` batches the admitted Claims from the same reading into one
-native-schema LLM call. Input is only Claim IDs and text. Parties, Timeline and
+prompt-structured LLM call. Input is only Claim IDs and text. Parties, Timeline and
 Impacts use the existing `claim_ids` public shape.
 Roles and combined date/time may be null. The backend validates schema and known
 nonempty links, dropping an entire row if any link is unknown. It invents no field
@@ -123,14 +126,18 @@ local loader/per-Claim runtime and Compose service are removed. The encoder
 and Claim support verifier have separate purposes; the stopped research experiments remain separate.
 
 The judgement therefore reads only admitted claims: their statuses, and only the
-source spans that were resolved. The backend derives source-ID lists from selected
-citations; the Reader generates no source lists, reasoning summaries or independent
+source spans that were resolved. Its payload retains Claim IDs but citation records
+contain only original Source text. Source IDs, Evidence Unit IDs and document/page/
+offset locators stay on the original Claims for binding, NLI, traceability and reports.
+The backend derives source-ID lists from selected citations; the Reader generates
+no source lists, reasoning summaries or independent
 party, timeline or impact structures. Historical structured views remain readable
 in saved traces and reports but do not enter Judgement or chat as factual authority.
 `support=bound` describes evidence binding, not semantic support or factual
 confirmation. Judgement is given neither the complete case sources nor the
-sentence around each quotation, so a fact reaches its summary only through a
-claim. Follow-up input is limited to QA IDs, gap keys and answered flags; raw
+separate context around each quotation. Attached Source spans can contain content
+beyond the Claim text; valid Claim references do not verify every generated fact.
+Follow-up input is limited to QA IDs, gap keys and answered flags; raw
 questions/answers remain Reader Sources and stored provenance, preventing that
 route from bypassing the gate. Technical context remains external. Judgement
 references to withheld/unknown Claim IDs fail before joining the trace. Every
@@ -251,22 +258,32 @@ Five stages in four files, and all of them go through `request_stage` in
 
 `request_stage` is the one transport: it checks the input against the token
 budget, posts to OpenRouter's messages endpoint, retries once on a dropped
-connection, and validates the reply against the stage's schema. Every stage
-but the reading sends that schema as a JSON-schema grammar. The reading passes
-`grammar=False`: its prompt describes the JSON, and the reply is fence-stripped
-and validated after decoding, asked again once after a `max_tokens` stop or an
-invalid reply, and failed as `case_reading_invalid` after the second. A caller that
-passes a `calls` list gets one record per stage (model, estimated input tokens,
-status, elapsed time); production passes none, the experiments do. The encoder
+connection, and validates the reply against the stage's schema. All structured
+stages append the complete JSON contract to the system prompt; no provider
+`output_config`, `response_format` or schema grammar is sent. `llm/schema.py`
+uses Pydantic to require every contract field recursively, forbid extra fields,
+and check types, enums and bounds before applying the original DTO validators.
+This prevents DTO defaults or coercion from hiding malformed model output.
+`llm/payload.py` preserves exact source values in compact JSON and counts the
+contract against the input budget. `llm/response.py` decodes provider envelopes.
+Replies may be fence-stripped, then locally validated. A malformed or truncated
+reply is asked again at most once; exhaustion raises `<stage>_invalid` for schema
+violations or `<stage>_incomplete` for token limits. Refusals and timeouts are not
+generation retries. Model, provider, temperature and token settings are unchanged.
+A caller's `calls` list receives model, estimated input tokens, output mode,
+request max_tokens, generation attempts, usage, status and elapsed time. Production
+logs output mode and the request cap without prompt or source text. The encoder
 gate (`MITRE_GATE_MODE=encoder`) runs a local model and calls no provider.
 
 A chat answer reads what the analysis reads — the case sources, the answered
 follow-ups and the technical context the latest analysis retrieved — and that
 analysis too when there is one. The model returns units, each with a basis
 (`case_fact`, `interpretation`, `technical` or `general`), the `claim_ids` it
-rests on and exact quotes. `chat/compose.py` keeps only claim ids of that
-analysis and quotes found in their source by the matcher `trace/bind.py` uses, then
-stores the units on the message; a unit whose citation fails keeps its text
+rests on and exact quotes. `chat/compose.py` builds the request and invokes the
+model; `chat/answer_contract.py` defines its reply. `chat/grounding.py` keeps only
+claim ids of that analysis, verifies quotes against the original Source text,
+and derives their locations. `chat/answer.py` stores the units on the message;
+a unit whose citation fails keeps its text
 without the citation. The log line `Chat answer grounding` counts cited and
 uncited case facts per answer.
 
@@ -323,9 +340,11 @@ source.
 ## 7. Things that will trip you
 
 **A report prints what was stored, not the analysis as it is now.**
-`reports/display.py` builds one `CaseReportContent` snapshot when the report is
+`reports/display.py` assembles one `CaseReportContent` snapshot when the report is
 generated, and `case_reports.structured_report` holds it. The HTML and the PDF
-render from that stored copy only. A row stored in an older shape is refused
+render from that stored copy only. It delegates Source labels and quotes to
+`reports/findings.py`, MITRE rows and notices to `reports/technical.py`, and
+caveats to `reports/limitations.py`. A row stored in an older shape is refused
 with `case_report_outdated` by the HTML, PDF and generate paths rather than rebuilt from current code,
 and the report list leaves it out so the valid versions still load. A field added
 later is optional, so an older row still validates: a report stored before

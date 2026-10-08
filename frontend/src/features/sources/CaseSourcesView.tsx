@@ -16,6 +16,8 @@ export interface NarrativeSubmission {
 export interface SourcesAnalysis {
   freshness: "missing" | "current" | "stale";
   isRunning: boolean;
+  isWaitingForFollowup: boolean;
+  canAnalyze: boolean;
   onAnalyze: () => void;
 }
 

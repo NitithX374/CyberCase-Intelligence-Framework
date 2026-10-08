@@ -182,10 +182,7 @@ async def answer_history(
         ChatMessage.ordinal < before_ordinal,
         ChatMessage.message_kind == "conversation",
     )
-    if analysis_result_id is None:
-        query = query.where(ChatMessage.analysis_result_id.is_(None))
-    else:
-        query = query.where(ChatMessage.analysis_result_id == analysis_result_id)
+    query = query.where(ChatMessage.analysis_result_id == analysis_result_id)
     rows = await db.scalars(query.order_by(ChatMessage.ordinal.desc()).limit(12))
     return list(reversed(list(rows)))
 

@@ -205,3 +205,4 @@ experiments/representation_analysis/outputs/
 # Model weights: ~1.1 GB, distributed separately and copied into the backend image.
 backend/xlmr_ladder_best/
 backend/nli_mdeberta/
+backend/source_selector_mpnet/

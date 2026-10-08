@@ -202,11 +202,26 @@ class CaseClaimGrounding(BaseModel):
         "conflicting_source",
         "claim_uncertain",
         "input_too_long",
+        "lr_supported",
+        "lr_not_supported",
     ]
     model: str | None = Field(default=None, max_length=200)
     label: Literal["entailment", "neutral", "contradiction"] | None = None
     entailment: float | None = Field(default=None, ge=0, le=1)
-    threshold: float = Field(default=0.8, gt=0.5, le=1)
+    threshold: float = Field(default=0.8, ge=0.5, le=1)
+    method: str | None = None
+    artifact_sha256: str | None = None
+    neutral: float | None = Field(default=None, ge=0, le=1)
+    contradiction: float | None = Field(default=None, ge=0, le=1)
+    p_supported: float | None = Field(default=None, ge=0, le=1)
+    selected_citation_indices: list[int] = Field(default_factory=list)
+    considered_citation_indices: list[int] = Field(default_factory=list)
+    selected_evidence_unit_ids: list[str] = Field(default_factory=list)
+    source_similarities: list[float] = Field(default_factory=list)
+    selector_threshold: float | None = None
+    selection_ms: float = Field(default=0, ge=0)
+    raw_tokens: int | None = Field(default=None, ge=0)
+    truncated: bool | None = None
     duration_ms: float = Field(default=0, ge=0)
 
 
@@ -256,15 +271,13 @@ CLAIM_FIELDS_HIDDEN_FROM_MODELS = {
     "contradicting_citations": {"__all__": {"tolerated_differences", "review_flags"}},
 }
 
-CLAIM_FIELDS_HIDDEN_FROM_JUDGEMENT = {
-    "semantic_grounding": True,
-    "reasoning_summary": True,
-    "supporting_source_ids": True,
-    "contradicting_source_ids": True,
-    "invalid_evidence": True,
-    "unverified_citations": True,
-    "supporting_citations": {"__all__": {"tolerated_differences", "context", "review_flags"}},
-    "contradicting_citations": {"__all__": {"tolerated_differences", "context", "review_flags"}},
+CLAIM_FIELDS_FOR_JUDGEMENT = {
+    "claim_id": True,
+    "claim_type": True,
+    "text": True,
+    "epistemic_status": True,
+    "supporting_citations": {"__all__": {"exact_quote"}},
+    "contradicting_citations": {"__all__": {"exact_quote"}},
 }
 
 

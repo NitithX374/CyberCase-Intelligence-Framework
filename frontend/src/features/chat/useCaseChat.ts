@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useMutationState, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { createCaseChatMessage, getCaseChat } from "./api";
 import { clearProgress, recordStep } from "@/features/analysis/progress";
@@ -62,15 +62,16 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
             }
           : current,
       );
-      if (result.analysis) {
-        queryClient.setQueryData(caseQueryKeys.analysis(caseId!), result.analysis);
+      const analysis = result.analysis;
+      if (analysis) {
+        queryClient.setQueryData(caseQueryKeys.analysis(caseId!), analysis);
         queryClient.setQueryData<CaseRead>(caseQueryKeys.case(caseId!), (current) =>
           current
             ? {
                 ...current,
-                source_revision: result.analysis!.source_revision,
-                latest_analysis_result_id: result.analysis!.id,
-                analysis_freshness: result.analysis!.freshness,
+                source_revision: analysis.source_revision,
+                latest_analysis_result_id: analysis.id,
+                analysis_freshness: analysis.freshness,
               }
             : current,
         );
@@ -148,17 +149,13 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
 }
 
 export function useIsFollowupPending(caseId: string | null): boolean {
-  const answering = useMutationState({
-    filters: {
-      mutationKey: caseQueryKeys.chatSend(caseId ?? "none"),
-      exact: true,
-      status: "pending",
-      predicate: (mutation) =>
-        (mutation.state.variables as Submission | undefined)?.answersQuestion === true,
-    },
-    select: (mutation) => mutation.mutationId,
+  const answering = useIsMutating({
+    mutationKey: caseQueryKeys.chatSend(caseId ?? "none"),
+    exact: true,
+    predicate: (mutation) =>
+      (mutation.state.variables as Submission | undefined)?.answersQuestion === true,
   });
-  return caseId !== null && answering.length > 0;
+  return caseId !== null && answering > 0;
 }
 
 function inOrder(messages: ChatMessageRead[]): ChatMessageRead[] {

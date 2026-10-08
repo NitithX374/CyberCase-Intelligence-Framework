@@ -87,8 +87,11 @@ async def test_bound_whole_case_same_claim_set_concurrent_views_and_judgement(
             {"claim_id": item["claim_id"], "text": item["text"]} for item in claims
         )
         assert all(
-            c["pointer_state"] == "direct" for item in claims for c in item["supporting_citations"]
+            set(c) == {"exact_quote"} for item in claims for c in item["supporting_citations"]
         )
+        assert [item["supporting_citations"][0]["exact_quote"] for item in claims] == [
+            source.text for source in bundle.sources
+        ] + [history[0].answer]
         return CaseProviderJudgement(
             version=reading.version, summary="Jane reported a loss [A-01]."
         )
@@ -101,6 +104,11 @@ async def test_bound_whole_case_same_claim_set_concurrent_views_and_judgement(
     assert requests == ["case_reading", "case_judgement"]
     assert extraction_input == judgement_input
     assert len(extraction_input) == 3
+    assert all(
+        citation.pointer_state == "direct"
+        for claim in trace.claims[:3]
+        for citation in claim.supporting_citations
+    )
     assert trace.claims[2].supporting_source_ids == ["QA-03"]
     assert trace.claims[3].epistemic_status == "not_confirmed"
     assert trace.claims[3].semantic_grounding.verdict == "unassessed"

@@ -387,33 +387,33 @@ def scripted(*replies: httpx.Response):
     return handler, sent
 
 
-async def test_without_grammar_the_payload_asks_for_no_output_config(monkeypatch) -> None:
+async def test_prompt_structured_the_payload_asks_for_no_output_config(monkeypatch) -> None:
     handler, sent = scripted(replied(json.dumps({"ok": True})))
-    result = await run_stage(monkeypatch, handler, [], grammar=False)
+    result = await run_stage(monkeypatch, handler, [])
 
     assert result == Probe(ok=True)
     assert "output_config" not in sent[0]
-    assert "output_config" in provider.stage_payload(
+    assert "output_config" not in provider.stage_payload(
         AnalysisPipelineConfig(model="test/model"), "system", {}, Probe
     )
 
 
-async def test_without_grammar_a_fenced_reply_is_read(monkeypatch) -> None:
+async def test_prompt_structured_a_fenced_reply_is_read(monkeypatch) -> None:
     handler, sent = scripted(replied('```json\n{"ok": true}\n```'))
     calls: list[dict[str, object]] = []
-    result = await run_stage(monkeypatch, handler, calls, grammar=False)
+    result = await run_stage(monkeypatch, handler, calls)
 
     assert result == Probe(ok=True)
     assert len(sent) == 1
     assert calls[0]["status"] == "completed"
 
 
-async def test_without_grammar_an_invalid_reply_is_asked_once_more(monkeypatch) -> None:
+async def test_prompt_structured_an_invalid_reply_is_asked_once_more(monkeypatch) -> None:
     handler, sent = scripted(
         replied('{"ok": "perhaps"}', output_tokens=700), replied(json.dumps({"ok": True}))
     )
     calls: list[dict[str, object]] = []
-    result = await run_stage(monkeypatch, handler, calls, grammar=False)
+    result = await run_stage(monkeypatch, handler, calls)
 
     assert result == Probe(ok=True)
     assert len(sent) == 2
@@ -422,11 +422,11 @@ async def test_without_grammar_an_invalid_reply_is_asked_once_more(monkeypatch) 
     assert calls[0]["output_tokens"] == 50
 
 
-async def test_without_grammar_two_invalid_replies_fail_the_stage(monkeypatch, caplog) -> None:
+async def test_prompt_structured_two_invalid_replies_fail_the_stage(monkeypatch, caplog) -> None:
     handler, sent = scripted(replied("not json at all"), replied('{"ok": "perhaps"}'))
     calls: list[dict[str, object]] = []
     with pytest.raises(CaseAnalysisFailure) as failure:
-        await run_stage(monkeypatch, handler, calls, grammar=False)
+        await run_stage(monkeypatch, handler, calls)
 
     assert failure.value.code == "probe_invalid"
     assert failure.value.status_code == 502
@@ -435,23 +435,23 @@ async def test_without_grammar_two_invalid_replies_fail_the_stage(monkeypatch, c
     assert "gave no valid reply" in caplog.text
 
 
-async def test_without_grammar_a_reply_cut_at_max_tokens_is_asked_once_more(monkeypatch) -> None:
+async def test_prompt_structured_a_reply_cut_at_max_tokens_is_asked_once_more(monkeypatch) -> None:
     handler, sent = scripted(
         replied('{"ok": tr', stop_reason="max_tokens", output_tokens=32_608),
         replied(json.dumps({"ok": True})),
     )
     calls: list[dict[str, object]] = []
-    result = await run_stage(monkeypatch, handler, calls, grammar=False)
+    result = await run_stage(monkeypatch, handler, calls)
 
     assert result == Probe(ok=True)
     assert len(sent) == 2
     assert calls[0]["runaway_output_tokens"] == 32_608
 
 
-async def test_without_grammar_a_refusal_is_not_asked_again(monkeypatch) -> None:
+async def test_prompt_structured_a_refusal_is_not_asked_again(monkeypatch) -> None:
     handler, sent = scripted(replied("", stop_reason="refusal"))
     with pytest.raises(CaseAnalysisFailure) as failure:
-        await run_stage(monkeypatch, handler, [], grammar=False)
+        await run_stage(monkeypatch, handler, [])
 
     assert failure.value.code == "probe_incomplete"
     assert failure.value.status_code == 409

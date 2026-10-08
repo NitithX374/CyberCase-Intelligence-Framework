@@ -24,9 +24,7 @@ def test_reading_override_is_persisted_and_does_not_change_judgement_or_output_b
     assert restored.for_reading().thinking_tokens == 0
     assert restored.for_reading().output_tokens == restored.output_tokens == 32608
     assert restored.thinking_tokens == 8192
-    payload = stage_payload(
-        restored.for_reading(), "system", {}, CaseProviderReadingReply, grammar=False
-    )
+    payload = stage_payload(restored.for_reading(), "system", {}, CaseProviderReadingReply)
     assert payload["thinking"] == {"type": "disabled"}
     assert payload["max_tokens"] == restored.output_tokens
 

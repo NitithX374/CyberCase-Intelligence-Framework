@@ -82,11 +82,12 @@ describe("Finding traceability", () => {
         model: "test-nli",
         threshold: 0.8,
         duration_ms: 0,
+        selection_ms: 0,
         entailment: verdict === "unassessed" ? null : verdict === "supported" ? 0.99 : 0.1,
       };
       render(<Findings result={result} />);
       expect(screen.getByText(label)).toBeVisible();
-      expect(screen.getByText("2 directly linked passages")).toBeVisible();
+      expect(screen.queryByText(/directly linked passage/)).not.toBeInTheDocument();
       expect(screen.queryByText("Meaning support not assessed")).not.toBeInTheDocument();
     },
   );
@@ -105,9 +106,9 @@ describe("Finding traceability", () => {
     expect(screen.getByRole("dialog")).not.toHaveTextContent("U002-revision");
   });
 
-  it("shows Source binding separately from semantic support without inventing confidence", () => {
+  it("shows semantic support without inventing confidence", () => {
     const { container } = render(<Findings />);
-    expect(screen.getByText("2 directly linked passages")).toBeVisible();
+    expect(screen.queryByText(/directly linked passage/)).not.toBeInTheDocument();
     expect(screen.getByText("Meaning support not assessed")).toBeVisible();
     expect(container.textContent).not.toMatch(
       /\b\d+(?:\.\d+)?%|semantically verified|confirmed true/i,
@@ -118,7 +119,7 @@ describe("Finding traceability", () => {
     const result = structuredClone(reading);
     result.trace_json!.claims[0].epistemic_status = "not_confirmed";
     render(<Findings result={result} />);
-    expect(screen.getByText("2 directly linked passages")).toBeVisible();
+    expect(screen.queryByText(/directly linked passage/)).not.toBeInTheDocument();
     expect(screen.getByText("Meaning support not assessed")).toBeVisible();
     expect(screen.queryByText("No linked supporting Source passage")).not.toBeInTheDocument();
   });
@@ -144,8 +145,8 @@ describe("Finding traceability", () => {
       }),
     });
     render(<Findings result={result} />);
-    expect(screen.getByText("1 unresolved reference")).toBeVisible();
-    expect(screen.getByText("No linked supporting Source passage")).toBeVisible();
+    expect(screen.queryByText(/unresolved reference/)).not.toBeInTheDocument();
+    expect(screen.queryByText("No linked supporting Source passage")).not.toBeInTheDocument();
     expect(screen.getByText("Meaning support not assessed")).toBeVisible();
     expect(screen.queryByText("Not found word for word in the source.")).not.toBeInTheDocument();
   });
@@ -179,8 +180,8 @@ describe("Finding traceability", () => {
       }),
     });
     render(<Findings result={result} rows={[thaiSource]} />);
-    expect(screen.getByText("เชื่อม Source โดยตรง 1 ข้อความ")).toBeVisible();
-    expect(screen.getByText("ค้นคืนตำแหน่งใน Source 1 ข้อความ")).toBeVisible();
+    expect(screen.queryByText(/เชื่อม Source โดยตรง/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ค้นคืนตำแหน่งใน Source/)).not.toBeInTheDocument();
     expect(screen.getByText("ยังไม่ได้ตรวจการรองรับทางความหมาย")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: /statement\.pdf/ }));
     const passages = within(screen.getByRole("region", { name: "Cited Source passages" }));
@@ -215,8 +216,8 @@ describe("Finding traceability", () => {
       }),
     });
     render(<Findings result={result} />);
-    expect(screen.getByText("1 directly linked passage")).toBeVisible();
-    expect(screen.queryByText("1 recovered passage")).not.toBeInTheDocument();
+    expect(screen.queryByText(/directly linked passage/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/recovered passage/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Conflicts with statement.pdf · p. 1" }));
     const passages = within(screen.getByRole("region", { name: "Cited Source passages" }));
     expect(passages.getByText(second)).toBeVisible();

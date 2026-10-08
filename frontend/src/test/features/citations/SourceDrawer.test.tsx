@@ -325,4 +325,126 @@ describe("SourceDrawer", () => {
     expect(mark).not.toBeNull();
     expect(mark).toHaveTextContent("crime scene");
   });
+
+  it("highlights the quoted text when the quote is an HTML table row", () => {
+    const docSource: CaseSourceRead = {
+      ...caseSource("doc-3", "document", "table.pdf"),
+      exact_text: "## Summary\n<table><tr><td>นายถนอม รอดสุข</td><td>ผู้กล่าวหา</td></tr></table>",
+      provenance_json: {
+        pages: [{ page_number: 1, start_offset: 0, end_offset: 80 }],
+      },
+    };
+
+    const [cited] = claimRefs(
+      {
+        supporting_source_ids: ["doc-3"],
+        supporting_citations: [
+          {
+            source_id: "doc-3",
+            exact_quote: "<tr><td>นายถนอม รอดสุข</td><td>ผู้กล่าวหา</td></tr>",
+            page_numbers: [1],
+          },
+        ],
+      },
+      parseCaseSources([docSource], []),
+    ).supporting;
+    const anchor = document.body.appendChild(document.createElement("button"));
+
+    const { container } = render(
+      <SourceDrawer sourceRef={cited} anchorElement={anchor} onClose={vi.fn()} />,
+    );
+
+    const tdMarks = container.querySelectorAll("td mark");
+    expect(tdMarks).toHaveLength(2);
+    expect(tdMarks[0]).toHaveTextContent("นายถนอม รอดสุข");
+    expect(tdMarks[1]).toHaveTextContent("ผู้กล่าวหา");
+    const tr = container.querySelector("tr");
+    expect(tr?.className).toContain("bg-amber-100/50");
+  });
+
+  it("highlights table content when quote is pipe-separated text without tags", () => {
+    const docSource: CaseSourceRead = {
+      ...caseSource("doc-4", "document", "table2.pdf"),
+      exact_text: "<table><tr><td>นายถนอม รอดสุข</td><td>ผู้กล่าวหา</td></tr></table>",
+      provenance_json: {
+        pages: [{ page_number: 1, start_offset: 0, end_offset: 80 }],
+      },
+    };
+
+    const [cited] = claimRefs(
+      {
+        supporting_source_ids: ["doc-4"],
+        supporting_citations: [
+          {
+            source_id: "doc-4",
+            exact_quote: "นายถนอม รอดสุข | ผู้กล่าวหา",
+            page_numbers: [1],
+          },
+        ],
+      },
+      parseCaseSources([docSource], []),
+    ).supporting;
+    const anchor = document.body.appendChild(document.createElement("button"));
+
+    const { container } = render(
+      <SourceDrawer sourceRef={cited} anchorElement={anchor} onClose={vi.fn()} />,
+    );
+
+    const tdMarks = container.querySelectorAll("td mark");
+    expect(tdMarks).toHaveLength(2);
+    expect(tdMarks[0]).toHaveTextContent("นายถนอม รอดสุข");
+    expect(tdMarks[1]).toHaveTextContent("ผู้กล่าวหา");
+  });
+
+  it("highlights table row when quote includes leading table tag or trailing table tag", () => {
+    const docSource: CaseSourceRead = {
+      ...caseSource("doc-5", "document", "table3.pdf"),
+      exact_text: "<table><tr><td>นายถนอม รอดสุข</td></tr><tr><td>นางสาวสุรัตนา</td></tr></table>",
+      provenance_json: {
+        pages: [{ page_number: 1, start_offset: 0, end_offset: 90 }],
+      },
+    };
+
+    const [citedLeading] = claimRefs(
+      {
+        supporting_source_ids: ["doc-5"],
+        supporting_citations: [
+          {
+            source_id: "doc-5",
+            exact_quote: "<table><tr><td>นายถนอม รอดสุข</td></tr>",
+            page_numbers: [1],
+          },
+        ],
+      },
+      parseCaseSources([docSource], []),
+    ).supporting;
+    const anchor1 = document.body.appendChild(document.createElement("button"));
+
+    const { container: c1 } = render(
+      <SourceDrawer sourceRef={citedLeading} anchorElement={anchor1} onClose={vi.fn()} />,
+    );
+    expect(c1.querySelector("td mark")).toHaveTextContent("นายถนอม รอดสุข");
+    expect(c1.querySelector("table")).not.toBeNull();
+
+    const [citedTrailing] = claimRefs(
+      {
+        supporting_source_ids: ["doc-5"],
+        supporting_citations: [
+          {
+            source_id: "doc-5",
+            exact_quote: "<tr><td>นางสาวสุรัตนา</td></tr></table>",
+            page_numbers: [1],
+          },
+        ],
+      },
+      parseCaseSources([docSource], []),
+    ).supporting;
+    const anchor2 = document.body.appendChild(document.createElement("button"));
+
+    const { container: c2 } = render(
+      <SourceDrawer sourceRef={citedTrailing} anchorElement={anchor2} onClose={vi.fn()} />,
+    );
+    expect(c2.querySelector("td mark")).toHaveTextContent("นางสาวสุรัตนา");
+    expect(c2.querySelector("table")).not.toBeNull();
+  });
 });

@@ -36,6 +36,23 @@ class Judgement:
     entailment: float
 
 
+@dataclass(frozen=True)
+class NliProbabilities:
+    entailment: float
+    neutral: float
+    contradiction: float
+    raw_tokens: int
+    truncated: bool
+
+    @property
+    def vector(self) -> tuple[float, float, float]:
+        return self.entailment, self.neutral, self.contradiction
+
+    @property
+    def label(self) -> str:
+        return LABEL_ORDER[max(range(3), key=self.vector.__getitem__)]
+
+
 class MdebertaNli:
     name = f"{MODEL_NAME}@{MODEL_REVISION[:12]}"
 
@@ -60,6 +77,27 @@ class MdebertaNli:
         scores = dict(zip(self.order, probabilities, strict=True))
         return Judgement(label=max(scores, key=scores.__getitem__), entailment=scores["entailment"])
 
+    def predict(self, premise: str, hypothesis: str) -> NliProbabilities:
+        raw_tokens = int(self.encoded(premise, hypothesis)["input_ids"].shape[-1])
+        batch = self.tokenizer(
+            premise,
+            hypothesis,
+            truncation=True,
+            max_length=MAX_TOKENS,
+            return_tensors="pt",
+            verbose=False,
+        )
+        with inference, self.torch.no_grad():
+            probabilities = self.torch.softmax(self.model(**batch).logits, dim=-1)[0].tolist()
+        scores = dict(zip(self.order, probabilities, strict=True))
+        return NliProbabilities(
+            scores["entailment"],
+            scores["neutral"],
+            scores["contradiction"],
+            raw_tokens,
+            raw_tokens > MAX_TOKENS,
+        )
+
 
 _state: MdebertaNli | NliUnavailable | None = None
 
@@ -82,7 +120,7 @@ def label_order(path: Path) -> tuple[str, ...]:
 
 
 def build() -> MdebertaNli:
-    path = Path(settings.quote_meaning_pointer_path)
+    path = Path(settings.claim_nli_path)
     weights = path / WEIGHTS_FILE
     if not weights.is_file() or not (path / "config.json").is_file():
         raise NliUnavailable("weights_missing")
@@ -99,7 +137,7 @@ def build() -> MdebertaNli:
         model = AutoModelForSequenceClassification.from_pretrained(path).eval()
     except Exception as error:
         raise NliUnavailable(f"load_failed:{type(error).__name__}") from error
-    logger.info("Meaning pointer model loaded from %s", path)
+    logger.info("Claim support NLI loaded from %s", path)
     return MdebertaNli(torch, tokenizer, model, order)
 
 
@@ -110,7 +148,7 @@ def load_nli() -> MdebertaNli:
             try:
                 _state = build()
             except NliUnavailable as error:
-                logger.warning("Meaning pointer unavailable: %s", error.reason)
+                logger.warning("Claim support NLI unavailable: %s", error.reason)
                 _state = error
     if isinstance(_state, NliUnavailable):
         raise NliUnavailable(_state.reason)

@@ -1,0 +1,10 @@
+{
+  "files": {
+    "outputs/models/b1_lr_classifier.joblib": "3e1fa3a30d18222b2617218720fae0a269d7073d13d806179d9fb48bc2a7e332",
+    "outputs/canonical/final_lr_coefficients.json": "77193565a1de76d5f7e5afbd58a31577bd12150643614009294014eefb2c4403",
+    "cache/forward_nli/attrbench_id_forward_filt_0_20.jsonl": "82bf656af2736de3da3ba5c155cbb24c0fd2e51d1195ad6b28b7bbc8b6152a7e",
+    "cache/forward_nli/attrbench_ood_forward_filt_0_20.jsonl": "5539c7c395952255078954c7d0d80f8b56103f958d9be76af996d0bcf2114a08",
+    "src/datasets/attributionbench.py": "d29429073cf183918c7a1d4f4e37c9d45d6cc803c4f1c023133335bcc365fb0c"
+  },
+  "scope": "Frozen original local champion assets; dataset hashes independently pinned by data/manifest.json"
+}

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CyberCase Intelligence Framework** provides whole-Case summarization and analysis, with conditional MITRE ATT&CK augmentation. The case owns multiple documents and narratives, the analysis, its conversation and reports. A cheap gap assessment can pause before expensive work. Otherwise Reading writes canonical claims only, selecting source-unit IDs; the backend derives source lists and resolves those IDs to original source spans. After binding, the pinned mDeBERTa checks complete Claims against their resolved supporting Source passages. Only entailment at or above the configurable threshold (default 0.8) reaches Judgement and the batched Parties/Timeline/Impacts extractor. Other Claims stay in Findings with their saved semantic verdict; verifier unavailability fails analysis, and zero admitted Claims produces an abstention without downstream model calls. Raw follow-up questions/answers are excluded from Judgement; QA IDs, gap keys and answered flags remain. One batched structured LLM call extracts Parties, Timeline and Impacts from exactly those admitted Claims, for display and reports. The two calls run independently in parallel; extractor failure records a warning and empty views without failing Judgement. Judgement receives claims, follow-up history and optional external technical context; extracted views never enter Judgement or chat as factual input. No projection-specific NLI checks run; historical saved views remain readable. Every summary sentence ends with supporting claim IDs. Reading uses prompt-described JSON, validated after decoding and retried at most once; other model calls retain JSON-schema grammar. There is no run row or queue. The existing agentic RAG pipeline supplies conditional external interpretation and never Case evidence. Reports are deterministic snapshots of stored analysis. [The grounding contract](docs/architecture/evidence-unit-grounding.md) records schemas, examples, state semantics and validation.
+**CyberCase Intelligence Framework** provides whole-Case summarization and analysis, with conditional MITRE ATT&CK augmentation. The case owns multiple documents and narratives, the analysis, its conversation and reports. A cheap gap assessment can pause before expensive work. Otherwise Reading writes canonical claims only, selecting source-unit IDs; the backend derives source lists and resolves those IDs to original source spans. After binding, frozen B1-LR selects resolved Source units with MPNet cosine >=0.20 (first maximum retained if none pass), concatenates retained original text with a single newline, runs pinned mDeBERTa with longest-first truncation at512 tokens, and applies the WiCE TRAIN-fitted LR to ordered E/N/C probabilities. Only LR score >=0.50 reaches Judgement and the batched Parties/Timeline/Impacts extractor. Other Claims stay in Findings with their saved semantic verdict; verifier unavailability fails analysis, and zero admitted Claims produces an abstention without downstream model calls. Raw follow-up questions/answers are excluded from Judgement; QA IDs, gap keys and answered flags remain. One batched structured LLM call extracts Parties, Timeline and Impacts from exactly those admitted Claims, for display and reports. The two calls run independently in parallel; extractor failure records a warning and empty views without failing Judgement. Judgement receives claims, follow-up history and optional external technical context; extracted views never enter Judgement or chat as factual input. No projection-specific NLI checks run; historical saved views remain readable. Every summary sentence ends with supporting claim IDs. All structured model stages use a complete JSON contract in the system prompt, with strict local Pydantic validation before DTO normalization and at most one generation retry for invalid or truncated output; no provider schema grammar is sent. There is no run row or queue. The existing agentic RAG pipeline supplies conditional external interpretation and never Case evidence. Reports are deterministic snapshots of stored analysis. [The production verifier contract](research/attribution_benchmark/B1_INTEGRATION.md) records schemas, examples, state semantics and validation.
 
 ## Service Layout
 
@@ -162,7 +162,8 @@ Backend (prefix `/api/v1`), one `routes.py` per feature folder. `tests/test_rout
   (100) for its record; a narrative is also at most 250,000 characters. A source is refused with 409
   `analysis_in_progress` while the case is being analysed
 - `GET`, `POST /cases/{case_id}/analysis` — read the latest analysis, or run one (`analysis/routes.py`). Running one
-  answers 409 `analysis_in_progress` while an analysis of that case is in flight
+  answers 409 `analysis_in_progress` while an analysis of that case is in flight,
+  or `analysis_waiting_followup` while a follow-up question awaits an answer. Chat continues analysis automatically once the round's answers are complete.
 - **Progress stream.** `POST /cases/{case_id}/analysis` and `POST /cases/{case_id}/chat/messages` answer a request sent
   with `Accept: text/event-stream` with a Server-Sent Events stream on the same request, instead of one JSON body
   (`analysis/stream.py`):
@@ -192,9 +193,9 @@ models/                 SQLAlchemy tables, one per file: case, source,
                         document, analysis_result, chat_message, report, user
 llm/                    calling a model
   request.py            request_stage: the one transport every model call
-                        takes, the LLM gate's included. grammar=False (the
-                        reading) sends no output_config: the reply is
-                        validated after decoding, asked at most twice. A
+                        takes, the LLM gate's included. All stages specify JSON
+                        in the system prompt, with no provider schema grammar.
+                        Invalid/truncated replies are asked at most twice. A
                         dropped connection or an HTTP 429, 500, 502, 503 or
                         504 is asked once more after 2 seconds (one retry
                         between them); a timeout is not. A 429 that survives
@@ -202,9 +203,9 @@ llm/                    calling a model
   settings.py           model, providers, output and thinking budgets; optional
                         Reading-only override with historical inheritance
   openrouter.py         the OpenRouter target; registry.py (model aliases),
-                        schema.py (the structured-output schema; a single-value
-                        Literal is sent as a one-item enum, because not every
-                        route enforces const)
+                        schema.py (prompt contracts and strict local Pydantic
+                        validation before DTO normalization), payload.py (input
+                        serialization/budgets), response.py (provider envelopes)
 trace/                  what the analysis, chat and reports share
   claims.py             claim fields/provider boundaries, gaps and follow-up
                         exchanges; reexports historical citation names
@@ -224,43 +225,12 @@ trace/                  what the analysis, chat and reports share
                         string, with its brackets; summary_closings gives the
                         punctuation it wrote after each bracket, which the
                         report and the analysis view print after the marks
-  quotes.py             finding a quotation in a source, in tiers: exact,
-                        NFKC fold, unique ellipsis pieces, markup-tolerant
-                        (whitespace between two non-Thai letters or digits
-                        must be on both sides), then format only (quote
-                        marks, punctuation, dash style, case and spacing
-                        ignored; a minus sign and the word boundary between
-                        non-Thai letters or digits kept; a thousands comma
-                        dropped and Thai digits read by value; at least 8
-                        characters left, found once or found again as the
-                        same source text); the stored quote is
-                        always source text; the locator says which tier
-                        accepted a quote (locate_quote), and
-                        tolerated_differences lists, word by word, what the
-                        NFKC, markup or format tier ignored (quote marks
-                        excluded, at most 8); MEANING_MARKS (?~≈±%<>) are
-                        looked for in two places, after NFKC and outside OCR
-                        tags: ignored_marks finds a mark on one side of a
-                        tolerated difference and not the other, and edge_marks
-                        finds one within two characters of a located span, on
-                        its line; nearest_passage points a quote
-                        no tier locates at its one clearly closest passage
-                        (rapidfuzz candidates, an infix edit distance, at most
-                        3 places at word level, the first and last words
-                        paired inside the aligned span, and a number with
-                        separators kept as one word)
-  meaning.py            the meaning pointer: for a not-confirmed claim whose
-                        unlocated supporting quote the string pointer gave up on,
-                        the three sentences of the cited source that share most
-                        words with the claim go to an NLI model, and the one
-                        most entailed (argmax entailment, at least 0.5) becomes
-                        meaning_passage, with its source offsets; the status
-                        never changes and the passage is evidence nowhere
-  nli_model.py          the mDeBERTa NLI checkpoint behind it: pinned by
-                        revision and weights hash, label order checked at load,
-                        loaded once under a lock, one pair at a time, a pair of
-                        more than 512 tokens skipped and never cut; a missing or
-                        broken model is NliUnavailable with a reason
+  b1_verifier.py        frozen WiCE TRAIN LR decision boundary, source-unit selection contract
+  b1_lr.json            small frozen coefficients, selector revision/hashes and provenance
+  source_selector.py    local pinned multilingual MPNet, normalized cosine, serialized CPU inference
+  claim_validation.py   structural blockers then B1-LR; saved per-Claim verdict/features/selection
+  nli_model.py          pinned mDeBERTa full E/N/C vector; longest-first truncation512,
+                        raw token count/truncation recorded; unavailable model fails analysis
   sentences.py          the sentence around a quotation: PyThaiNLP crfcut, line
                         by line; the encoder gate splits with it too
   bind.py               stable orchestration: resolve claim source references
@@ -268,8 +238,6 @@ trace/                  what the analysis, chat and reports share
                         derive summary units afterwards
   evidence_binding.py   validate selected IDs, materialize original source spans
                         and page locators, reject duplicate references
-  quote_binding.py      legacy quote locating, context, tolerated differences,
-                        review flags and advisory nearest passages
   grounding.py          legacy counters and deterministic Evidence ID metrics
   support.py            bound/mixed/unbound/no_claim describe evidence binding
                         of linked claims, never semantic or factual confirmation
@@ -345,13 +313,15 @@ chat/                   the case conversation; routes, schemas
   reply.py              routes a message: a follow-up answer or a question
   answer.py             answering a chat question: read the case, compose,
                         store the reply
-  compose.py            the chat model call: request, verify citations, units
-  prompts.py            CHAT_PROMPT
-  contracts.py          the answer compose returns
+  compose.py            the chat prompt, request and model call
+  answer_contract.py    the provider reply and composed answer shapes
+  grounding.py          binds answer units to Claims and exact Source quotes
 reports/                routes, schemas, contracts, generate.py (one report
                         per analysis, from what it recorded), display.py (the
-                        snapshot a report stores and prints), render.py (HTML
-                        and PDF from the Jinja2 template in templates/)
+                        snapshot a report stores and prints), findings.py
+                        (Source labels and quotes), technical.py (MITRE rows
+                        and notices), limitations.py (report caveats),
+                        render.py (HTML and PDF from templates/)
 experiments/            ablations — imports app/, never imported by it; only
                         __init__.py and this file are tracked; the rest
                         is local
@@ -468,25 +438,28 @@ question and answer. `MITRE_GATE_MODEL_PATH` points at the encoder's weights;
 
 ### Source units and canonical claims (backend)
 
-`sources/evidence.py` partitions every source at analysis time, reusing sentence spans and preserving all separators. Each frozen `EvidenceUnit(unit_id, source_id, start, end, text)` satisfies `text == source.text[start:end]`; ordered units reconstruct the source exactly. Canonical IDs have the form `source_id:U001-<16 hex characters>`, derived from the segmentation version and full source text. Reading receives all native sources and answered QA text together using local IDs such as `U001`, with unchanged Source identity and document/quality metadata. `analysis/reading_sources.py` captures revisions before Reading and expands its selections to canonical IDs before binding; offsets and hashes are omitted from the compact model payload. `trace/evidence_binding.py` checks source ownership, existence, syntax, stale hashes and duplicates before reproducing original text. Stored traces keep canonical IDs. On the direct path, citation `exact_quote` is backend-produced text with offsets, document identity and page locator when available. Legacy quotes retain the old matcher.
+`sources/evidence.py` partitions every source at analysis time, reusing sentence spans and preserving all separators. Each frozen `EvidenceUnit(unit_id, source_id, start, end, text)` satisfies `text == source.text[start:end]`; ordered units reconstruct the source exactly. Canonical IDs have the form `source_id:U001-<16 hex characters>`, derived from the segmentation version and full source text. Reading receives all native sources and answered QA text together using local IDs such as `U001`, with unchanged Source identity and document/quality metadata. `analysis/reading_sources.py` captures revisions before Reading and expands its selections to canonical IDs before binding; offsets and hashes are omitted from the compact model payload. `trace/evidence_binding.py` checks source ownership, existence, syntax, stale hashes and duplicates before reproducing original text. Stored traces keep canonical IDs. On the direct path, citation `exact_quote` is backend-produced text with offsets, document identity and page locator when available. New analyses accept source-unit IDs only; historical stored quote/pointer fields remain readable.
 
 The dedicated Reader contract contains `version` and `claims` only. Each claim contains its ID, type, text, epistemic status and supporting/contradicting unit citations. The backend derives source-ID lists and citation locations; the Reader cannot generate copied quotations, reasoning summaries, metadata or separate parties/timeline/impacts. `reported` covers attributed or qualified source assertions; `unknown` describes uncertainty explicitly stated in a source. Higher-level inference belongs to Judgement. Removing duplicated structured facts also removes projection-specific NLI verification. Historical views and saved verdicts remain readable for existing records but are never input authority for Judgement or chat. `support=bound` means linked claims have resolved supporting citations, not semantic or factual confirmation. The single-call `CaseProviderAnalysis` contract remains solely for the existing experimental baseline, separate from the production Reader.
 
+Judgement receives each admitted Claim's `claim_id`, type, text and epistemic status, plus supporting/contradicting citation text only. Source IDs, Evidence Unit IDs and document/page/offset metadata remain on the original Claims for binding, NLI, traceability and reports. This serialization does not alter the stored Claims or remove their attached Source text from Judgement.
+
 ### Claim views (backend)
 
-`analysis/views.py` makes one native-schema `case_views` call over exactly the
+`analysis/views.py` makes one prompt-structured `case_views` call over exactly the
 NLI-admitted canonical Claims supplied to Judgement. Each input contains only
-`claim_id` and `text`. After binding, `analysis/claim_gate.py` checks complete
-Claims against all resolved supporting Source passages through
-`trace/claim_validation.py`. Only NLI entailment at or above
-`claim_support_threshold` (default 0.8) reaches either call. Rejected and
-unassessed Claims remain stored with `semantic_grounding` for review. Missing
-support, unresolved supporting pointers, declared conflicts, uncertain status
-and over-length input are withheld; no truncation is used. An unavailable
-verifier fails analysis. With no admitted Claims, analysis records abstention
-and skips both downstream calls. Grounding records counts, model, threshold,
-verifier usage and duration. This is textual-support screening, not source truth
-or a calibrated factual-confidence score; Thai coverage remains unmeasured.
+`claim_id` and `text`. After binding, `analysis/claim_gate.py` runs the frozen
+B1-LR Claim/Source gate in a worker thread. MPNet retains original resolved units
+at cosine >=0.20, or the first highest-similarity unit if none pass; mDeBERTa
+scores the single-newline concatenation with longest-first truncation512. The
+ordered E/N/C vector enters the frozen WiCE TRAIN LR; score >=0.50 admits.
+This task-specific linear decision boundary is not calibrated factual confidence.
+All binding citations remain stored; selected indices/IDs, similarities, three
+NLI probabilities, LR score, artifact hash and truncation are separate diagnostics.
+Unresolved support, missing support, conflicts and uncertain status still withhold
+before inference. Missing/invalid model assets fail analysis. Zero admission skips
+Views/Judgement. Historical .80 verdicts keep their original meaning; rerunning
+analysis is required to obtain B1-LR verdicts.
 
 The extractor uses the configured analysis model and provider order, without
 thinking, with at most 4,096 output tokens and a 60-second overall deadline. It
@@ -509,15 +482,18 @@ There is no cross-analysis cache or new revision system. Historical extractor
 metadata, offsets and projection verdicts remain readable through generic records. Local model loaders,
 per-Claim inference, the provisioner and Compose sidecar/config/mount are removed;
 Torch/Transformers remain for the encoder gate and pinned Claim/Source NLI. The full
-contract is in [Source grounding](docs/architecture/evidence-unit-grounding.md).
+contract is in [B1-LR integration](research/attribution_benchmark/B1_INTEGRATION.md).
 
-### Legacy Meaning Pointer (backend)
+### Historical pointer compatibility
 
-When a reported claim's legacy quotation is not located, or its Evidence Unit pointer is invalid, and no nearest passage is available, `bound_claims` may ask the existing meaning pointer whether a sentence of the named source says what the claim says (`trace/meaning.py`, `trace/nli_model.py`). The candidates are the three sentences that share most words with the claim (newmm tokens for Thai, lowercase words otherwise); premise is the sentence, hypothesis is the claim, model `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7`. A sentence becomes the unverified citation's `meaning_passage` (verbatim source text, start and end offsets, the entailment kept for audit and never shown) only when entailment is the argmax and at least 0.5; ties go to the earlier sentence; a pair over 512 tokens is skipped, never cut; at most 30 citations and 3 pairs each per analysis. It runs inside `bind` in the worker thread, with no new progress step.
-
-The passage is shown under the not-confirmed claim only (the report's unverified quote, and the Findings row, with the words "found by meaning, not confirmed" and no score). It is never evidence: the claim stays `not_confirmed`, and the passage is in no support, grounding citation count, summary unit or model input.
-
-`QUOTE_MEANING_POINTER` (`on` by default, in code and Compose) and `QUOTE_MEANING_POINTER_PATH` (default `nli_mdeberta`, resolved under `/app` in the container) configure it. The weights are copied from the local Hugging Face cache by `backend/scripts/copy_nli_weights.py` into `backend/nli_mdeberta/`, which is git-ignored and mounted read-only in Compose; nothing is downloaded. A missing model, missing libraries, a hash or label-order mismatch, or a failure while judging never stops the analysis: one warning is logged per process, the grounding report records `meaning_pointer_unavailable` with its reason, and the report says so. The grounding report also counts the citations eligible, attempted, produced (`citations_meaning_pointed`) and skipped. `tests/conftest.py` keeps the real model off and injects a fake; the real-model tests skip when the weights are absent.
+Quote contexts, tolerated differences, near/meaning pointers and their counts
+remain accepted in stored traces and reports. There is no active meaning-pointer
+recovery or quote matcher in new analysis binding. `nli_model.py` serves the
+mandatory Claim support gate; unavailable weights no longer produce advisory
+success. `CLAIM_NLI_PATH` and `CLAIM_SELECTOR_PATH` name the two local model
+folders. Compose mounts them read-only; provisioning is explicit and no model
+is downloaded by an analysis request. Test fixtures replace the verifier to
+avoid accidental real model/provider calls.
 
 ### Chat Clarification Boundary
 

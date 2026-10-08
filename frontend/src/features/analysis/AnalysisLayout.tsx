@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { useParams, useRouter, useSelectedLayoutSegment } from "next/navigation";
-import { useIsCaseAnalysisRunning } from "@/features/analysis/queries";
+import { useAnalysisAvailability } from "@/features/analysis/queries";
 import { useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
 import { useIsFollowupPending } from "@/features/chat/useCaseChat";
 import { casePath } from "@/lib/casePaths";
@@ -20,7 +20,7 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
   const runAnalysis = useRunCaseAnalysis(caseId);
   const { analysisQuery, sourcesQuery, analysisResult, sources, overview } =
     useCaseOverview(caseId);
-  const isAnalysisRunning = useIsCaseAnalysisRunning(caseId);
+  const { isUpdating, isWaitingForFollowup, canAnalyze } = useAnalysisAvailability(caseId);
   const isFollowupPending = useIsFollowupPending(caseId);
   const section = useSelectedLayoutSegment();
   const panelRef = useRef<HTMLElement | null>(null);
@@ -66,7 +66,7 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!overview.hasAnalysis && (isAnalysisRunning || isFollowupPending)) {
+  if (!overview.hasAnalysis && isUpdating) {
     return (
       <AnalysisState
         processing
@@ -82,6 +82,18 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  if (!overview.hasAnalysis && isWaitingForFollowup) {
+    return (
+      <AnalysisState
+        title="Waiting for your answer"
+        description="Answer the follow-up question in Ask. Analysis continues automatically when the answers are complete."
+        actionLabel="Analyze"
+        onAction={runAnalysis}
+        actionDisabled
+      />
+    );
+  }
+
   if (!overview.hasAnalysis) {
     const hasSources = Boolean(sources?.length);
     return (
@@ -94,12 +106,12 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
         }
         actionLabel={hasSources ? "Analyze" : "Add sources"}
         onAction={hasSources ? runAnalysis : navigateToSources}
+        actionDisabled={hasSources && !canAnalyze}
       />
     );
   }
 
   const isStale = analysisResult?.freshness === "stale";
-  const isUpdating = isFollowupPending || isAnalysisRunning;
 
   return (
     <section
@@ -121,7 +133,7 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
                 overview={overview}
                 result={analysisResult}
                 sources={sources ?? []}
-                onReanalyze={isStale || isUpdating ? undefined : runAnalysis}
+                onReanalyze={isStale || !canAnalyze ? undefined : runAnalysis}
               />
             </div>
           </div>
@@ -144,7 +156,17 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
             </div>
             <AnalysisProgress caseId={caseId} className="mt-3 px-3.5" />
           </div>
-        ) : isStale ? (
+        ) : null}
+        {isWaitingForFollowup && !isUpdating && (
+          <p
+            role="status"
+            className="mt-6 rounded-lg bg-surface-nested px-3.5 py-2.5 text-[13px] leading-6 text-ink-secondary"
+          >
+            Answer the follow-up question in Ask. Analysis continues automatically when the answers
+            are complete.
+          </p>
+        )}
+        {isStale && !isUpdating && (
           <div
             role="alert"
             className="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-y border-line py-2 text-[13px] text-ink"
@@ -153,11 +175,16 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
               <span className="font-semibold">Analysis is based on older sources.</span>{" "}
               <span className="text-ink-secondary">New material was added since.</span>
             </p>
-            <button type="button" onClick={runAnalysis} className="btn-secondary h-8 px-3">
+            <button
+              type="button"
+              onClick={runAnalysis}
+              disabled={!canAnalyze}
+              className="btn-secondary h-8 px-3"
+            >
               Analyze latest sources
             </button>
           </div>
-        ) : null}
+        )}
         {!isUpdating && analysisResult?.trace_json && (
           <AnalysisPipeline trace={analysisResult.trace_json} />
         )}
@@ -195,6 +222,7 @@ function AnalysisState({
   description,
   actionLabel,
   onAction,
+  actionDisabled,
   processing,
   children,
 }: {
@@ -202,6 +230,7 @@ function AnalysisState({
   description: string;
   actionLabel?: string;
   onAction?: () => void;
+  actionDisabled?: boolean;
   processing?: boolean;
   children?: ReactNode;
 }) {
@@ -213,7 +242,12 @@ function AnalysisState({
       className="mx-auto min-h-[420px] w-full max-w-[52rem] justify-center px-5 py-16 sm:px-8"
     >
       {actionLabel && onAction && (
-        <button type="button" onClick={onAction} className="btn-primary mt-5">
+        <button
+          type="button"
+          onClick={onAction}
+          disabled={actionDisabled}
+          className="btn-primary mt-5"
+        >
           {actionLabel}
         </button>
       )}

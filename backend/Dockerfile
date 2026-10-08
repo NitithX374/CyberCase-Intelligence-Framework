@@ -23,7 +23,6 @@ COPY requirements.txt ./requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
 
-# CPU torch and transformers for the XLM-R gate that runs in shadow beside the LLM gate
 COPY requirements-encoder.txt ./requirements-encoder.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements-encoder.txt

@@ -1,0 +1,323 @@
+{
+  "experiment": "BGE-M3 paired original EN / cached Google MT-TH similarity",
+  "completed_at": "2026-10-07T16:13:38.304213+00:00",
+  "manifest": {
+    "runtime": {
+      "model": "BAAI/bge-m3",
+      "revision": "5617a9f61b028005a4858fdac845db406aefb181",
+      "asset_sha256": {
+        "pytorch_model.bin": "b5e0ce3470abf5ef3831aa1bd5553b486803e83251590ab7ff35a117cf6aad38",
+        "config.json": "26159e7ad065073448460117eb24b7a4572f6f4e78eadff65dc0a11c052449fa",
+        "modules.json": "84e40c8e006c9b1d6c122e02cba9b02458120b5fb0c87b746c41e0207cf642cf",
+        "sentence_bert_config.json": "eb9b44b13c0f52a3b3685c3b1cbdea1ba8b04bea123b98f61610048940776eb1",
+        "config_sentence_transformers.json": "1eef72430e7194a1e59680e635aed81ffa083f05668dbc5bb1c56c04c0999c38",
+        "tokenizer.json": "21106b6d7dab2952c1d496fb21d5dc9db75c28ed361a05f5020bbba27810dd08",
+        "tokenizer_config.json": "a62b2b6784f990259fddef5f16388693a8043be4f69179e6a5257eeb3f9abac4",
+        "sentencepiece.bpe.model": "cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865",
+        "special_tokens_map.json": "8c785abebea9ae3257b61681b4e6fd8365ceafde980c21970d001e834cf10835",
+        "1_Pooling/config.json": "e54c164a07274f2eb45bb724f54a79d1efcc90c41573887cd9a29aeee0597352"
+      },
+      "device": "cuda",
+      "precision": "torch.float16",
+      "pooling": "CLS",
+      "dimension": 1024,
+      "maximum_tokens": 8192,
+      "attention": "sdpa",
+      "similarity": "cosine; float32 L2 normalization and dot product",
+      "python": "3.12.2",
+      "libraries": {
+        "torch": "2.6.0+cu124",
+        "transformers": "5.15.1",
+        "sentence-transformers": "6.0.0"
+      },
+      "cuda_device": "NVIDIA GeForce GTX 1650"
+    },
+    "input": {
+      "rows": 3296,
+      "unique_text_pairs": 33583,
+      "dataset_manifest_sha256": "ced8dc70a42f167353972fe04cd81bf61534aacfc4961bc1da2b00320a85d9a7",
+      "translations_sha256": "9cbf0d24cdd60267e74987fc9a64c3e9e5579a97e7ace8cd19eb5e498cec2939",
+      "paired_inputs_sha256": "f227410ac4b9025e55be729cbdbeaeda399bf0507ee3bb0af0f94fb62adabb2b",
+      "mapping": "Original English segmentation; same cached Thai Claim and Source units in original order"
+    },
+    "pairs_per_batch": 32,
+    "padded_token_budget": 8192,
+    "code_sha256": {
+      "bge_translation_similarity.py": "ea67018a5ba6e89eb696ce798c3239f1502c0ecce3d9ba7e93c8837045dc70f6",
+      "bge_similarity_runtime.py": "e9f4135d407b4a27e7a78106474c421f5a28db6ddf0b88efb6de62cdf19a2bac",
+      "bge_similarity_report.py": "c577acad05c9e2cd95629a179178efd19a7fe2c2b54239cee8c0b105a46da013"
+    },
+    "contract_sha256": "1ea7b8331e59ceeb17a7a63731b5cee9bcbc4ffe1d9813fc8f195896a1d27793",
+    "status": "complete",
+    "started_at": "2026-10-07T15:03:24.897144+00:00",
+    "finished_at": "2026-10-07T16:13:38.304213+00:00",
+    "elapsed_seconds_this_attempt": 4213.4052505000145,
+    "completed_pairs": 33583,
+    "peak_allocated_vram_bytes": 1330208768
+  },
+  "summary": {
+    "scope": "Paired original EN / Google MT-TH dense semantic similarity; not translation gold or Claim support labels",
+    "runtime": {
+      "model": "BAAI/bge-m3",
+      "revision": "5617a9f61b028005a4858fdac845db406aefb181",
+      "asset_sha256": {
+        "pytorch_model.bin": "b5e0ce3470abf5ef3831aa1bd5553b486803e83251590ab7ff35a117cf6aad38",
+        "config.json": "26159e7ad065073448460117eb24b7a4572f6f4e78eadff65dc0a11c052449fa",
+        "modules.json": "84e40c8e006c9b1d6c122e02cba9b02458120b5fb0c87b746c41e0207cf642cf",
+        "sentence_bert_config.json": "eb9b44b13c0f52a3b3685c3b1cbdea1ba8b04bea123b98f61610048940776eb1",
+        "config_sentence_transformers.json": "1eef72430e7194a1e59680e635aed81ffa083f05668dbc5bb1c56c04c0999c38",
+        "tokenizer.json": "21106b6d7dab2952c1d496fb21d5dc9db75c28ed361a05f5020bbba27810dd08",
+        "tokenizer_config.json": "a62b2b6784f990259fddef5f16388693a8043be4f69179e6a5257eeb3f9abac4",
+        "sentencepiece.bpe.model": "cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865",
+        "special_tokens_map.json": "8c785abebea9ae3257b61681b4e6fd8365ceafde980c21970d001e834cf10835",
+        "1_Pooling/config.json": "e54c164a07274f2eb45bb724f54a79d1efcc90c41573887cd9a29aeee0597352"
+      },
+      "device": "cuda",
+      "precision": "torch.float16",
+      "pooling": "CLS",
+      "dimension": 1024,
+      "maximum_tokens": 8192,
+      "attention": "sdpa",
+      "similarity": "cosine; float32 L2 normalization and dot product",
+      "python": "3.12.2",
+      "libraries": {
+        "torch": "2.6.0+cu124",
+        "transformers": "5.15.1",
+        "sentence-transformers": "6.0.0"
+      },
+      "cuda_device": "NVIDIA GeForce GTX 1650"
+    },
+    "input": {
+      "rows": 3296,
+      "unique_text_pairs": 33583,
+      "dataset_manifest_sha256": "ced8dc70a42f167353972fe04cd81bf61534aacfc4961bc1da2b00320a85d9a7",
+      "translations_sha256": "9cbf0d24cdd60267e74987fc9a64c3e9e5579a97e7ace8cd19eb5e498cec2939",
+      "paired_inputs_sha256": "f227410ac4b9025e55be729cbdbeaeda399bf0507ee3bb0af0f94fb62adabb2b",
+      "mapping": "Original English segmentation; same cached Thai Claim and Source units in original order"
+    },
+    "unique_text_pairs": {
+      "n": 33583,
+      "mean": 0.8455475852782179,
+      "median": 0.8503332138061523,
+      "std": 0.07279407483092068,
+      "minimum": 0.34503114223480225,
+      "maximum": 1.0,
+      "percentiles": {
+        "1": 0.6398672950267792,
+        "5": 0.7227218687534332,
+        "10": 0.7553788661956787,
+        "25": 0.803479790687561,
+        "75": 0.8917953670024872,
+        "90": 0.9278312444686889,
+        "95": 0.9592493772506712,
+        "99": 1.0
+      }
+    },
+    "changed_text_pairs": {
+      "n": 32458,
+      "mean": 0.8401942388691416,
+      "median": 0.8476930558681488,
+      "std": 0.06802312440181521,
+      "minimum": 0.34503114223480225,
+      "maximum": 0.9997268319129944,
+      "percentiles": {
+        "1": 0.6372312170267105,
+        "5": 0.7210627436637879,
+        "10": 0.7535782217979431,
+        "25": 0.8016486763954163,
+        "75": 0.8874085247516632,
+        "90": 0.9181539595127106,
+        "95": 0.9356259286403655,
+        "99": 0.9689854246377945
+      }
+    },
+    "identical_text_pairs": 1125,
+    "splits": {
+      "test": {
+        "rows": 1610,
+        "claim_occurrences": {
+          "n": 1610,
+          "mean": 0.8557627919667996,
+          "median": 0.8671205043792725,
+          "std": 0.06162313332968372,
+          "minimum": 0.6016916036605835,
+          "maximum": 0.9906724095344543,
+          "percentiles": {
+            "1": 0.6900719404220581,
+            "5": 0.7374681502580642,
+            "10": 0.7698149681091309,
+            "25": 0.8199648559093475,
+            "75": 0.9006101489067078,
+            "90": 0.9253740727901459,
+            "95": 0.9384998738765716,
+            "99": 0.963133472800255
+          }
+        },
+        "source_unit_occurrences": {
+          "n": 33644,
+          "mean": 0.8427537364588242,
+          "median": 0.8495770990848541,
+          "std": 0.07990049352407055,
+          "minimum": 0.34503114223480225,
+          "maximum": 1.0,
+          "percentiles": {
+            "1": 0.5970404744148254,
+            "5": 0.7070177406072616,
+            "10": 0.7486706972122192,
+            "25": 0.8002529144287109,
+            "75": 0.8916311413049698,
+            "90": 0.9284606337547302,
+            "95": 0.9771726608276367,
+            "99": 1.0
+          }
+        },
+        "unique_claims": {
+          "n": 1452,
+          "mean": 0.8576910201429335,
+          "median": 0.8684028387069702,
+          "std": 0.0605818662937096,
+          "minimum": 0.6016916036605835,
+          "maximum": 0.9906724095344543,
+          "percentiles": {
+            "1": 0.6902109521627426,
+            "5": 0.7397558361291885,
+            "10": 0.7722828149795532,
+            "25": 0.8239321559667587,
+            "75": 0.9016446024179459,
+            "90": 0.925780737400055,
+            "95": 0.9384857952594757,
+            "99": 0.9625416451692581
+          }
+        },
+        "unique_source_units": {
+          "n": 24055,
+          "mean": 0.8460519576142073,
+          "median": 0.8510982394218445,
+          "std": 0.07618091152529419,
+          "minimum": 0.34503114223480225,
+          "maximum": 1.0,
+          "percentiles": {
+            "1": 0.6253077864646912,
+            "5": 0.7170362353324891,
+            "10": 0.7525377631187439,
+            "25": 0.8037833571434021,
+            "75": 0.8926085829734802,
+            "90": 0.9305838942527771,
+            "95": 0.9838847577571869,
+            "99": 1.0
+          }
+        }
+      },
+      "test_ood": {
+        "rows": 1686,
+        "claim_occurrences": {
+          "n": 1686,
+          "mean": 0.8657298829773284,
+          "median": 0.8713962435722351,
+          "std": 0.060377014955249504,
+          "minimum": 0.6285035610198975,
+          "maximum": 1.0,
+          "percentiles": {
+            "1": 0.7074907332658767,
+            "5": 0.7539467513561249,
+            "10": 0.7867897152900696,
+            "25": 0.8279363662004471,
+            "75": 0.9083773791790009,
+            "90": 0.939099133014679,
+            "95": 0.9570277631282806,
+            "99": 0.9794518262147904
+          }
+        },
+        "source_unit_occurrences": {
+          "n": 10270,
+          "mean": 0.8377494066518377,
+          "median": 0.8420156240463257,
+          "std": 0.06236421255600236,
+          "minimum": 0.5057653784751892,
+          "maximum": 1.0,
+          "percentiles": {
+            "1": 0.6727301847934722,
+            "5": 0.7312455177307129,
+            "10": 0.7574132680892944,
+            "25": 0.7978288382291794,
+            "75": 0.8809514045715332,
+            "90": 0.915762186050415,
+            "95": 0.9320811808109283,
+            "99": 0.9637408131361006
+          }
+        },
+        "unique_claims": {
+          "n": 1624,
+          "mean": 0.8666121834898229,
+          "median": 0.8720425963401794,
+          "std": 0.06003110539560277,
+          "minimum": 0.6285035610198975,
+          "maximum": 1.0,
+          "percentiles": {
+            "1": 0.7080292326211929,
+            "5": 0.7548280000686646,
+            "10": 0.7872884333133697,
+            "25": 0.8292544782161713,
+            "75": 0.9084440320730209,
+            "90": 0.9395125389099122,
+            "95": 0.9571859955787658,
+            "99": 0.97987972676754
+          }
+        },
+        "unique_source_units": {
+          "n": 6498,
+          "mean": 0.835484094676989,
+          "median": 0.8385974764823914,
+          "std": 0.06316949431514621,
+          "minimum": 0.5057653784751892,
+          "maximum": 1.0,
+          "percentiles": {
+            "1": 0.6662706780433655,
+            "5": 0.7287156283855438,
+            "10": 0.7552142262458801,
+            "25": 0.7945406883955002,
+            "75": 0.879132479429245,
+            "90": 0.915487676858902,
+            "95": 0.9340214818716049,
+            "99": 0.9653279238939284
+          }
+        }
+      }
+    },
+    "truncated_en": 0,
+    "truncated_th": 0,
+    "files_sha256": {
+      "scores.jsonl": "ebd3370889b369f1106305d25bf243c302d9a64654120efc1256fd6ac9edc11a",
+      "rows.jsonl": "c8515b8adc8dab15c2643ef17b75f0a310be26797d61e63df1d26e9a4bc501b6",
+      "pairs.csv": "283451610f53b4c1b358dca26a2fbc62becf61565898797db054de312d0efdc3",
+      "lowest_100.json": "b711d8d3ab76e59e84de39f6891a4e00eda67b4fbee951730ad8aecaa3163647"
+    },
+    "notes": [
+      "Unique-pair averages avoid repeated-text weighting; row/unit occurrence averages include repeated references",
+      "Same text may occur as both a Claim and a Source unit",
+      "Empty reference bundles retain null Source metrics, not artificial zero similarity",
+      "High cosine does not verify names, amounts, negation, legal roles or inherited-gold validity",
+      "No threshold filtering, gold repair, verifier fitting or production changes"
+    ]
+  },
+  "independent_verification": {
+    "verified_at": "2026-10-07T16:13:50.289706+00:00",
+    "status": "pass",
+    "rows": 3296,
+    "unique_pairs": 33583,
+    "independent_statistics": "stdlib fmean/median/pstdev and linear quantiles match all saved distributions",
+    "mapping": "original rows, gold, ordered Claim/reference-unit keys and cached translations verified",
+    "csv": "all UTF-8 EN/TH text pairs and score keys verified",
+    "truncation": "none; maximum saved token length 432",
+    "unchanged": "dataset files, translation cache, execution-source snapshots and frozen B1 cache hashes",
+    "scope": "Saved scores/metadata verified; full embedding inference was not rerun",
+    "manifest_sha256": "71c11f20948efafa24c408c562ef63a43010f6342123088e523dd685e988b208",
+    "summary_sha256": "5c0cd3db73ff6ba5aef190bf208a329ceae63781a06293645c4ad85225af3926"
+  },
+  "raw_outputs": "tmp/bge-m3-mt-th/",
+  "validation": {
+    "focused_tests_passed": 7,
+    "production_changes": false,
+    "new_translation_calls": 0
+  }
+}

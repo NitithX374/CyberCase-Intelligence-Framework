@@ -1,5 +1,6 @@
 *_case_views/
 nli_mdeberta/
+source_selector_mpnet/
 xlmr_ladder_best/
 __pycache__/
 *.pyc

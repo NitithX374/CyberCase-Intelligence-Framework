@@ -59,7 +59,7 @@ def stub_libraries(monkeypatch, *, tokenizer=None, model=None):
 
 
 def at(monkeypatch, path: Path) -> None:
-    monkeypatch.setattr(settings, "quote_meaning_pointer_path", str(path))
+    monkeypatch.setattr(settings, "claim_nli_path", str(path))
 
 
 def reason_of() -> str:
@@ -139,7 +139,7 @@ def test_the_model_is_loaded_once_and_a_failure_is_remembered_and_warned_once(
             with pytest.raises(NliUnavailable):
                 nli_model.load_nli()
 
-    warnings = [r for r in caplog.records if "Meaning pointer unavailable" in r.getMessage()]
+    warnings = [r for r in caplog.records if "Claim support NLI unavailable" in r.getMessage()]
     assert len(warnings) == 1
     assert "weights_missing" in warnings[0].getMessage()
 

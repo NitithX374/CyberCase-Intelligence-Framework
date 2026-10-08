@@ -86,17 +86,64 @@ export function SourceDrawer({
   );
 }
 
-function highlightQuote(text: string, quote: string | null): string {
-  if (!quote) return text;
+const MARK_OPEN =
+  '<mark class="bg-amber-200/60 dark:bg-amber-400/30 text-ink px-1 py-0.5 rounded font-medium">';
+const MARK_CLOSE = "</mark>";
+const TR_HIGHLIGHT = 'class="bg-amber-100/50 dark:bg-amber-400/15"';
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function highlightSnippet(snippet: string): string {
+  if (/<[^>]+>/.test(snippet)) {
+    const parts = snippet.split(/(<[^>]+>)/g);
+    return parts
+      .map((part) => {
+        if (part.startsWith("<") && part.endsWith(">")) {
+          if (/^<tr\b/i.test(part)) {
+            if (/class=/i.test(part)) {
+              return part.replace(
+                /class=["']([^"']*)["']/i,
+                (_, cls) => `class="${cls} bg-amber-100/50 dark:bg-amber-400/15"`,
+              );
+            }
+            return part.replace(/^<tr/i, `<tr ${TR_HIGHLIGHT}`);
+          }
+          return part;
+        }
+        if (!part.trim()) return part;
+        const leading = part.match(/^\s*/)?.[0] ?? "";
+        const trailing = part.match(/\s*$/)?.[0] ?? "";
+        const trimmed = part.slice(leading.length, part.length - trailing.length);
+        return `${leading}${MARK_OPEN}${trimmed}${MARK_CLOSE}${trailing}`;
+      })
+      .join("");
+  }
+
+  if (snippet.trim().startsWith("|") && snippet.trim().endsWith("|")) {
+    const cells = snippet.split("|");
+    return cells
+      .map((cell, idx) => {
+        if (idx === 0 || idx === cells.length - 1) return cell;
+        if (!cell.trim()) return cell;
+        const leading = cell.match(/^\s*/)?.[0] ?? "";
+        const trailing = cell.match(/\s*$/)?.[0] ?? "";
+        const trimmed = cell.slice(leading.length, cell.length - trailing.length);
+        return `${leading}${MARK_OPEN}${trimmed}${MARK_CLOSE}${trailing}`;
+      })
+      .join("|");
+  }
+
+  return `${MARK_OPEN}${snippet}${MARK_CLOSE}`;
+}
+
+function highlightSingleQuote(text: string, quote: string): string {
   const target = quote.trim();
   if (!target) return text;
 
-  const markOpen =
-    '<mark class="bg-amber-200/60 dark:bg-amber-400/30 text-ink px-1 py-0.5 rounded font-medium">';
-  const markClose = "</mark>";
-
   if (text.includes(target)) {
-    return text.split(target).join(`${markOpen}${target}${markClose}`);
+    return text.split(target).join(highlightSnippet(target));
   }
 
   const lowerText = text.toLowerCase();
@@ -106,16 +153,62 @@ function highlightQuote(text: string, quote: string | null): string {
     const matched = text.slice(index, index + target.length);
     const before = text.slice(0, index);
     const after = text.slice(index + target.length);
-    return `${before}${markOpen}${matched}${markClose}${after}`;
+    return `${before}${highlightSnippet(matched)}${after}`;
+  }
+
+  const chunks = target
+    .replace(/<[^>]+>/g, "\n")
+    .split(/[\n|]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+  if (chunks.length > 1) {
+    const pattern = chunks.map(escapeRegex).join("(?:\\s*|<[^>]+>)+");
+    try {
+      const regex = new RegExp(pattern, "i");
+      const match = regex.exec(text);
+      if (match) {
+        const matched = match[0];
+        const before = text.slice(0, match.index);
+        const after = text.slice(match.index + matched.length);
+        return `${before}${highlightSnippet(matched)}${after}`;
+      }
+    } catch {
+      // Fall through if regex fails
+    }
+  } else if (chunks.length === 1 && chunks[0].length > 1) {
+    const chunk = chunks[0];
+    const chunkIndex = lowerText.indexOf(chunk.toLowerCase());
+    if (chunkIndex !== -1) {
+      const matched = text.slice(chunkIndex, chunkIndex + chunk.length);
+      const before = text.slice(0, chunkIndex);
+      const after = text.slice(chunkIndex + chunk.length);
+      return `${before}${highlightSnippet(matched)}${after}`;
+    }
   }
 
   return text;
 }
 
+export function highlightQuote(text: string, quoteOrQuotes: string | string[] | null): string {
+  if (!quoteOrQuotes) return text;
+  const quotes = (Array.isArray(quoteOrQuotes) ? quoteOrQuotes : [quoteOrQuotes])
+    .map((q) => q?.trim())
+    .filter((q): q is string => Boolean(q));
+
+  let result = text;
+  for (const q of quotes) {
+    result = highlightSingleQuote(result, q);
+  }
+  return result;
+}
+
 function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
   const pages = sourceRef.sourcePages;
   const content = sourceRef.displayContent || sourceRef.excerpt;
-  const quote = sourceRef.exactQuote;
+  const quotes = sourceRef.passages?.length
+    ? sourceRef.passages.map((p) => p.quote)
+    : sourceRef.exactQuote;
 
   if (sourceRef.question) {
     return (
@@ -130,7 +223,7 @@ function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
           <dt className="mb-2 text-xs font-medium text-ink-muted">Answer</dt>
           <dd className="select-text text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
             {content ? (
-              <Markdown content={highlightQuote(content, quote)} allowHtml />
+              <Markdown content={highlightQuote(content, quotes)} allowHtml />
             ) : (
               "(No text content)"
             )}
@@ -148,7 +241,7 @@ function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
             <h3 className="mb-2 text-xs font-medium text-ink-muted">Page {page.pageNumber}</h3>
             {page.text ? (
               <div className="select-text [overflow-wrap:anywhere]">
-                <Markdown content={highlightQuote(page.text, quote)} allowHtml />
+                <Markdown content={highlightQuote(page.text, quotes)} allowHtml />
               </div>
             ) : (
               <p className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink-muted [overflow-wrap:anywhere]">
@@ -164,7 +257,7 @@ function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
           )}
           {content ? (
             <div className="select-text [overflow-wrap:anywhere]">
-              <Markdown content={highlightQuote(content, quote)} allowHtml />
+              <Markdown content={highlightQuote(content, quotes)} allowHtml />
             </div>
           ) : (
             <p className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink-muted [overflow-wrap:anywhere]">

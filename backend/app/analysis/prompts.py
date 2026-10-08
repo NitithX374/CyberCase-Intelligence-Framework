@@ -36,17 +36,31 @@ Source references:
 - Every claim must select supplied source_id and evidence_unit_ids exactly as shown.
 - Unit IDs such as U001 are local to their source_id. Always select the matching
   source_id; U001 in one source is different from U001 in another source.
-- A claim may combine several nearby units or several sources when they collectively
-  support all material content. Put each source's units in its own citation.
-- Select units that support attribution, dates, quantities and qualifications as well
-  as the main proposition. A valid unit ID alone does not establish semantic support.
+- Every claim's supporting citations must collectively support every material element
+  stated in the claim without relying on uncited case context.
+- Select the minimum sufficient evidence set, not merely the unit containing the main action:
+  cite enough units to support the entire claim, but do not add unrelated or unnecessary units.
+  Put each source's units in its own citation.
+- A valid unit ID alone does not establish semantic support. Do not rely on uncited source
+  context when resolving a named person from a role, resolving a pronoun, resolving an alias,
+  resolving a relationship, resolving a date or relative time, resolving a quantity, resolving
+  attribution, or adding any other material factual detail.
+- When resolving a role, pronoun, alias, or generic reference into a specific named entity,
+  cite both the unit establishing the identity/referent and the unit stating the event/proposition.
+
+- If the required identity/context unit cannot be cited, or if the cited units do not establish
+  a specific detail, keep the claim at the less-specific wording actually supported by those
+  units (for example, prefer "ผู้ต้องหาแจ้งผู้กล่าวหาที่ ๑ว่า..." over "ผู้ต้องหาแจ้งนายถนอม รอดสุขว่า...").
   If the sources support only part of a possible claim, state only that part.
-- When expanding a pronoun or relative date such as "that day", also select the unit
-  that establishes its referent or date.
 - Link contradicting units separately when present.
 - Do not reproduce source text as evidence or generate exact quotations. The backend
   owns original text, offsets, hashes, page information, filenames and provenance.
 - Document extraction metadata and OCR warnings are provenance, not case facts.
+- Final evidence-completeness check: Before returning the output, verify each claim against
+  its supporting_citations. If any material detail in the claim requires source context not
+  present in those citations, add the required Evidence Unit if available, or remove / generalize
+  that unsupported detail from the claim. Do not expose chain-of-thought or internal reasoning
+  fields in the JSON.
 
 Follow-up answers:
 - Use only what the user explicitly answered. Answered follow-ups are addressable
@@ -157,16 +171,16 @@ The input contains three information classes:
 2. The reading:
    - Canonical claims read from all supplied sources, each carrying source content
      reproduced by the backend from selected unit IDs.
-     Their resolved source content has also passed the NLI support gate. This checks
-     textual support; source truth is not established by that check.
+     Citation records contain source text only. Source/unit IDs and document
+     locators stay in the backend; cite the supplied claim IDs in your output.
+     Each supplied claim has already passed semantic support verification against its
+     resolved supporting evidence. Treat only these admitted claims as case-specific
+     factual input for synthesis. This checks textual support; source truth is not
+     established by that check.
    - Derive case facts from these claims. Do not invent a role, date, event, impact,
      causal relationship or other factual content absent from them.
    - Every claim ID you write must name a claim that appears there. Never invent a
      claim ID, and never write a new claim.
-   - A claim whose epistemic_status is "not_confirmed" has no supporting evidence
-     location resolved in the case sources. This does not make it false. Do not state it as an
-     established fact in the summary. If it matters to the case, say that it is
-     unconfirmed, or raise it as a gap.
 
 3. Technical context:
    - This is optional external knowledge retrieved from MITRE ATT&CK.

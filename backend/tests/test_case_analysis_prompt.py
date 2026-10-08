@@ -60,6 +60,36 @@ def test_the_gap_instructions_keep_the_topic_in_words(prompt) -> None:
     assert "It is never the gap_key." in " ".join(prompt().split())
 
 
+def test_reader_prompt_enforces_complete_evidence_attribution() -> None:
+    prompt = " ".join(CASE_READING_SYSTEM_PROMPT.split())
+    # 1. all material claim details must be supported by cited evidence
+    assert (
+        "Every claim's supporting citations must collectively support every material element stated in the claim without relying on uncited case context."
+        in prompt
+    )
+    # 2. minimum sufficient evidence set
+    assert (
+        "Select the minimum sufficient evidence set, not merely the unit containing the main action"
+        in prompt
+    )
+    # 3. named-entity resolution requires citation of the identity-establishing unit
+    assert (
+        "When resolving a role, pronoun, alias, or generic reference into a specific named entity, cite both the unit establishing the identity"
+        in prompt
+    )
+    # 4. unsupported specificity must be removed/generalized
+    assert (
+        "keep the claim at the less-specific wording actually supported by those units"
+        in prompt
+    )
+    # 5. final evidence-completeness check
+    assert "Final evidence-completeness check:" in prompt
+    assert (
+        "add the required Evidence Unit if available, or remove / generalize that unsupported detail from the claim"
+        in prompt
+    )
+
+
 def provider_result(*, contradicting: bool) -> CaseProviderAnalysis:
     citation = CaseProviderCitation(
         source_id="s1",

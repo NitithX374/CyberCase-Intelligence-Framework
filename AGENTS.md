@@ -83,7 +83,7 @@ in the same change rather than leaving the next person to discover it.
    describes something the server is doing — an analysis in flight, an answer
    being sent — must survive the component unmounting. `features/analysis/queries.ts`
    reads a running analysis from the mutation cache by its key
-   (`useMutationState`), and `useIsFollowupPending` in
+   (`useIsMutating`), and `useIsFollowupPending` in
    `features/chat/useCaseChat.ts` does the same for an answer.
 
 ### Tests

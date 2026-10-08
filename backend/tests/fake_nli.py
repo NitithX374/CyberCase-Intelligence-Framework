@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
-from app.trace.nli_model import Judgement
+from app.trace.b1_verifier import ClaimVerification, supported_probability
+from app.trace.nli_model import Judgement, NliProbabilities
 
 NEUTRAL = Judgement(label="neutral", entailment=0.1)
 
@@ -25,6 +26,22 @@ class FakeNli:
     def judge(self, premise: str, hypothesis: str) -> Judgement:
         self.judged.append((premise, hypothesis))
         return self.rule(premise, hypothesis)
+
+    def verify(self, claim: str, units: Sequence[str]) -> ClaimVerification:
+        premise = "\n".join(units)
+        result = self.judge(premise, claim)
+        neutral = 0 if result.label == "contradiction" else 1 - result.entailment
+        contradiction = 1 - result.entailment if result.label == "contradiction" else 0
+        nli = NliProbabilities(
+            result.entailment, neutral, contradiction, 20, not self.fits(premise, claim)
+        )
+        return ClaimVerification(
+            nli,
+            supported_probability(nli.vector),
+            tuple(range(len(units))),
+            tuple(1.0 for _ in units),
+            0,
+        )
 
 
 def entailing(*fragments: str, probability: float = 0.9) -> FakeNli:

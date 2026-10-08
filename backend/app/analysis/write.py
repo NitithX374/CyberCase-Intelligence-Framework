@@ -23,7 +23,7 @@ from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle
 from app.trace.bind import bound_claims, followup_registry_items
 from app.trace.claims import (
-    CLAIM_FIELDS_HIDDEN_FROM_JUDGEMENT,
+    CLAIM_FIELDS_FOR_JUDGEMENT,
     CaseAnalysisClaim,
     CaseFollowupExchange,
     followup_payload,
@@ -59,7 +59,6 @@ async def write_trace(
             sources, language, followup_history, reading_sources=reading_sources
         ),
         schema=CaseProviderReadingReply,
-        grammar=False,
     )
     announce("bind")
     reading, grounding = await checked_reading(
@@ -215,7 +214,7 @@ def technical_context_payload(
 def reading_payload(reading: CaseProviderReading) -> dict[str, object]:
     return {
         "claims": [
-            claim.model_dump(mode="json", exclude=CLAIM_FIELDS_HIDDEN_FROM_JUDGEMENT)
+            claim.model_dump(mode="json", include=CLAIM_FIELDS_FOR_JUDGEMENT)
             for claim in reading.claims
         ],
     }

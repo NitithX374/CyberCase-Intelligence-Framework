@@ -36,9 +36,9 @@ An omitted output path creates a new ignored directory under `propagation_runs/`
 
 ## Explicit bounded live execution
 
-Add `--execute --judgement-model <provider/model>` to a preparation command with a new output directory when a live dry run is intended. There is no full-experiment switch: the hard cap is five clusters, two logical Judgement stage calls per cluster. Existing native transport retries may issue additional provider requests; their native call receipts are retained. The harness does not alter transport, production defaults or services.
+Add `--execute --judgement-model <provider/model>` with an explicit output directory for live execution. Candidate-cache runs retain the five-cluster cap. The `--champion` adapter allows an explicit limit up to 100; the agreed B1-LR study uses 10 ID and 10 OOD clusters. There are at most two logical Judgement stages per cluster, with no stage for empty admission. Native bounded retries may issue additional provider requests. A research response-capture transport records replies without altering production request defaults or services. See [B1_INTEGRATION.md](B1_INTEGRATION.md).
 
-Live runs additionally save the full native Judgement response and citation metrics. Raw output is preserved before scoring; rejected or unknown IDs are never silently removed. Protocol violations and uncited blocks are recorded and stop the run with a nonzero exit. A completed stage is not evidence of summary semantic correctness.
+Live runs save native Judgement replies and citation metrics. Rejected or unknown IDs are never silently removed. Failures and protocol violations stop by default. Explicit `--continue-on-error` records them separately and continues the remaining arms; the final status is `completed_with_failures`. `--resume` preserves recorded failed arms rather than rerunning them. Failed generations are unknown outcomes, not safe summaries.
 
 ## Metrics and denominators
 
@@ -53,13 +53,13 @@ The scoring sidecar uses original row labels; labels never enter the model paylo
 | Conditional propagation / retention | Cited accepted rows of the corresponding label | Accepted rows of that label |
 | Citation exposure including rejected rows | Any cited known negative row IDs | All original negative rows |
 
-Every ratio stores numerator, denominator and value; a zero denominator yields null. Unknown IDs, rejected IDs, malformed claim brackets, uncited blocks and citation blocks containing admitted negatives are separate diagnostics. Out-of-protocol citations invalidate the matched structural endpoint. No pooled accuracy, confidence interval, model ranking or hypothesis test is produced by this small harness.
+Every ratio stores numerator, denominator and value; a zero denominator yields null. Unknown IDs, rejected IDs, malformed claim brackets and uncited blocks are separate diagnostics. The new `summarize_propagation.py` aggregates the agreed matched study with cluster-bootstrap intervals and exact paired McNemar tests, separating generation failures and empty-admission abstentions. It measures row-ID citation utilization, not final-summary semantic correctness or a model ranking.
 
 ## Validation without model calls
 
 ```powershell
 & '.\env_mitre\Scripts\python.exe' -m pytest -c backend/pytest.ini `
-  backend/tests/claim_propagation_checks.py backend/tests/claim_propagation_outcome_checks.py -q
+  backend/tests/test_claim_propagation.py backend/tests/test_b1_research_evaluation.py -q
 ```
 
-These research checks are invoked by explicit paths and stay outside normal `test_*.py` backend discovery: a standard backend installation does not need downloaded benchmark files or the research environment. Checks reuse actual pinned raw rows/labels and the existing cached run. Model-boundary tests use stubs and original claim text; they do not generate input claims or synthetic labels. Missing research data/dependencies fail when the checks are explicitly requested. No live provider call is needed.
+The propagation checks are now in normal backend test discovery and reuse pinned local raw rows/caches. The evaluation checks exercise cache integrity, metrics and failure accounting using controlled fixtures. Neither calls a live provider. The separate `test_b1_real_model.py` requires explicit `B1_REAL_MODEL=1` and local pinned model assets; Reader/Judgement remain mocked in that integration smoke.

@@ -111,7 +111,7 @@ def test_the_judgement_request_has_no_case_sources():
         "reading",
     }
     [claim] = judgement_call["content"]["reading"]["claims"]
-    assert claim["supporting_citations"][0]["exact_quote"] == SOURCE_TEXT
+    assert claim["supporting_citations"] == [{"exact_quote": SOURCE_TEXT}]
 
 
 def test_no_citation_sent_to_the_judgement_carries_the_sentence_around_its_quote():
@@ -122,8 +122,7 @@ def test_no_citation_sent_to_the_judgement_carries_the_sentence_around_its_quote
     content = judgement_request(checked, "english", (), None)
     [claim] = content["reading"]["claims"]
     [citation] = claim["supporting_citations"]
-    assert citation["exact_quote"] == QUOTE
-    assert "context" not in citation
+    assert citation == {"exact_quote": QUOTE}
     assert '"context"' not in json.dumps(content)
 
 
@@ -227,7 +226,16 @@ def test_the_judgement_prompt_asks_every_summary_sentence_to_end_with_claim_ids(
 def test_the_rest_of_the_judgement_prompt_is_unchanged():
     prompt = " ".join(CASE_JUDGEMENT_SYSTEM_PROMPT.split())
 
-    assert 'A claim whose epistemic_status is "not_confirmed"' in prompt
+    assert "Citation records contain source text only." in prompt
+    assert "cite the supplied claim IDs in your output." in prompt
+    assert (
+        "Each supplied claim has already passed semantic support verification against its "
+        "resolved supporting evidence." in prompt
+    )
+    assert (
+        "Treat only these admitted claims as case-specific factual input for synthesis." in prompt
+    )
+    assert "not_confirmed" not in prompt
     assert "Keep it concise, readable, and complete." in prompt
     assert "Two supplied claims attributing the same event differently" in prompt
     assert "Follow-up metadata identifies answered gaps, without raw questions or answers" in prompt

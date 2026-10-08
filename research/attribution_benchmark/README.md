@@ -58,3 +58,49 @@ Sources: [MiniCheck](https://huggingface.co/lytang/MiniCheck-DeBERTa-v3-Large), 
 ## Downstream propagation dry run
 
 [PROPAGATION.md](PROPAGATION.md) documents the bounded, offline-by-default harness. It reuses original benchmark row/evidence pairs, frozen cached verifier decisions and the native CyberCase Judgement boundary. It measures cited benchmark row IDs; it does not assess final-summary semantic factuality. Live Judgement requires an explicit execution flag and model identifier.
+
+The selected WiCE TRAIN B1-LR integration, agreed 10 ID + 10 OOD live replay,
+official Google EN/MT-TH transfer and current production admission boundary are
+documented in [B1_INTEGRATION.md](B1_INTEGRATION.md). This method uses a one-newline
+filtered premise, longest-first truncation and a frozen LR decision; it differs
+from the historical English-only baseline protocol above.
+
+Completed 2026-10-07: [frozen B1-LR integration and paired results](B1_RESULTS_2026-10-07.md),
+with a [compact aggregate receipt](results/b1_20261007.json). Twenty live downstream
+clusters and all 3,296 EN/Google MT-TH pairs are measured; generation failures,
+coverage loss, higher Thai false acceptance and unverified Docker deployment are
+reported explicitly.
+
+## BGE-M3 translation similarity diagnostic
+
+`bge_translation_similarity.py` compares each original English Claim/Source unit
+with its already cached Google MT-TH translation. It uses the pinned local
+`BAAI/bge-m3` snapshot, dense CLS embeddings and float32 cosine normalization.
+The run covers all 33,583 unique paired texts behind the same 3,296 benchmark
+rows; repeated row/unit occurrences are retained separately in summaries.
+Similarity does not establish translation fidelity or Claim/Source support.
+No threshold filtering, gold repair, new translation or production change occurs.
+
+```powershell
+$env:PYTHONPATH="$PWD\backend;$PWD"
+$env:HF_HUB_OFFLINE='1'
+$env:TRANSFORMERS_OFFLINE='1'
+& '.\env_mitre\Scripts\python.exe' -m research.attribution_benchmark.bge_translation_similarity --translations tmp/attribution-mt-th --output tmp/bge-m3-mt-th --model-path F:/Caches/huggingface/hub/models--BAAI--bge-m3/snapshots/5617a9f61b028005a4858fdac845db406aefb181 --device cuda --precision float16 --pairs-per-batch 32 --token-budget 8192
+```
+
+`--resume` requires identical cached translations, model/runtime, method and
+scored pair identity. Outputs include `pairs.csv` (original/translated texts and
+scores), `scores.jsonl`, `rows.jsonl`, `lowest_100.json`, `summary.json`,
+`report.md` and a complete/failed run manifest. CUDA unavailability and invalid
+embeddings fail explicitly; no CPU/model fallback is used.
+
+Completed: [BGE-M3 EN/MT-TH similarity results](BGE_MT_TH_RESULTS_2026-10-07.md)
+and [compact provenance/aggregate receipt](results/bge_mt_th_20261007.json).
+All 33,583 unique pairs and 3,296 original row mappings were independently
+checked. Mean cosine 0.8455 and median 0.8503 describe embedding proximity;
+they do not validate translation fidelity or repair inherited gold labels.
+
+The [larger checkpoint audit](CHECKPOINT_AUDIT_2026-10-07.md) separates the
+English standalone results from filter/LR combinations and documents the
+historical XLM-R premise-joining confound. No new checkpoint experiment or
+production model switch was performed by that audit.

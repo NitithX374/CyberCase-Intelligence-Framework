@@ -38,7 +38,6 @@ services:
       CASE_ANALYSIS_MODEL: ${CASE_ANALYSIS_MODEL:-google/gemma-4-26b-a4b-it}
       CASE_ANALYSIS_PROVIDERS: ${CASE_ANALYSIS_PROVIDERS:-nextbit/bf16,coreweave/bf16}
       CASE_READING_THINKING_TOKENS: ${CASE_READING_THINKING_TOKENS:-8192}
-      QUOTE_MEANING_POINTER: ${QUOTE_MEANING_POINTER:-on}
       OPENROUTER_CYBERCASE: ${OPENROUTER_CYBERCASE:-}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -52,6 +51,7 @@ services:
       - ./backend/alembic:/app/alembic
       - ./backend/alembic.ini:/app/alembic.ini
       - ./backend/nli_mdeberta:/app/nli_mdeberta:ro
+      - ./backend/source_selector_mpnet:/app/source_selector_mpnet:ro
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     depends_on:
       db:

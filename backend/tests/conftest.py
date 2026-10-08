@@ -14,7 +14,6 @@ def no_shadow_gate(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def no_real_meaning_model(monkeypatch):
-    monkeypatch.setattr(settings, "quote_meaning_pointer", "on")
     monkeypatch.setattr(nli_model, "load_nli", lambda: FakeNli())
 
 

@@ -101,15 +101,30 @@ export function Markdown({ content, allowHtml = false }: MarkdownProps) {
             <thead className="border-b border-line bg-surface-nested text-ink">{children}</thead>
           ),
           tbody: ({ children }) => <tbody className="divide-y divide-line">{children}</tbody>,
-          tr: ({ children }) => (
-            <tr className="transition-colors hover:bg-surface-hover">{children}</tr>
+          tr: ({ children, className, ...props }: React.ComponentPropsWithoutRef<"tr">) => (
+            <tr
+              className={`transition-colors hover:bg-surface-hover ${className ?? ""}`.trim()}
+              {...props}
+            >
+              {children}
+            </tr>
           ),
-          th: ({ children }) => (
-            <th className="px-3 py-2 text-left text-xs font-semibold text-ink-secondary">
+          th: ({ children, className, ...props }: React.ComponentPropsWithoutRef<"th">) => (
+            <th
+              className={`px-3 py-2 text-left text-xs font-semibold text-ink-secondary ${className ?? ""}`.trim()}
+              {...props}
+            >
               {children}
             </th>
           ),
-          td: ({ children }) => <td className="px-3 py-2 text-ink break-words">{children}</td>,
+          td: ({ children, className, ...props }: React.ComponentPropsWithoutRef<"td">) => (
+            <td
+              className={`px-3 py-2 text-ink break-words ${className ?? ""}`.trim()}
+              {...props}
+            >
+              {children}
+            </td>
+          ),
           script: () => null,
           iframe: () => null,
           img: ({ alt }) => (alt ? <span>{alt}</span> : null),

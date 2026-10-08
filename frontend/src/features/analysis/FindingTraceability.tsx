@@ -1,4 +1,5 @@
 import { hasThai } from "@/lib/language";
+import { Icon } from "@/components/icons";
 import type { FindingTraceabilityData } from "./findingTraceabilityData";
 
 const SEMANTIC_LABELS = {
@@ -16,6 +17,8 @@ const SEMANTIC_LABELS = {
 
 const SEMANTIC_REASONS = {
   english: {
+    lr_supported: "Selected Source passages passed the frozen B1-LR admission gate.",
+    lr_not_supported: "Selected Source passages did not pass the frozen B1-LR admission gate.",
     entailed: "The cited Source passages passed the NLI entailment threshold for this finding.",
     neutral: "The NLI model did not find that the cited Source passages entail this finding.",
     contradiction:
@@ -28,6 +31,8 @@ const SEMANTIC_REASONS = {
     input_too_long: "The complete Source passages and finding exceed the NLI input limit.",
   },
   thai: {
+    lr_supported: "ข้อความ Source ที่เลือกผ่านเกณฑ์ B1-LR ที่ตรึงไว้",
+    lr_not_supported: "ข้อความ Source ที่เลือกไม่ผ่านเกณฑ์ B1-LR ที่ตรึงไว้",
     entailed: "ข้อความ Source ที่อ้างผ่านเกณฑ์การรองรับ Finding ของ NLI",
     neutral: "NLI ไม่พบว่าข้อความ Source ที่อ้างรองรับเนื้อหา Finding",
     contradiction: "NLI พบว่าข้อความ Source ที่อ้างขัดแย้งกับ Finding",
@@ -49,52 +54,15 @@ export function FindingTraceability({
 }) {
   const thai = hasThai(text);
   const language = thai ? "thai" : "english";
-  const linked = traceability.direct + traceability.recovered + traceability.legacy;
-  const descriptions = [
-    {
-      count: traceability.direct,
-      label: thai
-        ? `เชื่อม Source โดยตรง ${traceability.direct} ข้อความ`
-        : `${traceability.direct} directly linked passage${traceability.direct === 1 ? "" : "s"}`,
-    },
-    {
-      count: traceability.recovered,
-      label: thai
-        ? `ค้นคืนตำแหน่งใน Source ${traceability.recovered} ข้อความ`
-        : `${traceability.recovered} recovered passage${traceability.recovered === 1 ? "" : "s"}`,
-    },
-    {
-      count: traceability.legacy,
-      label: thai
-        ? `การอ้างอิงแบบเดิม ${traceability.legacy} ข้อความ`
-        : `${traceability.legacy} legacy citation${traceability.legacy === 1 ? "" : "s"}`,
-    },
-    {
-      count: traceability.unresolved,
-      label: thai
-        ? `เชื่อมตำแหน่งใน Source ไม่ได้ ${traceability.unresolved} รายการ`
-        : `${traceability.unresolved} unresolved reference${traceability.unresolved === 1 ? "" : "s"}`,
-    },
-  ];
+  const isSupported = traceability.semanticSupport === "supported";
   return (
-    <div className="mt-3 space-y-1 text-xs leading-5" aria-label="Finding traceability">
-      <div className="flex flex-wrap gap-x-3 gap-y-1 text-ink-secondary">
-        <span className="font-medium">{thai ? "การเชื่อม Source" : "Source linkage"}</span>
-        {linked === 0 && (
-          <span className="text-unresolved">
-            {thai
-              ? "ไม่มีข้อความ Source สนับสนุนที่เชื่อมไว้"
-              : "No linked supporting Source passage"}
-          </span>
-        )}
-        {descriptions
-          .filter(({ count }) => count > 0)
-          .map(({ label }) => (
-            <span key={label}>{label}</span>
-          ))}
-      </div>
+    <div className="mt-2 text-xs leading-5" aria-label="Finding traceability">
       <p
-        className="text-ink-muted"
+        className={
+          isSupported
+            ? "inline-flex items-start gap-1.5 rounded-md bg-established/10 px-2.5 py-1 font-semibold text-established"
+            : "text-ink-muted"
+        }
         title={
           traceability.semanticReason
             ? SEMANTIC_REASONS[language][traceability.semanticReason]
@@ -103,6 +71,7 @@ export function FindingTraceability({
               : "Source linkage locates cited text. This analysis has no recorded check that the cited passages support the complete finding."
         }
       >
+        {isSupported && <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0" />}
         {traceability.semanticSupport === "unassessed" && traceability.semanticReason
           ? thai
             ? "ตรวจการรองรับไม่ได้ — ไม่ส่งเข้า Judgement"

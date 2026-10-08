@@ -121,11 +121,11 @@ def test_the_analysis_is_a_reading_then_a_judgement():
     assert trace.summary == "A file share was encrypted overnight."
 
 
-def test_the_reading_is_validated_after_decoding_and_the_judgement_keeps_its_grammar():
+def test_reading_and_judgement_use_the_shared_prompt_structured_transport():
     bundle = case_with_one_narrative()
     _, (reading_call, judgement_call) = written(bundle, reading_of(bundle))
 
-    assert reading_call["grammar"] is False
+    assert "grammar" not in reading_call
     assert reading_call["system"] == CASE_READING_JSON_PROMPT
     assert "grammar" not in judgement_call
     assert judgement_call["system"] == CASE_JUDGEMENT_SYSTEM_PROMPT
@@ -233,7 +233,7 @@ def test_the_judgement_excludes_a_claim_whose_unit_was_not_found_but_retains_it_
     assert trace.grounding.citations_verified == 1
 
 
-def test_the_judgement_is_told_what_a_not_confirmed_claim_is():
+def test_the_judgement_is_told_admitted_claims_passed_support_verification():
     bundle = case_with_one_narrative()
     reading = reading_of(bundle)
     reading = reading.model_copy(
@@ -243,11 +243,14 @@ def test_the_judgement_is_told_what_a_not_confirmed_claim_is():
     _, (_, judgement_call) = written(bundle, reading)
 
     system = " ".join(judgement_call["system"].split())
-    assert 'A claim whose epistemic_status is "not_confirmed"' in system
-    assert "has no supporting evidence location resolved in the case sources" in system
-    assert "This does not make it false" in system
-    assert "Do not state it as an established fact in the summary" in system
-    assert "say that it is unconfirmed, or raise it as a gap" in system
+    assert (
+        "Each supplied claim has already passed semantic support verification against its "
+        "resolved supporting evidence." in system
+    )
+    assert (
+        "Treat only these admitted claims as case-specific factual input for synthesis." in system
+    )
+    assert "not_confirmed" not in system
     assert [claim["claim_id"] for claim in judgement_call["content"]["reading"]["claims"]] == [
         "A-01"
     ]

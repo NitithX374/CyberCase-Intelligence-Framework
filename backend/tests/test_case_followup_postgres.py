@@ -40,7 +40,7 @@ async def answer_the_question(
         db.add(
             ChatMessage(
                 case_id=case_id,
-                ordinal=2,
+                ordinal=await next_ordinal(db, case_id),
                 role="user",
                 content="Around two in the morning.",
                 message_kind="followup_answer",
@@ -437,7 +437,7 @@ async def test_an_analysis_records_the_answers_it_read_and_not_later_ones():
 
 async def test_an_analysis_records_the_sources_it_read_and_not_later_ones():
     async with isolated_database() as session_factory:
-        case_id, user_id, _ = await seeded_case(session_factory)
+        case_id, user_id, _ = await seeded_case(session_factory, trace=None)
         async with session_factory() as db:
             read = await db.scalar(select(CaseSource.id).where(CaseSource.case_id == case_id))
 
@@ -495,6 +495,7 @@ async def test_a_spent_budget_does_not_silence_the_case_for_good(monkeypatch):
                     )
                 )
         standing = (await gap_questions(session_factory, case_id))[-1]
+        await answer_the_question(session_factory, case_id, standing.id)
         production_pipeline(monkeypatch, gaps.gaps)
 
         replied = await run_case_analysis(
@@ -523,18 +524,22 @@ async def test_a_spent_budget_does_not_silence_the_case_for_good(monkeypatch):
         assert outstanding.id == asked_again.question.id, "one question is outstanding at a time"
 
 
-async def test_a_second_analysis_does_not_strand_the_standing_question(monkeypatch):
+async def test_manual_analysis_leaves_the_standing_question_untouched(monkeypatch):
     async with isolated_database() as session_factory:
         case_id, user_id, question_id = await seeded_case(session_factory)
-        production_pipeline(monkeypatch, [CaseAnalysisGap.model_validate(GAP)])
+        seen = []
+        production_pipeline(monkeypatch, [CaseAnalysisGap.model_validate(GAP)], seen)
 
-        step = await run_case_analysis(
-            case_id=case_id, user_id=user_id, session_factory=session_factory
-        )
+        with pytest.raises(CaseWorkflowError) as raised:
+            await run_case_analysis(
+                case_id=case_id, user_id=user_id, session_factory=session_factory
+            )
 
-        assert step.needs_followup
-        assert step.result.status == "assessment"
-        assert step.question.id == question_id, "asked a new question over the standing one"
+        assert raised.value.code == "analysis_waiting_followup"
+        assert seen == []
+        async with session_factory() as db:
+            outstanding = await pending_question(db, case_id)
+        assert outstanding.id == question_id
         asked = await gap_questions(session_factory, case_id)
         assert len(asked) == 1, f"{len(asked)} questions outstanding, expected 1"
 

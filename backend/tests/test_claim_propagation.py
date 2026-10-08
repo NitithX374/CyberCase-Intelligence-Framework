@@ -181,10 +181,16 @@ def test_duplicate_claim_rows_keep_separate_evidence_and_ids(raw_rows):
     claims = payload["reading"]["claims"]
     assert len(claims) == len(cluster.rows)
     assert len({claim["claim_id"] for claim in claims}) == len(claims)
+    originals = [row_claim(claim_id, row) for claim_id, row in cluster.assigned_rows]
     source_sets = [
-        {citation["source_id"] for citation in claim["supporting_citations"]} for claim in claims
+        {citation.source_id for citation in claim.supporting_citations} for claim in originals
     ]
     assert all(not a & b for i, a in enumerate(source_sets) for b in source_sets[i + 1 :])
+    for sent, original in zip(claims, originals, strict=True):
+        assert sent["claim_id"] == original.claim_id
+        assert sent["supporting_citations"] == [
+            {"exact_quote": citation.exact_quote} for citation in original.supporting_citations
+        ]
 
 
 def test_gate_preserves_ids_and_never_transmits_gold_or_response(raw_rows, verifier):

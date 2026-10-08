@@ -6,7 +6,7 @@ import { MeaningfulErrorModal } from "@/components/MeaningfulErrorModal";
 import { EmptyState } from "@/components/EmptyState";
 import { toUserFacingError } from "@/lib/userFacingError";
 import { useCase } from "@/features/cases/queries";
-import { useIsAnalysisUpdating } from "@/features/analysis/queries";
+import { useAnalysisAvailability } from "@/features/analysis/queries";
 import { useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
 import { useCaseSourceActions } from "@/features/sources/useCaseSourceActions";
 import { useCaseSourceRows } from "@/features/sources/useCaseSourceRows";
@@ -15,7 +15,7 @@ export function SourcesPage() {
   const { caseId } = useParams<{ caseId: string }>();
 
   const caseQuery = useCase(caseId);
-  const isAnalyzing = useIsAnalysisUpdating(caseId);
+  const { isUpdating, isWaitingForFollowup, canAnalyze } = useAnalysisAvailability(caseId);
   const runAnalysis = useRunCaseAnalysis(caseId);
 
   const sourceRows = useCaseSourceRows(caseId);
@@ -52,7 +52,9 @@ export function SourcesPage() {
           caseQuery.data
             ? {
                 freshness: caseQuery.data.analysis_freshness,
-                isRunning: isAnalyzing,
+                isRunning: isUpdating,
+                isWaitingForFollowup,
+                canAnalyze,
                 onAnalyze: runAnalysis,
               }
             : undefined

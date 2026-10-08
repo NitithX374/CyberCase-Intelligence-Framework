@@ -161,12 +161,14 @@ async def record_or_replay(
         case_id=case_id, user_id=user_id, request=request, session_factory=session_factory
     )
     if recorded is None:
-        return await reply_in_conversation(
+        question, answer = await answer_case_question(
             case_id=case_id,
             user_id=user_id,
-            request=request,
+            content=request.content,
+            client_request_id=request.client_request_id,
             session_factory=session_factory,
         )
+        return [question, answer], None
     if recorded.next_question is not None:
         return recorded.messages, None
     return await analyse_after_round(
@@ -176,23 +178,6 @@ async def record_or_replay(
         first_new_ordinal=recorded.first_new_ordinal,
         session_factory=session_factory,
     )
-
-
-async def reply_in_conversation(
-    *,
-    case_id: UUID,
-    user_id: UUID | None,
-    request: ChatMessageCreate,
-    session_factory: Callable,
-) -> tuple[list[ChatMessage], AnalysisStep | None]:
-    question, answer = await answer_case_question(
-        case_id=case_id,
-        user_id=user_id,
-        content=request.content,
-        client_request_id=request.client_request_id,
-        session_factory=session_factory,
-    )
-    return [question, answer], None
 
 
 async def record_answer_and_ask_next(

@@ -29,6 +29,7 @@ from app.followup.conversation import (
     case_messages,
     followup_history_from,
     last_question_awaiting_analysis,
+    pending_question,
     rounds_asked,
 )
 from app.models.analysis_result import CaseAnalysisResult
@@ -113,6 +114,11 @@ async def read_case_for_analysis(
 ) -> CaseUnderAnalysis:
     async with session_factory() as db, db.begin():
         case = await owned_case(db, case_id, user_id, lock=True, options=WITH_SOURCES)
+        if await pending_question(db, case.id) is not None:
+            raise CaseWorkflowError(
+                "analysis_waiting_followup",
+                "Answer the pending follow-up question before starting analysis",
+            )
         try:
             bundle = analysable_bundle(case)
         except SourceError as error:

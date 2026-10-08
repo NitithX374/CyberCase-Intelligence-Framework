@@ -12,7 +12,6 @@ def test_prompt_json_message_is_compact_without_changing_source_text():
         "system",
         content,
         CaseProviderReadingReply,
-        grammar=False,
     )
     message = compact["messages"][0]["content"]
     assert message == json.dumps(content, ensure_ascii=False, separators=(",", ":"))
@@ -20,10 +19,13 @@ def test_prompt_json_message_is_compact_without_changing_source_text():
     assert "output_config" not in compact
 
 
-def test_existing_grammar_stage_serialization_stays_unchanged():
+def test_every_structured_stage_serializes_the_user_message_compactly():
     content = {"claims": []}
     payload = stage_payload(
         AnalysisPipelineConfig(model="test/model"), "system", content, CaseProviderReadingReply
     )
-    assert payload["messages"][0]["content"] == json.dumps(content, ensure_ascii=False)
-    assert payload["output_config"]["format"]["type"] == "json_schema"
+    assert payload["messages"][0]["content"] == json.dumps(
+        content, ensure_ascii=False, separators=(",", ":")
+    )
+    assert "output_config" not in payload
+    assert "<response_contract>" in payload["system"]

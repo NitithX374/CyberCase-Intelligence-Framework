@@ -315,7 +315,7 @@ def test_no_internal_identifier_reaches_the_reader() -> None:
     try:
         pdf = PdfReader(BytesIO(render_case_report_pdf(report, ISSUE)))
         pdf_pages = [page.extract_text() for page in pdf.pages]
-    except OSError:
+    except (OSError, ModuleNotFoundError):
         pass
 
     rendered = "\n".join(

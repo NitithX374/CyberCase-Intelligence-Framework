@@ -1,5 +1,5 @@
 import { hasThai } from "@/lib/language";
-import { citedSourcePassages } from "./groupSourceRefs";
+import { continuousPassages } from "./continuousPassages";
 import { quotedPassage } from "./quotedPassage";
 import type { SourceMessageRef } from "./types";
 
@@ -18,7 +18,7 @@ const THAI_POINTER_LABELS = {
 };
 
 export function SourcePassages({ sourceRef }: { sourceRef: SourceMessageRef }) {
-  const passages = citedSourcePassages(sourceRef);
+  const passages = continuousPassages(sourceRef);
   if (passages.length === 0) return null;
   return (
     <section aria-label="Cited Source passages" className="mb-6 space-y-3">
@@ -36,7 +36,7 @@ export function SourcePassages({ sourceRef }: { sourceRef: SourceMessageRef }) {
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
               {label}
             </h3>
-            <p className="select-text text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
+            <p className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
               {passage.before}
               {passage.before || passage.after ? (
                 <strong className="font-semibold bg-amber-200/60 dark:bg-amber-400/30 text-ink px-1 py-0.5 rounded">

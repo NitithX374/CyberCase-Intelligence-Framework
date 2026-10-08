@@ -61,20 +61,22 @@ const groupDefinitions = [
 ] as const;
 
 export function groupCaseFindings(findings: CaseFinding[]) {
-  return groupDefinitions
-    .map((group) => ({
-      ...group,
-      findings: findings.filter((finding) => {
-        const key =
-          finding.epistemicStatus !== "reported"
-            ? finding.epistemicStatus
-            : finding.claimType === "unknown"
-              ? "unknown_claim"
-              : finding.claimType;
-        return key === group.id;
-      }),
-    }))
-    .filter((group) => group.findings.length > 0);
+  const byGroup = new Map<string, CaseFinding[]>();
+  for (const finding of findings) {
+    const key =
+      finding.epistemicStatus !== "reported"
+        ? finding.epistemicStatus
+        : finding.claimType === "unknown"
+          ? "unknown_claim"
+          : finding.claimType;
+    const grouped = byGroup.get(key) ?? [];
+    grouped.push(finding);
+    byGroup.set(key, grouped);
+  }
+  return groupDefinitions.flatMap((group) => {
+    const grouped = byGroup.get(group.id);
+    return grouped ? [{ ...group, findings: grouped }] : [];
+  });
 }
 
 export function buildCaseOverview(
@@ -129,8 +131,8 @@ export function buildCaseOverview(
       })),
     };
   });
-  const backing = claimBacking(findings);
-  const affected = findingsNamed(findings);
+  const findingsById = new Map(findings.map((finding) => [finding.id, finding]));
+  const backing = claimBacking(findingsById);
   return {
     hasAnalysis: true,
     incidentSummary,
@@ -148,7 +150,10 @@ export function buildCaseOverview(
       description: gap.description,
       reason: gap.reason,
       askable: gap.askable,
-      affectedFindings: affected(gap.affected_claim_ids),
+      affectedFindings: (gap.affected_claim_ids ?? []).flatMap((id) => {
+        const finding = findingsById.get(id);
+        return finding ? [{ id: finding.id, text: finding.text }] : [];
+      }),
     })),
     parties: (trace.involved_parties ?? []).map(
       ({ name, role, claim_ids, support, projection_grounding }) => ({
@@ -247,8 +252,7 @@ function emptyCaseOverview(): CaseOverviewData {
   };
 }
 
-function claimBacking(findings: CaseFinding[]) {
-  const byId = new Map(findings.map((finding) => [finding.id, finding]));
+function claimBacking(byId: Map<string, CaseFinding>) {
   return (claimIds: string[] = []): ClaimBacked => {
     const cited = claimIds.flatMap((id) => byId.get(id) ?? []);
     const seen = new Set<string>();
@@ -270,15 +274,6 @@ function claimBacking(findings: CaseFinding[]) {
       unconfirmed: unconfirmedStatuses(cited.map((finding) => finding.epistemicStatus)),
     };
   };
-}
-
-function findingsNamed(findings: CaseFinding[]) {
-  const byId = new Map(findings.map((finding) => [finding.id, finding]));
-  return (claimIds: string[] = []): Pick<CaseFinding, "id" | "text">[] =>
-    claimIds.flatMap((id) => {
-      const finding = byId.get(id);
-      return finding ? [{ id: finding.id, text: finding.text }] : [];
-    });
 }
 
 function unavailableCaseOverview(reason: string): CaseOverviewData {

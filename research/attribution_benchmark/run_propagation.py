@@ -4,7 +4,6 @@ import argparse
 import asyncio
 import hashlib
 import json
-import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,89 +15,71 @@ sys.path.insert(0, str(REPOSITORY))
 from app.analysis.prompts import CASE_JUDGEMENT_SYSTEM_PROMPT
 from app.llm.settings import AnalysisPipelineConfig
 
-from research.attribution_benchmark.data import sha256
+from research.attribution_benchmark.champion import champion_inputs
+from research.attribution_benchmark.receipts import (
+    digest,
+    git_receipt,
+    now,
+    save,
+    source_receipt,
+)
 from research.attribution_benchmark.propagation_data import (
     MAX_DRY_RUN_CLUSTERS,
     SPLITS,
     load_inputs,
 )
 from research.attribution_benchmark.propagation_judgement import judge, prepare_payload
+from research.attribution_benchmark.propagation_execution import (
+    execute_arm,
+    existing_outcome,
+)
 from research.attribution_benchmark.propagation_metrics import (
     admission_metrics,
-    propagation_metrics,
 )
-
-
-def now() -> str:
-    return datetime.now(UTC).isoformat()
-
-
-def digest(value: object) -> str:
-    return hashlib.sha256(
-        json.dumps(value, ensure_ascii=False, sort_keys=True).encode("utf-8")
-    ).hexdigest()
-
-
-def save(path: Path, value: object) -> None:
-    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-
-def git_receipt() -> dict:
-    def git(*args):
-        return subprocess.check_output(
-            ["git", *args], cwd=REPOSITORY, text=True, encoding="utf-8"
-        ).strip()
-
-    return {
-        "head": git("rev-parse", "HEAD"),
-        "branch": git("branch", "--show-current"),
-        "status": git("status", "--short"),
-    }
-
-
-def source_receipt() -> dict:
-    paths = [
-        "research/attribution_benchmark/data.py",
-        "research/attribution_benchmark/propagation_data.py",
-        "research/attribution_benchmark/propagation_judgement.py",
-        "research/attribution_benchmark/propagation_metrics.py",
-        "research/attribution_benchmark/run_propagation.py",
-        "backend/app/analysis/write.py",
-        "backend/app/analysis/prompts.py",
-        "backend/app/trace/claims.py",
-        "backend/app/trace/citations.py",
-        "backend/app/trace/evidence_binding.py",
-        "backend/app/trace/trace.py",
-        "backend/app/trace/summary.py",
-        "backend/app/sources/evidence.py",
-        "backend/app/llm/request.py",
-        "backend/app/llm/settings.py",
-    ]
-    return {path: sha256(REPOSITORY / path) for path in paths}
 
 
 def arguments(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Bounded AttributionBench row-ID propagation dry run; offline by default"
     )
-    parser.add_argument(
+    verifier = parser.add_mutually_exclusive_group(required=True)
+    verifier.add_argument(
+        "--champion", action="store_true", help="Frozen WiCE TRAIN B1-LR"
+    )
+    verifier.add_argument(
         "--verifier-run",
         type=Path,
-        required=True,
         help="Existing complete, independently verified candidate run",
     )
     parser.add_argument("--split", choices=SPLITS, default="dev")
-    parser.add_argument("--limit", type=int, choices=range(1, MAX_DRY_RUN_CLUSTERS + 1), default=1)
+    parser.add_argument("--limit", type=int, default=1)
     parser.add_argument("--output", type=Path)
     parser.add_argument(
-        "--execute", action="store_true", help="Explicitly enable bounded live Judgement requests"
+        "--execute",
+        action="store_true",
+        help="Explicitly enable bounded live Judgement requests",
     )
     parser.add_argument(
-        "--judgement-model", help="Explicit provider/model identifier; required with --execute"
+        "--judgement-model",
+        help="Explicit provider/model identifier; required with --execute",
+    )
+    parser.add_argument("--judgement-providers", default="")
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Retain every recorded arm, continue only missing arms",
+    )
+    parser.add_argument(
+        "--continue-on-error",
+        action="store_true",
+        help="Record generation failures separately; never treat them as safe summaries",
     )
     args = parser.parse_args(argv)
     if args.execute and not args.judgement_model:
         parser.error("--execute requires --judgement-model")
+    maximum = 100 if args.champion else MAX_DRY_RUN_CLUSTERS
+    if not 1 <= args.limit <= maximum:
+        parser.error(f"--limit must be 1..{maximum}")
     return args
 
 
@@ -106,9 +87,17 @@ async def run(args: argparse.Namespace) -> Path:
     if args.execute and not args.judgement_model:
         raise ValueError("Live Judgement requires an explicit model identifier")
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
-    output = args.output or Path(__file__).resolve().parent / "propagation_runs" / timestamp
+    output = (
+        args.output or Path(__file__).resolve().parent / "propagation_runs" / timestamp
+    )
     output = output.resolve()
-    output.mkdir(parents=True, exist_ok=False)
+    resume = getattr(args, "resume", False)
+    output.mkdir(parents=True, exist_ok=resume)
+    previous_manifest = (
+        json.loads((output / "manifest.json").read_text(encoding="utf-8"))
+        if resume
+        else None
+    )
     manifest = {
         "schema_version": "claim_propagation_dry_run_v1",
         "status": "preparing",
@@ -123,14 +112,26 @@ async def run(args: argparse.Namespace) -> Path:
         "reader_requests": 0,
         "verifier_inference_requests": 0,
     }
-    save(output / "manifest.json", manifest)
+    if not resume:
+        save(output / "manifest.json", manifest)
     outcomes = []
     try:
-        dataset, verifier, clusters, selection = load_inputs(
-            args.split, args.limit, args.verifier_run
+        dataset, verifier, clusters, selection = (
+            champion_inputs(args.split, args.limit)
+            if getattr(args, "champion", False)
+            else load_inputs(args.split, args.limit, args.verifier_run)
         )
         config = (
-            AnalysisPipelineConfig(model=args.judgement_model) if args.judgement_model else None
+            AnalysisPipelineConfig(
+                model=args.judgement_model,
+                providers=tuple(
+                    provider.strip()
+                    for provider in getattr(args, "judgement_providers", "").split(",")
+                    if provider.strip()
+                ),
+            )
+            if args.judgement_model
+            else None
         )
         manifest.update(
             {
@@ -151,11 +152,28 @@ async def run(args: argparse.Namespace) -> Path:
                 "status": "running" if args.execute else "preparing",
             }
         )
+        if previous_manifest:
+            keys = (
+                "dataset",
+                "verifier",
+                "cluster_keys",
+                "judgement_config",
+                "temperature",
+                "prompt_sha256",
+            )
+            if any(previous_manifest[key] != manifest[key] for key in keys):
+                raise ValueError(
+                    "Resumed protocol differs from frozen original inputs/configuration"
+                )
+            save(output / "manifest_before_resume.json", previous_manifest)
+            manifest["resumed_at"] = now()
         save(output / "manifest.json", manifest)
-        (output / "judgement_prompt.txt").write_text(CASE_JUDGEMENT_SYSTEM_PROMPT, encoding="utf-8")
+        (output / "judgement_prompt.txt").write_text(
+            CASE_JUDGEMENT_SYSTEM_PROMPT, encoding="utf-8"
+        )
         for cluster in clusters:
             directory = output / cluster.key
-            directory.mkdir()
+            directory.mkdir(exist_ok=resume)
             mapping = [
                 {
                     "claim_id": claim_id,
@@ -176,11 +194,13 @@ async def run(args: argparse.Namespace) -> Path:
             save(directory / "row_mapping.json", mapping)
             all_ids = {claim_id for claim_id, _ in cluster.assigned_rows}
             verified_ids = {
-                claim_id for claim_id, row in cluster.assigned_rows if verifier.accepts(row)
+                claim_id
+                for claim_id, row in cluster.assigned_rows
+                if verifier.accepts(row)
             }
             for arm, accepted in (("unfiltered", all_ids), ("verified", verified_ids)):
                 arm_directory = directory / arm
-                arm_directory.mkdir()
+                arm_directory.mkdir(exist_ok=resume)
                 payload = prepare_payload(cluster, accepted)
                 save(arm_directory / "request.json", payload)
                 outcome = {
@@ -193,40 +213,41 @@ async def run(args: argparse.Namespace) -> Path:
                     "status": "prepared",
                     "calls": [],
                 }
+                saved = existing_outcome(arm_directory, outcome) if resume else None
+                if saved and saved["status"] != "prepared":
+                    outcomes.append(saved)
+                    continue
                 outcomes.append(outcome)
                 save(arm_directory / "outcome.json", outcome)
                 if not accepted:
                     outcome["status"] = "no_accepted_claims"
                 elif args.execute:
-                    outcome["status"] = "running"
-                    try:
-                        judgement = await judge(payload, config, outcome["calls"])
-                        save(arm_directory / "judgement.json", judgement.model_dump(mode="json"))
-                        outcome["propagation"] = propagation_metrics(
-                            cluster, accepted, judgement.summary
-                        )
-                        outcome["status"] = (
-                            "completed"
-                            if outcome["propagation"]["protocol_valid"]
-                            else "protocol_violation"
-                        )
-                        if outcome["status"] == "protocol_violation":
-                            raise ValueError("Judgement citation protocol violation")
-                    except BaseException as error:
-                        outcome.update(
-                            {
-                                "error_type": type(error).__name__,
-                                "error": str(error),
-                            }
-                        )
-                        if outcome["status"] != "protocol_violation":
-                            outcome["status"] = "failed"
-                        raise
-                    finally:
-                        save(arm_directory / "outcome.json", outcome)
+                    await execute_arm(
+                        arm_directory,
+                        cluster,
+                        accepted,
+                        payload,
+                        config,
+                        outcome,
+                        save,
+                        judge,
+                        record_only=getattr(args, "continue_on_error", False),
+                    )
                 save(arm_directory / "outcome.json", outcome)
         manifest.update(
-            {"status": "completed" if args.execute else "prepared", "finished_at": now()}
+            {
+                "status": (
+                    "completed_with_failures"
+                    if any(
+                        outcome["status"] in ("failed", "protocol_violation", "running")
+                        for outcome in outcomes
+                    )
+                    else "completed"
+                )
+                if args.execute
+                else "prepared",
+                "finished_at": now(),
+            }
         )
         save(output / "outcomes.json", outcomes)
         save(output / "manifest.json", manifest)
@@ -244,7 +265,11 @@ async def run(args: argparse.Namespace) -> Path:
 
 def main(argv=None) -> None:
     output = asyncio.run(run(arguments(argv)))
-    print(json.dumps({"output": str(output), "status": read_status(output)}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {"output": str(output), "status": read_status(output)}, ensure_ascii=False
+        )
+    )
 
 
 def read_status(output: Path) -> str:

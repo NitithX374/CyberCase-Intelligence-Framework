@@ -1,5 +1,11 @@
 # เรื่อง grammar ทั้งหมดในที่เดียว (2026-10-01)
 
+บันทึกวันที่ 2026-10-08: เปลี่ยนทุก structured stage ของ backend เป็น JSON contract
+ใน system prompt และตรวจด้วย Pydantic หลังตอบแล้ว ไม่ส่ง `output_config` ไปบังคับ grammar
+อีกต่อไป ครอบคลุม assessment, Reading, Judgement, Views, Chat และ LLM MITRE gate.
+ผลทดลองและตัวเลขด้านล่างเป็นของ Reading ในการทดลองเดิมเท่านั้น ไม่ใช่ผลวัดของทุก stage
+หลังการเปลี่ยนครั้งนี้ รายละเอียดปัจจุบันอยู่ที่ `backend/ARCHITECTURE.md` ส่วน 5.
+
 ## สรุปสั้น
 
 - **ปัญหา:** ตอนให้ provider บังคับ JSON ด้วย grammar ขั้น reading บางครั้งเขียนแต่ช่องว่างจนหมด token ทำให้เคสล้ม ช้า และแพง

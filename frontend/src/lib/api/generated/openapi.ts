@@ -355,11 +355,24 @@ export interface components {
         };
         CaseClaimGrounding: {
             verdict: "supported" | "not_supported" | "unassessed";
-            reason: "entailed" | "neutral" | "contradiction" | "low_entailment" | "no_resolved_source" | "unresolved_source_reference" | "conflicting_source" | "claim_uncertain" | "input_too_long";
+            reason: "entailed" | "neutral" | "contradiction" | "low_entailment" | "no_resolved_source" | "unresolved_source_reference" | "conflicting_source" | "claim_uncertain" | "input_too_long" | "lr_supported" | "lr_not_supported";
             model?: string | null;
             label?: ("entailment" | "neutral" | "contradiction") | null;
             entailment?: number | null;
             threshold: number;
+            method?: string | null;
+            artifact_sha256?: string | null;
+            neutral?: number | null;
+            contradiction?: number | null;
+            p_supported?: number | null;
+            selected_citation_indices?: number[];
+            considered_citation_indices?: number[];
+            selected_evidence_unit_ids?: string[];
+            source_similarities?: number[];
+            selector_threshold?: number | null;
+            selection_ms: number;
+            raw_tokens?: number | null;
+            truncated?: boolean | null;
             duration_ms: number;
         };
         CaseClaimSpan: {
@@ -410,6 +423,10 @@ export interface components {
             claim_validation_ms: number;
             claim_verifier_model?: string | null;
             claim_verifier_threshold?: number | null;
+            claim_verifier_artifact_sha256?: string | null;
+            claim_source_units_considered: number;
+            claim_source_units_selected: number;
+            claim_verifier_truncated_pairs: number;
             associations_outside_context: number;
             associations_without_claim: number;
             summary_ids_unknown: number;

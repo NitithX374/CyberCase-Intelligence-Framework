@@ -200,7 +200,13 @@ describe("CaseSourcesView", () => {
     const onAnalyze = vi.fn();
     renderSources({
       sources: [caseSource()],
-      analysis: { freshness: "missing", isRunning: false, onAnalyze },
+      analysis: {
+        freshness: "missing",
+        isRunning: false,
+        isWaitingForFollowup: false,
+        canAnalyze: true,
+        onAnalyze,
+      },
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
@@ -210,17 +216,52 @@ describe("CaseSourcesView", () => {
   it("says when the sources changed since the last analysis", () => {
     renderSources({
       sources: [caseSource()],
-      analysis: { freshness: "stale", isRunning: false, onAnalyze: vi.fn() },
+      analysis: {
+        freshness: "stale",
+        isRunning: false,
+        isWaitingForFollowup: false,
+        canAnalyze: true,
+        onAnalyze: vi.fn(),
+      },
     });
 
     expect(screen.getByText("Sources changed since the last analysis")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Analyze latest" })).toBeEnabled();
   });
 
+  it.each(["missing", "current", "stale"] as const)(
+    "blocks Analyze while awaiting an answer with %s analysis",
+    (freshness) => {
+      const onAnalyze = vi.fn();
+      renderSources({
+        sources: [caseSource()],
+        analysis: {
+          freshness,
+          isRunning: false,
+          isWaitingForFollowup: true,
+          canAnalyze: false,
+          onAnalyze,
+        },
+      });
+      const button = screen.getByRole("button", { name: /^Analyze/ });
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+      expect(onAnalyze).not.toHaveBeenCalled();
+      expect(screen.getByText(/continue automatically/)).toBeVisible();
+      expect(screen.getByRole("button", { name: "Add source" })).toBeEnabled();
+    },
+  );
+
   it("keeps the rail clear once the analysis is up to date", () => {
     renderSources({
       sources: [caseSource()],
-      analysis: { freshness: "current", isRunning: false, onAnalyze: vi.fn() },
+      analysis: {
+        freshness: "current",
+        isRunning: false,
+        isWaitingForFollowup: false,
+        canAnalyze: true,
+        onAnalyze: vi.fn(),
+      },
     });
 
     expect(screen.queryByRole("button", { name: /Analyze/ })).not.toBeInTheDocument();
@@ -229,7 +270,13 @@ describe("CaseSourcesView", () => {
   it("shows a run in progress instead of a second button", () => {
     renderSources({
       sources: [caseSource()],
-      analysis: { freshness: "current", isRunning: true, onAnalyze: vi.fn() },
+      analysis: {
+        freshness: "current",
+        isRunning: true,
+        isWaitingForFollowup: false,
+        canAnalyze: false,
+        onAnalyze: vi.fn(),
+      },
     });
 
     expect(screen.getByRole("button", { name: "Analyzing…" })).toBeDisabled();
@@ -238,7 +285,13 @@ describe("CaseSourcesView", () => {
   it("does not let a source be added while an analysis runs", () => {
     renderSources({
       sources: [caseSource()],
-      analysis: { freshness: "current", isRunning: true, onAnalyze: vi.fn() },
+      analysis: {
+        freshness: "current",
+        isRunning: true,
+        isWaitingForFollowup: false,
+        canAnalyze: false,
+        onAnalyze: vi.fn(),
+      },
     });
 
     expect(screen.getByRole("button", { name: "Add source" })).toBeDisabled();
@@ -254,12 +307,21 @@ describe("CaseSourcesView", () => {
       isAddingNarrative: false,
       onUploadDocument: vi.fn(),
       onAddNarrative: vi.fn().mockResolvedValue(true),
-      analysis: { freshness: "current", isRunning: false, onAnalyze: vi.fn() },
+      analysis: {
+        freshness: "current",
+        isRunning: false,
+        isWaitingForFollowup: false,
+        canAnalyze: true,
+        onAnalyze: vi.fn(),
+      },
     };
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const view = (running: boolean) => (
       <QueryClientProvider client={queryClient}>
-        <CaseSourcesView {...props} analysis={{ ...props.analysis!, isRunning: running }} />
+        <CaseSourcesView
+          {...props}
+          analysis={{ ...props.analysis!, isRunning: running, canAnalyze: !running }}
+        />
       </QueryClientProvider>
     );
     const { rerender } = render(view(false));
@@ -275,7 +337,13 @@ describe("CaseSourcesView", () => {
   it("lets a source be added when no analysis runs", () => {
     renderSources({
       sources: [caseSource()],
-      analysis: { freshness: "current", isRunning: false, onAnalyze: vi.fn() },
+      analysis: {
+        freshness: "current",
+        isRunning: false,
+        isWaitingForFollowup: false,
+        canAnalyze: true,
+        onAnalyze: vi.fn(),
+      },
     });
 
     expect(screen.getByRole("button", { name: "Add source" })).toBeEnabled();
@@ -287,7 +355,13 @@ describe("CaseSourcesView", () => {
       sources: [caseSource()],
       isUploading: true,
       uploadingFilename: "statement.pdf",
-      analysis: { freshness: "missing", isRunning: false, onAnalyze: vi.fn() },
+      analysis: {
+        freshness: "missing",
+        isRunning: false,
+        isWaitingForFollowup: false,
+        canAnalyze: true,
+        onAnalyze: vi.fn(),
+      },
     });
 
     expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();

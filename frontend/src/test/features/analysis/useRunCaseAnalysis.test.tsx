@@ -1,12 +1,15 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider, useMutation } from "@tanstack/react-query";
-import { describe, expect, it, vi } from "vitest";
-import type { CaseChatResponse } from "@/lib/api/types";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { CaseChatRead, CaseChatResponse } from "@/lib/api/types";
 import { useCaseChat } from "@/features/chat/useCaseChat";
 import { caseChat, chatResponse, deferred, message } from "@/test/chat";
 import { useAnalysisRunOutcome, useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
+import { useAnalysisAvailability } from "@/features/analysis/queries";
 
 const api = vi.hoisted(() => ({ getChat: vi.fn(), send: vi.fn(), start: vi.fn() }));
+
+beforeEach(() => vi.clearAllMocks());
 
 vi.mock("@/features/chat/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/chat/api")>()),
@@ -56,9 +59,11 @@ describe("useAnalysisRunOutcome", () => {
 function AnswerThenAnalyze() {
   const chat = useCaseChat({ caseId: "case-1" });
   const runAnalysis = useRunCaseAnalysis("case-1");
+  const { canAnalyze } = useAnalysisAvailability("case-1");
   return (
     <>
       <p>Waiting on {chat.pendingQuestionId ?? "nothing"}</p>
+      <p>{canAnalyze ? "Analysis available" : "Analysis unavailable"}</p>
       <button type="button" onClick={() => chat.submitContent("Around 02:00.")}>
         Answer
       </button>
@@ -70,6 +75,49 @@ function AnswerThenAnalyze() {
 }
 
 describe("useRunCaseAnalysis", () => {
+  it("stays blocked until the next pending question is refreshed after Analyze", async () => {
+    const refreshed = deferred<CaseChatRead>();
+    api.getChat.mockResolvedValueOnce(caseChat("case-1", [])).mockReturnValue(refreshed.promise);
+    api.start.mockResolvedValue({ status: "need_followup" });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <AnswerThenAnalyze />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("Analysis available")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
+    await waitFor(() => expect(api.getChat).toHaveBeenCalledTimes(2));
+    fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
+    expect(api.start).toHaveBeenCalledOnce();
+    await act(async () => refreshed.resolve(caseChat("case-1", [], "question-1")));
+    expect(await screen.findByText("Waiting on question-1")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
+    await act(async () => {});
+    expect(api.start).toHaveBeenCalledOnce();
+  });
+
+  it("blocks manual analysis while a follow-up question awaits an answer", async () => {
+    const question = {
+      ...message("case-1", 1, "assistant", "When did it start?"),
+      message_kind: "followup_question" as const,
+      gap_key: "topic:incident-time",
+    };
+    api.getChat.mockResolvedValue(caseChat("case-1", [question], question.id));
+    api.start.mockResolvedValue({ status: "need_followup" });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <AnswerThenAnalyze />
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText(`Waiting on ${question.id}`)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
+    await act(async () => {});
+    expect(api.start).not.toHaveBeenCalled();
+  });
+
   it("does not start an analysis while an answer to a question is being analysed", async () => {
     const question = {
       ...message("case-1", 1, "assistant", "When did it start?"),

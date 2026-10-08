@@ -31,10 +31,10 @@ from app.trace.trace import CaseProviderReading
 pytestmark = pytest.mark.asyncio
 
 NO_GAPS = {"version": "case_assessment_v1", "gaps": []}
-ASKING = {"version": "case_assessment_v1", "gaps": [GAP]}
+ASKING = {"version": "case_assessment_v1", "gaps": [{**GAP, "affected_claim_ids": []}]}
 HEAD = "The attacker logged in to the VPN gateway."
 TAIL = "The attacker exfiltrated the payroll archive."
-STAGES = {"suggestion": "answer", "summary": "judge", "gaps": "assess"}
+STAGES = {"suggestion": "answer", "summary": "judge", "gaps": "assess", "claims": "read"}
 JUDGED = {
     "version": "case_analysis_trace_v1",
     "summary": "Files on the shared drive were encrypted.",
@@ -123,11 +123,12 @@ class Model:
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         payload = json.loads(request.content)
-        if "output_config" in payload:
-            properties = payload["output_config"]["format"]["schema"]["properties"]
-            stage = next(name for key, name in STAGES.items() if key in properties)
-        else:
-            stage = "read"
+        assert "output_config" not in payload
+        contract = json.loads(
+            payload["system"].split("<response_contract>\n")[1].split("\n</response_contract>")[0]
+        )
+        properties = contract["properties"]
+        stage = next(name for key, name in STAGES.items() if key in properties)
         content = json.loads(payload["messages"][0]["content"])
         self.calls.append((stage, content))
         script = self.replies[stage]
@@ -305,7 +306,7 @@ async def test_a_trace_the_binder_cannot_store_is_a_coded_server_error(monkeypat
         (off_schema, 502, "case_reading_invalid"),
         (unreadable, 502, "analysis_invalid_response"),
         (erring, 502, "analysis_provider_error"),
-        (cut_short, 502, "case_reading_invalid"),
+        (cut_short, 502, "case_reading_incomplete"),
         (refused, 409, "analysis_provider_unauthorized"),
         (declined, 409, "case_reading_incomplete"),
         (rejected, 409, "analysis_provider_error"),
@@ -342,39 +343,49 @@ async def test_an_answer_whose_round_met_an_outage_is_retryable_and_the_retry_re
         assert retried.json()["analysis"]["status"] == "validated"
 
 
-async def test_an_analysis_stored_while_a_question_waits_retires_the_question(monkeypatch, model):
+async def test_manual_analysis_cannot_retire_a_pending_question(monkeypatch, model):
     async with isolated_database() as factory:
         case_id, user_id, _ = await seeded_case(factory, trace=None)
         scripted = model(
             assess=[ASKING, NO_GAPS],
             read=[reading()],
             judge=[JUDGED],
-            answer=[general("T1059 is Command and Scripting Interpreter.")],
         )
         async with signed_in(monkeypatch, factory, user_id) as client:
             asked = await client.post(f"/cases/{case_id}/analysis")
+            pending_before = (await client.get(f"/cases/{case_id}/chat")).json()[
+                "pending_question_id"
+            ]
             analysed = await client.post(f"/cases/{case_id}/analysis")
             chat = await client.get(f"/cases/{case_id}/chat")
+            calls_before_answer = scripted.stages().copy()
             sent = await client.post(
-                f"/cases/{case_id}/chat/messages", json={"content": "What does ATT&CK T1059 mean?"}
+                f"/cases/{case_id}/chat/messages",
+                json={"content": "Around two in the morning.", "client_request_id": "send-1"},
             )
 
         assert asked.json()["status"] == "need_followup"
-        assert analysed.json()["status"] == "completed"
-        assert chat.json()["pending_question_id"] is None
+        assert analysed.status_code == 409
+        assert analysed.json()["detail"]["code"] == "analysis_waiting_followup"
+        assert pending_before is not None
+        assert chat.json()["pending_question_id"] == pending_before
+        assert calls_before_answer == ["assess"]
         assert sent.status_code == 200, sent.text
         assert [m["message_kind"] for m in sent.json()["messages"]] == [
+            "followup_answer",
             "conversation",
-            "conversation",
-        ], "the next message is a question about the case, not an answer to a retired question"
-        assert sent.json()["analysis"] is None
+        ]
+        assert sent.json()["pending_question_id"] is None
+        assert sent.json()["analysis"]["status"] == "validated"
         assert scripted.stages().count("read") == 1
 
 
-async def asked_twice_then_lost(client, scripted: Model, case_id) -> httpx.Response:
+async def asked_then_lost(client, scripted: Model, case_id) -> httpx.Response:
     first = await client.post(f"/cases/{case_id}/analysis")
     second = await client.post(f"/cases/{case_id}/analysis")
-    assert (first.json()["status"], second.json()["status"]) == ("need_followup", "need_followup")
+    assert first.json()["status"] == "need_followup"
+    assert second.status_code == 409
+    assert second.json()["detail"]["code"] == "analysis_waiting_followup"
     lost = await client.post(
         f"/cases/{case_id}/chat/messages",
         json={"content": "Around two in the morning.", "client_request_id": "send-1"},
@@ -384,12 +395,12 @@ async def asked_twice_then_lost(client, scripted: Model, case_id) -> httpx.Respo
     return lost
 
 
-async def test_a_round_asked_twice_resumes_when_its_answer_is_sent_again(monkeypatch, model):
+async def test_a_round_resumes_when_its_answer_is_sent_again(monkeypatch, model):
     async with isolated_database() as factory:
         case_id, user_id, _ = await seeded_case(factory, trace=None)
         scripted = model(assess=[ASKING], read=[down], judge=[JUDGED])
         async with signed_in(monkeypatch, factory, user_id) as client:
-            await asked_twice_then_lost(client, scripted, case_id)
+            await asked_then_lost(client, scripted, case_id)
             retried = await client.post(
                 f"/cases/{case_id}/chat/messages",
                 json={"content": "Around two in the morning.", "client_request_id": "send-1"},
@@ -400,12 +411,12 @@ async def test_a_round_asked_twice_resumes_when_its_answer_is_sent_again(monkeyp
         assert scripted.stages().count("read") == provider.TRANSPORT_ATTEMPTS + 1
 
 
-async def test_a_round_asked_twice_resumes_when_the_case_is_analysed_again(monkeypatch, model):
+async def test_an_answered_round_resumes_when_the_case_is_analysed_again(monkeypatch, model):
     async with isolated_database() as factory:
         case_id, user_id, _ = await seeded_case(factory, trace=None)
         scripted = model(assess=[ASKING], read=[down], judge=[JUDGED])
         async with signed_in(monkeypatch, factory, user_id) as client:
-            await asked_twice_then_lost(client, scripted, case_id)
+            await asked_then_lost(client, scripted, case_id)
             analysed = await client.post(f"/cases/{case_id}/analysis")
 
         assert analysed.json()["status"] == "completed", "the answered gap was asked again"

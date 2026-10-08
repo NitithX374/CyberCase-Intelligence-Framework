@@ -69,5 +69,5 @@ async def test_matched_conditions_use_identical_reading_content_and_canonical_bi
         assert result["status"] == "completed"
     assert seen[0]["content"] == seen[1]["content"]
     assert seen[0]["system"] == seen[1]["system"]
-    assert all(item["stage"] == "case_reading" and item["grammar"] is False for item in seen)
+    assert all(item["stage"] == "case_reading" and "grammar" not in item for item in seen)
     assert all(item["config"].output_tokens == 32608 for item in seen)

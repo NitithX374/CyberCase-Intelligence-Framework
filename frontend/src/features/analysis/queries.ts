@@ -1,9 +1,9 @@
-import { useMutation, useMutationState, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCaseAnalysis, startCaseAnalysis } from "./api";
 import { clearProgress, recordStep } from "./progress";
 import type { AnalysisStepRead, CaseAnalysisResultRead } from "@/lib/api/types";
 import { caseQueryKeys } from "@/lib/queryKeys";
-import { useIsFollowupPending } from "@/features/chat/useCaseChat";
+import { useCaseChatQuery, useIsFollowupPending } from "@/features/chat/useCaseChat";
 
 export function useCaseAnalysis(caseId: string | null) {
   return useQuery<CaseAnalysisResultRead | null>({
@@ -17,21 +17,28 @@ export function useCaseAnalysis(caseId: string | null) {
 const UNRUNNABLE_ANALYSIS_KEY = ["cases", "__no_case__", "analysis", "run"] as const;
 
 export function useIsCaseAnalysisRunning(caseId: string | null): boolean {
-  const running = useMutationState({
-    filters: {
-      mutationKey: caseId ? caseQueryKeys.analysisRun(caseId) : UNRUNNABLE_ANALYSIS_KEY,
-      exact: true,
-      status: "pending",
-    },
-    select: (mutation) => mutation.mutationId,
+  const running = useIsMutating({
+    mutationKey: caseId ? caseQueryKeys.analysisRun(caseId) : UNRUNNABLE_ANALYSIS_KEY,
+    exact: true,
   });
-  return running.length > 0;
+  return running > 0;
 }
 
 export function useIsAnalysisUpdating(caseId: string | null): boolean {
   const running = useIsCaseAnalysisRunning(caseId);
   const answering = useIsFollowupPending(caseId);
   return running || answering;
+}
+
+export function useAnalysisAvailability(caseId: string | null) {
+  const chat = useCaseChatQuery(caseId);
+  const isUpdating = useIsAnalysisUpdating(caseId);
+  const isWaitingForFollowup = Boolean(chat.data?.pending_question_id);
+  return {
+    isUpdating,
+    isWaitingForFollowup,
+    canAnalyze: caseId !== null && chat.isSuccess && !isWaitingForFollowup && !isUpdating,
+  };
 }
 
 export function useStartCaseAnalysis(caseId: string | null) {
@@ -53,7 +60,7 @@ export function useStartCaseAnalysis(caseId: string | null) {
     onSettled: (_step, error) => {
       if (!caseId) return;
       clearProgress(queryClient, caseId);
-      void Promise.all([
+      return Promise.all([
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.cases() }),
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId), exact: true }),
         queryClient.refetchQueries({ queryKey: caseQueryKeys.chat(caseId), exact: true }),

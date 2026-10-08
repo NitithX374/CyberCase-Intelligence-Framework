@@ -5,12 +5,42 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import cached_property
 
+import threading
+from typing import Any
+
 from pythainlp.tokenize import sent_tokenize
 
 from app.sources.bundle import CaseSourceItem
 from app.trace.claims import MAX_CONTEXT_CHARS, CaseQuoteContext
 
 MIN_SENTENCE_CHARS = 25
+
+_sat_model: Any = None
+_sat_lock = threading.Lock()
+
+
+def get_sat_segmenter() -> Any:
+    global _sat_model
+    if _sat_model is None:
+        with _sat_lock:
+            if _sat_model is None:
+                try:
+                    from wtpsplit import SaT
+
+                    _sat_model = SaT("sat-3l-sm")
+                except Exception:
+                    _sat_model = False
+    return _sat_model if _sat_model is not False else None
+
+
+def tokenize_sentences(segment_text: str) -> list[str]:
+    segmenter = get_sat_segmenter()
+    if segmenter is not None:
+        try:
+            return segmenter.split(segment_text)
+        except Exception:
+            pass
+    return sent_tokenize(segment_text, engine="crfcut")
 
 
 @dataclass(frozen=True)
@@ -39,8 +69,9 @@ def line_spans(text: str) -> list[tuple[int, int]]:
 
 
 def line_sentences(text: str, start: int, end: int) -> list[tuple[int, int]]:
-    pieces = sent_tokenize(text[start:end], engine="crfcut")
-    if "".join(pieces) != text[start:end]:
+    segment_text = text[start:end]
+    pieces = tokenize_sentences(segment_text)
+    if "".join(pieces) != segment_text:
         return [stripped(text, start, end)]
     spans: list[tuple[int, int]] = []
     held_start, at = start, start
@@ -129,8 +160,10 @@ __all__ = [
     "MIN_SENTENCE_CHARS",
     "Sentence",
     "SentenceIndex",
+    "get_sat_segmenter",
     "quote_context",
     "sentence_spans",
     "split_sources",
     "split_text",
+    "tokenize_sentences",
 ]

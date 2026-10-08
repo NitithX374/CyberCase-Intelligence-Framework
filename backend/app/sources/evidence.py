@@ -6,10 +6,11 @@ from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 
 from app.sources.bundle import CaseSourceItem
+from app.sources.markup import source_tables
 from app.trace.quotes import MAX_QUOTE_CHARS
 from app.trace.sentences import sentence_spans
 
-EVIDENCE_VERSION = "evidence_units_v1"
+EVIDENCE_VERSION = "evidence_units_v2"
 UNIT_PATTERN = re.compile(
     r"(?P<source>[^:]{1,160}):U(?P<number>[0-9]{3,})-(?P<revision>[a-f0-9]{16})"
 )
@@ -31,7 +32,7 @@ def evidence_revision(text: str) -> str:
 def evidence_units(source: CaseSourceItem) -> tuple[EvidenceUnit, ...]:
     if not source.text:
         return ()
-    starts = [0, *(start for start, _ in sentence_spans(source.text)[1:])]
+    starts = segmentation_starts(source.text)
     ends = [*starts[1:], len(source.text)]
     revision = evidence_revision(source.text)
     spans = [
@@ -49,6 +50,17 @@ def evidence_units(source: CaseSourceItem) -> tuple[EvidenceUnit, ...]:
         )
         for index, (start, end) in enumerate(spans, 1)
     )
+
+
+def segmentation_starts(text: str) -> list[int]:
+    starts: list[int] = []
+    cursor = 0
+    for table in source_tables(text):
+        starts.extend(cursor + start for start, _ in sentence_spans(text[cursor : table.start]))
+        starts.extend([table.start, *table.row_starts[1:]])
+        cursor = table.end
+    starts.extend(cursor + start for start, _ in sentence_spans(text[cursor:]))
+    return [0, *starts[1:]]
 
 
 def evidence_payload(source: CaseSourceItem) -> dict[str, object]:

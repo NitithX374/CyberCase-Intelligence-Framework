@@ -197,8 +197,10 @@ async def test_followup_answer_still_supports_a_claim_through_the_same_source_un
 
     approved = calls[1]["content"]["reading"]["claims"]
     assert [claim["claim_id"] for claim in approved] == ["A-01", "A-03", "A-04"]
-    assert approved[-1]["supporting_citations"][0]["source_id"] == "QA-03"
-    assert approved[-1]["supporting_citations"][0]["exact_quote"] == history[0].answer
+    assert approved[-1]["supporting_citations"] == [{"exact_quote": history[0].answer}]
+    citation = trace.claims[-1].supporting_citations[0]
+    assert citation.source_id == "QA-03"
+    assert citation.evidence_unit_ids == [evidence_units(qa)[0].unit_id]
     assert trace.claims[-1].semantic_grounding.verdict == "supported"
 
 
@@ -248,10 +250,13 @@ async def test_judgement_cannot_reintroduce_a_withheld_claim_id_in_its_summary(m
 
 
 @pytest.mark.asyncio
-async def test_long_input_is_unassessed_and_withheld_from_the_judgement(monkeypatch):
+async def test_long_input_is_scored_with_research_truncation_and_negative_verdict_withheld(
+    monkeypatch,
+):
     scorer = FakeNli(fits=lambda premise, hypothesis: False)
     trace, calls, _ = await run_pipeline(monkeypatch, scorer=scorer)
-    assert all(claim.semantic_grounding.reason == "input_too_long" for claim in trace.claims)
+    assert all(claim.semantic_grounding.reason == "lr_not_supported" for claim in trace.claims)
+    assert all(claim.semantic_grounding.truncated for claim in trace.claims)
     assert [call["stage"] for call in calls] == ["case_reading"]
 
 

@@ -40,7 +40,9 @@ export function CaseWorkspace({ children }: { children: ReactNode }) {
     setIsChatOpen(next);
     try {
       localStorage.setItem(CHAT_OPEN_STORAGE_KEY, String(next));
-    } catch {}
+    } catch (error) {
+      console.warn("Could not save the chat panel preference", error);
+    }
   }, []);
   const openChat = useCallback(() => setChatOpen(true), [setChatOpen]);
   const closeChat = useCallback(() => setChatOpen(false), [setChatOpen]);

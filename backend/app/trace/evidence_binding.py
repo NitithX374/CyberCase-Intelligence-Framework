@@ -33,7 +33,9 @@ def direct_citation(unit: EvidenceUnit, source: CaseSourceItem) -> CaseSourceCit
         document_id=source.document_id,
         filename=source.filename,
         page_numbers=list(locator[2]) if locator else [],
-        context=quote_context(SentenceIndex(source.text), quote),
+        context=None
+        if "<tr" in quote.lower()
+        else quote_context(SentenceIndex(source.text), quote),
     )
 
 
@@ -105,8 +107,7 @@ def bind_citations(
 
         end = start + len(quote)
         unit_ids = [
-            u.unit_id for u in index.units_for(source.source_id)
-            if u.start < end and u.end > start
+            u.unit_id for u in index.units_for(source.source_id) if u.start < end and u.end > start
         ]
         locator = find_document_locator(
             {

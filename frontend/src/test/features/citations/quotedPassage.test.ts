@@ -5,7 +5,7 @@ describe("readable", () => {
   it("shows OCR table and page-number markup as plain text", () => {
     expect(
       readable("<tr><td>3 มีนาคม 2569</td><td>123-4-56789</td></tr><page_number>2</page_number>"),
-    ).toBe(" 3 มีนาคม 2569 123-4-56789 ");
+    ).toBe("3 มีนาคม 2569 | 123-4-56789\n");
   });
 
   it("keeps markup that is not the OCR's own, such as a link in a phishing email", () => {
@@ -40,7 +40,7 @@ describe("quotedPassage", () => {
     });
 
     expect(`${passage.before}[${passage.quote}]${passage.after}`).toBe(
-      "… 3 มีนาคม 2569 [123-4-56789] 52,000 บาท …",
+      "… 3 มีนาคม 2569 | [123-4-56789] | 52,000 บาท …",
     );
   });
 

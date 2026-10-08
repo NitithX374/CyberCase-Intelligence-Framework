@@ -28,6 +28,10 @@ Code is grouped by flow, so following one means opening one folder. Each folder 
 
 A feature may import another feature's hooks or types (Analysis reads sources); shared folders import no feature. There are no barrel files: import from the file that defines the name.
 
+In Sources, `SourceViewport.tsx` owns selection and representation tabs; `SourcePreviews.tsx` renders original files and extracted text, and `sourcePresentation.ts` reads page metadata. Analysis and follow-up pending indicators use TanStack Query's `useIsMutating` with exact case mutation keys, so they survive unmounting.
+
+Every manual Analyze action uses `useAnalysisAvailability`: Chat must be loaded, no follow-up question may be awaiting an answer, and no analysis or follow-up answer mutation may be running. The analysis mutation remains pending until the Chat refresh finishes. Completing the follow-up answers continues analysis automatically through the existing Chat request.
+
 Tests live only in `src/test/`, at the path of the file they test: `src/features/chat/useCaseChat.ts` is tested by `src/test/features/chat/useCaseChat.test.tsx`. A test imports through `@/`, never by a relative path, so moving it breaks nothing. `npm run lint` fails on a test file anywhere else.
 
 ## Contracts
@@ -46,6 +50,7 @@ Each Finding shows saved supporting Source linkage separately from semantic
 support: direct, recovered, legacy and unresolved references. Duplicate references
 do not inflate these counts. Saved Claim-level NLI verdicts distinguish supported,
 not_supported and unassessed; no calibrated factual-confidence score is shown.
+Supported Findings have a teal accent and checked support label. The Supported filter uses only the saved semantic verdict; All retains every Finding and the Not confirmed filter remains available.
 Source chips group citations by Source/page while preserving every
 distinct cited span in the drawer, including separate occurrences of identical text.
 New LLM extraction and Judgement run independently in parallel over the

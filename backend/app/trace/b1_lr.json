@@ -1,0 +1,28 @@
+{
+  "method": "b1-lr-wice-train-v1",
+  "fit_dataset": "WiCE TRAIN, 3750 rows",
+  "features": ["P_entailment", "P_neutral", "P_contradiction"],
+  "weights": [1.4108176231384277, -1.0513354539871216, -0.3022925555706024],
+  "intercept": 0.05828031152486801,
+  "threshold": 0.5,
+  "selector_threshold": 0.2,
+  "selector_model": "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+  "selector_revision": "4328cf26390c98c5e3c738b4460a05b95f4911f5",
+  "selector_max_tokens": 128,
+  "selector_hashes": {
+    "model.safetensors": "b5722100700c48b74c9c199c5f39ff9493c94d1497f719e791d4bc3861d7714a",
+    "modules.json": "8f4b264b80206c830bebbdcae377e137925650a433b689343a63bdc9b3145460",
+    "sentence_bert_config.json": "70f4448f31320443fe3557cacea5abf2dcc4915dda8c80646bec9f3bb0aa5a1f",
+    "1_Pooling/config.json": "a37f83ada23e7887be6b88f4998927dbeac0038af301553c7cd5461413bf1a56"
+  },
+  "source_artifact": "nli_grounding_experiment/outputs/canonical/final_lr_coefficients.json",
+  "source_artifact_sha256": "77193565a1de76d5f7e5afbd58a31577bd12150643614009294014eefb2c4403",
+  "selection_rule": "cosine >= 0.20; if none pass retain first maximum; original unit order",
+  "premise_separator": "\n",
+  "nli_max_tokens": 512,
+  "nli_truncation": "longest_first",
+  "solver": "lbfgs",
+  "C": 1.0,
+  "class_weight": "balanced",
+  "seed": 42
+}

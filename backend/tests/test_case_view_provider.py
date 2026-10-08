@@ -9,7 +9,7 @@ from app.llm import request as provider
 from app.llm.settings import AnalysisPipelineConfig
 
 
-async def test_existing_native_schema_transport_batches_claims_in_one_non_thinking_request(
+async def test_prompt_structured_transport_batches_claims_in_one_non_thinking_request(
     monkeypatch,
 ):
     posts = []
@@ -37,7 +37,10 @@ async def test_existing_native_schema_transport_batches_claims_in_one_non_thinki
     assert payload["max_tokens"] == 4096
     assert payload["temperature"] == 0
     assert payload["provider"] == {"order": ["test-provider"], "allow_fallbacks": False}
-    schema = payload["output_config"]["format"]["schema"]
+    assert "output_config" not in payload
+    schema = json.loads(
+        payload["system"].split("<response_contract>\n")[1].split("\n</response_contract>")[0]
+    )
     assert set(schema["required"]) == {"parties", "timeline", "impacts"}
     assert schema["additionalProperties"] is False
     content = json.loads(payload["messages"][0]["content"])
@@ -47,7 +50,7 @@ async def test_existing_native_schema_transport_batches_claims_in_one_non_thinki
     assert result.extraction.status == "completed"
 
 
-async def test_native_schema_failure_yields_empty_views_with_explicit_failure(monkeypatch):
+async def test_prompt_schema_failure_yields_empty_views_with_explicit_failure(monkeypatch):
     def response(request):
         return httpx.Response(
             200,

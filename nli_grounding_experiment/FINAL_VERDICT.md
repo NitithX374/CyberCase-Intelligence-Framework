@@ -1,10 +1,11 @@
 # FINAL VERDICT: CyberCase Evidence-Grounded Claim Verification
 
 **Date:** 2026-10-07  
+**Integration audit:** WiCE table values are synchronized with `outputs/canonical/final_metrics.json`; paired Supported-F1 differences are synchronized with `outputs/stage1_b1_lr_verification.json`. No models were refitted.
 **Framework:** CyberCase Intelligence Framework  
 **Evaluation Splits:** WiCE (Train, Dev, Test), AttributionBench (In-Domain, Out-of-Domain)  
 **Hardware Profile:** NVIDIA GeForce GTX 1650 (4,096 MiB VRAM), AMD / Intel Host CPU, Windows OS  
-**Random Seed:** 42 (Strictly deterministic across all experiments and bootstraps)
+**Original Research Seed:** 42. Integration bootstrap seed: 20261007. Fixed seeds do not establish bitwise determinism across devices or library versions.
 
 ---
 
@@ -21,7 +22,7 @@ $$\text{Retained Evidence Units} \xrightarrow{\quad\text{Concatenation}\quad} \t
                                                ▼
                 ┌─────────────────────────────────────────────────────────────┐
                 │             Reader / Extraction Module                      │
-                │  Produces: Claim Hypothesis C + Raw Evidence Units {U_1..U_m}│
+                │  Produces: Claim C + IDs of backend-created Source units     │
                 └──────────────────────────────┬──────────────────────────────┘
                                                ▼
                 ┌─────────────────────────────────────────────────────────────┐
@@ -49,7 +50,7 @@ $$\text{Retained Evidence Units} \xrightarrow{\quad\text{Concatenation}\quad} \t
                          ┌─────────────────────┴─────────────────────┐
                          ▼                                           ▼
                  [ SUPPORTED ]                               [ UNSUPPORTED ]
-          Admitted into Judgement Layer               Quarantined / Flagged for Gap Analysis
+          Admitted into Judgement Layer               Withheld; retained in analysis trace
 ```
 
 ---
@@ -60,12 +61,12 @@ $$\text{Retained Evidence Units} \xrightarrow{\quad\text{Concatenation}\quad} \t
 
 | Evaluation Metric | B0 (Naive Baseline) | B1 (Semantic Filter + Heuristic) | B1-LR (Final Champion) | B3 (Bidirectional NLI + LR) |
 | :--- | :---: | :---: | :---: | :---: |
-| **Accuracy** | 64.65% | 63.53% | **66.64%** | 66.54% |
-| **Macro-$F_1$** | 0.5852 | 0.5966 | **0.6185** | 0.6205 |
-| **Supported Precision** | 43.78% | 42.92% | **46.26%** | 46.13% |
-| **Supported Recall** | 44.85% | 56.06% | **50.61%** | 51.21% |
-| **Supported-$F_1$** | 0.4431 | 0.4860 | **0.4834** | 0.4856 |
-| **False Support Rate (FSR)** | 25.46% | 31.64% | **26.22%** | 27.03% |
+| **Accuracy** | 64.67% | 63.55% | **66.64%** | 66.54% |
+| **Macro-$F_1$** | 0.5852 | 0.5967 | **0.6185** | 0.6205 |
+| **Supported Precision** | 42.68% | 42.65% | **46.26%** | 46.24% |
+| **Supported Recall** | 42.42% | 52.73% | **50.61%** | 52.12% |
+| **Supported-$F_1$** | 0.4255 | 0.4715 | **0.4834** | 0.4900 |
+| **False Support Rate (FSR)** | 25.41% | 31.62% | **26.22%** | 27.03% |
 | **Pipeline Throughput Latency** | ~390 ms / claim | ~227 ms / claim | **~227 ms / claim** | ~449 ms / claim |
 
 *Confusion Matrix for B1-LR on WiCE Test:* $\text{TP} = 167$, $\text{FP} = 194$, $\text{TN} = 546$, $\text{FN} = 163$ ($N = 1,070$, Gold Positive = 330, Gold Negative = 740).
@@ -76,8 +77,8 @@ $$\text{Retained Evidence Units} \xrightarrow{\quad\text{Concatenation}\quad} \t
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **B1-LR vs B0** | **+1.98%** [+0.19%, +3.74%] | **+0.0333** [+0.0128, +0.0533] | **+0.0576** [+0.0286, +0.0868] | +0.75% [-1.09%, +2.70%] | **Macro-$F_1$ & Supp-$F_1$ Highly Significant** |
 | **B1-LR vs B0-LR** | **+2.07%** [+0.28%, +3.83%] | **+0.0248** [+0.0048, +0.0451] | **+0.0349** [+0.0072, +0.0636] | -1.25% [-3.38%, +0.83%] | **Macro-$F_1$ & Supp-$F_1$ Significant** |
-| **B1-LR vs B1** | **+3.10%** [+1.68%, +4.39%] | **+0.0219** [+0.0076, +0.0350] | -0.0026 [-0.0221, +0.0169] | **-5.42%** [-7.17%, -3.70%] | **Macro-$F_1$ Significant; FSR Major Reduction** |
-| **B1-LR vs B3** | +0.10% [-0.75%, +0.93%] | -0.0020 [-0.0113, +0.0065] | -0.0022 [-0.0156, +0.0111] | -0.81% [-1.80%, +0.13%] | **Indistinguishable (CI spans 0); Latency $2\times$ worse in B3** |
+| **B1-LR vs B1** | **+3.10%** [+1.68%, +4.39%] | **+0.0219** [+0.0076, +0.0350] | +0.0119 [-0.0067, +0.0279] | **-5.42%** [-7.17%, -3.70%] | **Macro-$F_1$ Significant; FSR Major Reduction** |
+| **B1-LR vs B3** | +0.10% [-0.75%, +0.93%] | -0.0020 [-0.0113, +0.0065] | -0.0066 [-0.0200, +0.0045] | -0.81% [-1.80%, +0.13%] | **Indistinguishable (CI spans 0); Latency $2\times$ worse in B3** |
 
 ---
 
@@ -86,13 +87,15 @@ $$\text{Retained Evidence Units} \xrightarrow{\quad\text{Concatenation}\quad} \t
 | Component Architecture | Empirical Verdict | Rationale & Statistical Evidence |
 | :--- | :---: | :--- |
 | **Semantic Evidence Filtering ($\tau = 0.20$)** | **KEEP** | Filters out 47.2% of irrelevant text units while maintaining **93.52% evidence recall** on DEV. Shortens premise character length by 25.3%, speeding up NLI inference from 390.2 ms to 313.7 ms per claim. Paired with a learned boundary, it produces a statistically significant $+0.0333$ Macro-$F_1$ gain over unfiltered B0. |
-| **Learned 3D Decision Boundary (Logistic Regression)** | **KEEP** | Replaces the naive heuristic threshold ($P_{\text{ent}} = \max$) with a calibrated linear decision plane. Drastically suppresses false positives, slashing False Support Rate by **$-5.42\%$** (95% CI: [$-7.17\%, -3.70\%$]) relative to B1 while adding only 0.76 ms overhead. |
+| **Learned 3D Decision Boundary (Logistic Regression)** | **KEEP** | Replaces the naive heuristic threshold ($P_{\text{ent}} = \max$) with a task-specific linear decision boundary. Drastically suppresses false positives, slashing False Support Rate by **$-5.42\%$** (95% CI: [$-7.17\%, -3.70\%$]) relative to B1 while adding only 0.76 ms overhead. |
 | **Sentence-Wise Aggregation (SW-NLI-LR)** | **REJECT** | Severely degrades cross-attention and inter-sentence discourse context. DEV Macro-$F_1$ plummeted by **$-0.0597$** (0.5800 vs 0.6397), Supported-$F_1$ plunged by **$-0.0916$**, and inference cost escalated $>10\times$ (41,943 pairs vs 3,750 pairs). |
 | **Alternative Semantic Selectors (Top-$k$, Margin)** | **REJECT** | Current Selector A ($\tau = 0.20$) outperformed all 12 candidate selectors on DEV in Macro-$F_1$ (0.6397) and Supported-$F_1$ (0.5097). Relative margin selectors ($\delta \in \{0.10, 0.15, 0.20\}$) crippled evidence recall down to 56.66%–72.05%, discarding gold evidence. |
 | **Nonlinear Classifier Head (XGBoost)** | **REJECT** | Promoted on DEV ($\Delta \text{Supp-}F_1 = +0.0230$), but failed decisively on TEST: paired bootstrap $\Delta \text{Macro-}F_1 = +0.0035$ (95% CI: [$-0.0162, +0.0234$], spans zero), while False Support Rate deteriorated by **$+3.95\%$** (95% CI: [$+1.91\%, +5.88\%$]). Added complexity harmed trust boundaries. |
 | **Nonlinear Classifier Head (Tiny MLP)** | **REJECT** | Underperformed Logistic Regression on DEV (Macro-$F_1 = 0.6367$ vs 0.6397; Supported-$F_1 = 0.5145$ vs 0.5097; FSR $= 24.54\%$ vs 22.11%). Rejected at the DEV gate. |
 | **Reverse NLI ($C \implies E$ Score Fusion)** | **REJECT** | $\Delta \text{Macro-}F_1$ was statistically indistinguishable from zero ($-0.0020$, 95% CI: [$-0.0113, +0.0065$]) while doubling end-to-end NLI compute time and latency from 227 ms to 449 ms. |
 | **Alternative Backbone (`xlm-roberta-large-xnli`)** | **REJECT** | 560M parameter model (2x parameter size, 2.24 GB) underperformed the frozen `mDeBERTa-v3-base-xnli` on DEV (Macro-$F_1 = 0.6316$ vs 0.6397, $\Delta = -0.0080$; Supported-$F_1 = 0.4787$ vs 0.5097, $\Delta = -0.0311$). |
+
+Audit qualification, 2026-10-07: the old XLM-R stage joins retained units with spaces while the champion uses newlines. The reported DEV values and stage decision above are preserved, but this is not a completely controlled backbone-only comparison. The separate English checkpoint comparison also finds a larger MiniCheck checkpoint outperforming standalone mDeBERTa; MiniCheck+B1-LR and MiniCheck Thai transfer remain unmeasured. See [the checkpoint audit](../research/attribution_benchmark/CHECKPOINT_AUDIT_2026-10-07.md).
 
 ---
 
@@ -102,7 +105,7 @@ Every rejected component was eliminated through formal empirical gating:
 
 1. **Reverse NLI (B3):**
    * *Mechanism:* Concatenating a reverse NLI pass ($C \implies E$) to evaluate premise entailment.
-   * *Rejection Rationale:* $\Delta \text{Macro-}F_1 = -0.0020$ [$-0.0113, +0.0065$] on WiCE Test. The paired bootstrap confidence interval spans zero, confirming zero statistical benefit while doubling GPU latency from 227 ms to 449 ms.
+   * *Rejection Rationale:* $\Delta \text{Macro-}F_1 = -0.0020$ [$-0.0113, +0.0065$] on WiCE Test. The paired bootstrap confidence interval spans zero, showing no detectable benefit in this comparison while doubling GPU latency from 227 ms to 449 ms.
 2. **Sentence-Wise NLI (SW-NLI-LR):**
    * *Mechanism:* Scoring each sentence unit $U_i$ against Claim $C$ individually, followed by pooling features (`max_entail`, `mean_entail`, etc.).
    * *Rejection Rationale:* In natural language claim verification, multi-sentence evidence requires joint attention across discourse markers and coreferences. Isolated scoring degraded DEV Macro-$F_1$ by $-0.0597$ and Supported-$F_1$ by $-0.0916$, while inflating NLI forward passes by $>10\times$.
@@ -138,14 +141,14 @@ The final champion (**B1-LR**) was evaluated with completely frozen parameters (
 
 ## F. THESIS-SAFE CLAIMS
 
-The following empirical claims are directly proven and strictly supported:
+The following claims are supported within the reported benchmark protocols; they do not establish production factual or legal correctness:
 
 1. **Semantic filtering improves both accuracy and computational efficiency:**
    * Filtering candidate units at $\tau = 0.20$ removes 47.2% of raw units while retaining 93.52% of gold evidence.
    * It shortens premise character length by 25.3%, reducing NLI GPU forward pass latency from 390.2 ms to 313.7 ms per claim.
    * Combining semantic filtering with a learned decision hyperplane yields a statistically significant $+0.0333$ Macro-$F_1$ improvement (95% CI: [$+0.0128, +0.0533$]) and $+0.0576$ Supported-$F_1$ improvement (95% CI: [$+0.0286, +0.0868$]) over unfiltered B0.
 2. **A learned decision hyperplane substantially controls False Support Rate:**
-   * Replacing heuristic argmax with balanced Logistic Regression on $[P_{\text{ent}}, P_{\text{neu}}, P_{\text{con}}]$ drops the False Support Rate from 31.64% to 26.22% ($\Delta = -5.42\%$, 95% CI: [$-7.17\%, -3.70\%$]), preventing unsupported claims from contaminating downstream analysis.
+   * Replacing heuristic argmax with balanced Logistic Regression on $[P_{\text{ent}}, P_{\text{neu}}, P_{\text{con}}]$ drops the False Support Rate from 31.64% to 26.22% ($\Delta = -5.42\%$, 95% CI: [$-7.17\%, -3.70\%$]), reducing false admissions on WiCE Test; downstream citation utilization requires a separate matched experiment.
 3. **Bidirectional (Reverse) NLI is empirically unviable:**
    * Computing reverse inference ($C \implies E$) yields a statistically indistinguishable Macro-$F_1$ difference ($\Delta = -0.0020$, 95% CI: [$-0.0113, +0.0065$]) while doubling system latency.
 4. **Joint premise concatenation outperforms sentence-wise decomposition:**
@@ -175,62 +178,29 @@ The following statements are empirically false or misleading and must **never** 
 ## H. FINAL SYSTEM PLACEMENT IN CYBERCASE
 
 ```
-                  ┌───────────────────────────────────────────────┐
-                  │                 Case Sources                  │
-                  │   (Disk Images, Memory Dumps, Syslogs, PCAP)  │
-                  └───────────────────────┬───────────────────────┘
-                                          │
-                                          ▼
-                  ┌───────────────────────────────────────────────┐
-                  │         Document Reader & Ingestion           │
-                  │ (Textract, OCR, PDF Parser, Normalization)    │
-                  └───────────────────────┬───────────────────────┘
-                                          │
-                                          ▼
-                  ┌───────────────────────────────────────────────┐
-                  │          Claim & Evidence Extraction          │
-                  │  Generates: Candidate Claims + Evidence Units │
-                  └───────────────────────┬───────────────────────┘
-                                          │
-                                          ▼
-                  ┌───────────────────────────────────────────────┐
-                  │              Deterministic Binding            │
-                  │ (Source File URI, Chunk Offset, Unit ID Maps) │
-                  └───────────────────────┬───────────────────────┘
-                                          │
-                                          ▼
-               =======================================================
-               │             FINAL CLAIM VERIFIER (B1-LR)            │
-               │                                                     │
-               │  1. Semantic Filter (tau = 0.20)                    │
-               │  2. Frozen Forward NLI (mDeBERTa-v3-base-xnli)      │
-               │  3. Logistic Regression Calibrated Decision Head    │
-               =======================================================
-                                          │
-                      ┌───────────────────┴───────────────────┐
-                      ▼                                       ▼
-            Accepted Claim State                    Rejected Claim State
-           (Grounded & Verified)                 (Unsubstantiated / Quarantined)
-                      │                                       │
-                      └───────────────────┬───────────────────┘
-                                          │
-                                          ▼
-                  ┌───────────────────────────────────────────────┐
-                  │             CyberCase Judgement               │
-                  │  (Deterministic Rules, Temporal Logic Engine) │
-                  └───────────────────────┬───────────────────────┘
-                                          │
-                                          ▼
-                  ┌───────────────────────────────────────────────┐
-                  │              Downstream Artifacts             │
-                  │  • Timeline Reconstruction                    │
-                  │  • MITRE ATT&CK Mapping                       │
-                  │  • Investigation Gap Analysis                 │
-                  │  • Automated Case Summary & Court Report      │
-                  └───────────────────────────────────────────────┘
+Case -> N Documents / Narrative / Follow-up Sources
+       -> extraction / OCR with provenance
+       -> deterministic addressable Source units
+       -> Reader: canonical Claims + selected unit IDs
+       -> deterministic binding: original text / offsets / document pages
+       -> frozen B1-LR admission
+            MPNet cosine >= .20 selection, research-defined top-1 retention
+            -> original retained units joined with one newline
+            -> forward mDeBERTa, longest-first truncation at 512 tokens
+            -> WiCE TRAIN-fitted task-specific LR boundary, score >= .50
+       -> admitted Claims only
+            |-> Views: Parties / Timeline / Impacts
+            |-> Judgement: LLM synthesis
+                  -> Summary claim IDs / Gaps / conditional MITRE context
+                  -> deterministic reference validation / Report
+
+Withheld Claims -> saved trace only; no Judgement admission
+Zero admitted Claims -> abstention; no Judgement call
 ```
 
-The verifier establishes a dependable trust boundary directly ahead of the Judgement engine. It prevents hallucinatory or ungrounded claims from polluting timeline synthesis and threat actor attribution, while executing under 230 ms per claim.
+This boundary controls which Claim objects enter Judgement; it does not prove real-world truth, legal correctness or the semantic correctness of every derived view. Admitted Claims retain their original supporting citation text, including units omitted from the NLI premise. Another admitted Claim or its passages can therefore expose a withheld proposition. Final reference checks reject withheld Claim IDs, but do not verify every implicit statement in generated prose.
+
+The completed integration and paired experiments are reported in [B1_RESULTS_2026-10-07.md](../research/attribution_benchmark/B1_RESULTS_2026-10-07.md). That report separates admission, downstream Claim-ID utilization, inherited-gold EN/MT-TH transfer, measured runtime and deployment limits. The historical research latency above is not a guarantee of production latency.
 
 ---
 

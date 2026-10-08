@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AnalysisFindings } from "@/features/analysis/AnalysisFindings";
+import type { CaseAnalysisResultRead } from "@/lib/api/types";
 import {
   analysisResult,
   caseId,
@@ -17,6 +18,13 @@ const analysis = analysisResult({
     summary: "A transfer was reported.",
     claims: [
       claim("The statement reports a transfer.", source.id, {
+        semantic_grounding: {
+          verdict: "supported",
+          reason: "lr_supported",
+          threshold: 0.5,
+          selection_ms: 0,
+          duration_ms: 0,
+        },
         supporting_citations: [
           {
             source_id: source.id,
@@ -32,19 +40,33 @@ const analysis = analysisResult({
         epistemic_status: "not_confirmed",
         supporting_citations: [],
       }),
+      claim("Another transaction was mentioned.", source.id, {
+        claim_id: "A-03",
+        semantic_grounding: {
+          verdict: "not_supported",
+          reason: "lr_not_supported",
+          threshold: 0.5,
+          selection_ms: 0,
+          duration_ms: 0,
+        },
+      }),
+      claim("A legacy report has a Source link.", source.id, { claim_id: "A-04" }),
     ],
   }),
   external_context_json: { sources_read: sourcesRead(source.id) },
 });
 
-const navigation = vi.hoisted(() => ({ search: "" }));
+const navigation = vi.hoisted(() => ({
+  search: "",
+  result: undefined as CaseAnalysisResultRead | undefined,
+}));
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ caseId }),
   useSearchParams: () => new URLSearchParams(navigation.search),
 }));
 vi.mock("@/features/analysis/queries", () => ({
-  useCaseAnalysis: () => ({ data: analysis, isLoading: false }),
+  useCaseAnalysis: () => ({ data: navigation.result, isLoading: false }),
 }));
 vi.mock("@/features/sources/queries", () => ({
   useCaseSources: () => ({ data: [source], isLoading: false }),
@@ -52,9 +74,40 @@ vi.mock("@/features/sources/queries", () => ({
 
 beforeEach(() => {
   navigation.search = "";
+  navigation.result = analysis;
 });
 
 describe("AnalysisFindings", () => {
+  it("shows an accurate empty Supported filter and lets the reader return to All", () => {
+    navigation.result = structuredClone(analysis);
+    navigation.result.trace_json!.claims[0].semantic_grounding = null;
+    render(<AnalysisFindings />);
+    fireEvent.click(screen.getByRole("button", { name: "Supported 0" }));
+    expect(screen.getByText("No supported findings in this analysis.")).toBeVisible();
+    expect(screen.queryByRole("article")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "All 4" }));
+    expect(screen.getByText("The statement reports a transfer.")).toBeVisible();
+  });
+
+  it("filters by saved Source support and retains the other findings under All", () => {
+    render(<AnalysisFindings />);
+    fireEvent.click(screen.getByRole("button", { name: "Supported 1" }));
+    expect(screen.getByRole("button", { name: "Supported 1" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("The statement reports a transfer.")).toBeVisible();
+    expect(screen.queryByText("The transfer went to Account B.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Another transaction was mentioned.")).not.toBeInTheDocument();
+    expect(screen.queryByText("A legacy report has a Source link.")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "statement.pdf · p. 4" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("received 52,000 baht");
+    fireEvent.click(screen.getByRole("button", { name: "Close source" }));
+    fireEvent.click(screen.getByRole("button", { name: "All 4" }));
+    expect(screen.getByText("Another transaction was mentioned.")).toBeVisible();
+    expect(screen.getByText("A legacy report has a Source link.")).toBeVisible();
+  });
+
   it("lists every finding and opens the exact page a quotation came from", () => {
     render(<AnalysisFindings />);
 

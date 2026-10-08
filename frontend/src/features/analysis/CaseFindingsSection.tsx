@@ -71,6 +71,7 @@ function FindingRow({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const detailsId = `finding-${finding.id}-details`;
+  const isSupported = finding.traceability.semanticSupport === "supported";
 
   const isUnknown = finding.claimType === "unknown" || finding.epistemicStatus === "unknown";
   const isNotConfirmed = finding.epistemicStatus === "not_confirmed";
@@ -82,19 +83,27 @@ function FindingRow({
       id={`finding-${finding.id}`}
       aria-label={`Finding ${number}`}
       className={`scroll-mt-5 rounded-xl border p-4 sm:p-5 transition-all duration-150 ${
+        isSupported ? "border-l-4 border-l-established" : ""
+      } ${
         isNotConfirmed
           ? "border-unresolved/30 bg-surface shadow-xs"
           : isUnknown
             ? "border-amber-500/25 bg-amber-500/[0.02] dark:bg-amber-500/[0.04] shadow-xs"
             : isContradicted
               ? "border-critical/30 bg-critical/[0.02] shadow-xs"
-              : "border-line bg-surface hover:border-line-strong hover:shadow-xs"
+              : isSupported
+                ? "border-established/30 bg-accent-soft/40 shadow-xs"
+                : "border-line bg-surface hover:border-line-strong hover:shadow-xs"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <span
           aria-hidden="true"
-          className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-surface-nested px-2 text-xs font-semibold tabular-nums text-ink-secondary"
+          className={`inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full px-2 text-xs font-semibold tabular-nums ${
+            isSupported
+              ? "bg-established/10 text-established"
+              : "bg-surface-nested text-ink-secondary"
+          }`}
         >
           {number}
         </span>

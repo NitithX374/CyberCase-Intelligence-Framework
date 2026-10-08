@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AnalysisStepRead } from "@/lib/api/types";
 import { useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
+import { useAnalysisAvailability } from "@/features/analysis/queries";
 import { deferred } from "@/test/chat";
 import { analysisResult, caseId } from "@/test/fixtures";
 import { httpError, refusal } from "@/test/httpErrors";
@@ -15,6 +16,7 @@ const state = vi.hoisted(() => ({
   start: vi.fn(),
   segment: "sources" as string | null,
   caseError: null as unknown,
+  pendingQuestionId: null as string | null,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -25,6 +27,14 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/features/analysis/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/analysis/api")>()),
   startCaseAnalysis: (...args: unknown[]) => state.start(...args),
+}));
+vi.mock("@/features/chat/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/chat/api")>()),
+  getCaseChat: async () => ({
+    case_id: caseId,
+    messages: [],
+    pending_question_id: state.pendingQuestionId,
+  }),
 }));
 vi.mock("@/features/cases/queries", () => ({
   useCase: () => ({ data: undefined, error: state.caseError }),
@@ -59,8 +69,9 @@ const QUESTION: AnalysisStepRead = { status: "need_followup" };
 
 function AnalyzeButton() {
   const runAnalysis = useRunCaseAnalysis(caseId);
+  const { canAnalyze } = useAnalysisAvailability(caseId);
   return (
-    <button type="button" onClick={runAnalysis}>
+    <button type="button" onClick={runAnalysis} disabled={!canAnalyze}>
       Analyze
     </button>
   );
@@ -87,6 +98,7 @@ beforeEach(() => {
   state.start.mockReset();
   state.segment = "sources";
   state.caseError = null;
+  state.pendingQuestionId = null;
   localStorage.clear();
 });
 
@@ -159,6 +171,7 @@ describe("an analysis run started from a page", () => {
     state.start.mockResolvedValue({ status: "completed", result: analysisResult() });
     renderLayout(<AnalyzeButton />);
 
+    await waitFor(() => expect(screen.getByRole("button", { name: "Analyze" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
 
     await waitFor(() => expect(state.push).toHaveBeenCalledWith(`/case/${caseId}/analysis`));
@@ -170,6 +183,7 @@ describe("an analysis run started from a page", () => {
     state.start.mockReturnValue(run.promise);
     const { showPage } = renderLayout(<AnalyzeButton />);
 
+    await waitFor(() => expect(screen.getByRole("button", { name: "Analyze" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
     await waitFor(() => expect(state.start).toHaveBeenCalledOnce());
     showPage(<p>legal</p>);
@@ -192,12 +206,16 @@ describe("an analysis run started from a page", () => {
     expect(state.push).not.toHaveBeenCalled();
   });
 
-  it("opens Ask every time it asks, even when the question is one Ask already showed", async () => {
+  it("opens Ask for a follow-up and blocks another run after Ask is closed or the page remounts", async () => {
     localStorage.setItem("cybercase:chat-open", "false");
-    state.start.mockResolvedValue(QUESTION);
-    renderLayout(<AnalyzeButton />);
+    state.start.mockImplementation(async () => {
+      state.pendingQuestionId = "question-1";
+      return QUESTION;
+    });
+    const { showPage } = renderLayout(<AnalyzeButton />);
     expect(ask()).not.toBeInTheDocument();
 
+    await waitFor(() => expect(screen.getByRole("button", { name: "Analyze" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
     await waitFor(() => expect(ask()).toBeInTheDocument());
 
@@ -205,8 +223,12 @@ describe("an analysis run started from a page", () => {
     expect(ask()).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
-    await waitFor(() => expect(ask()).toBeInTheDocument());
-    expect(state.start).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();
+    showPage(<p>legal</p>);
+    showPage(<AnalyzeButton />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled());
+    expect(ask()).not.toBeInTheDocument();
+    expect(state.start).toHaveBeenCalledOnce();
     expect(state.push).not.toHaveBeenCalled();
   });
 });

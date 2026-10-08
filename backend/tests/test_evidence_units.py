@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from app.sources.bundle import CaseSourceItem
-from app.sources.evidence import EvidenceIndex, evidence_units
+from app.sources.evidence import EvidenceIndex, evidence_revision, evidence_units
 from app.trace.quotes import MAX_QUOTE_CHARS
 
 
@@ -72,3 +72,39 @@ def test_ambiguous_source_identities_are_refused():
         EvidenceIndex(
             (CaseSourceItem("S1", "narrative", "One."), CaseSourceItem("S1", "narrative", "Two."))
         )
+
+
+@pytest.mark.parametrize("separator", ["", "\n", "\r\n"])
+def test_table_rows_keep_each_person_age_and_role_together(separator):
+    rows = [
+        "<tr><td>นายถนอม รอดสุข อายุ ๔๕ ปี</td><td>ไทย-ไทย</td><td>ผู้กล่าวหาที่ ๑</td></tr>",
+        "<tr><td>นางสาวพัชร์สิตา วราธรณ์สินชัย อายุ ๔๓ ปี</td><td>ไทย-ไทย</td><td>ผู้กล่าวหาที่ ๒</td></tr>",
+        "<tr><td>นางสาวสุรัตนา ศรีรักษ์ อายุ ๔๑ ปี</td><td>ไทย-ไทย</td><td>ผู้ต้องหา</td></tr>",
+    ]
+    text = "เสนอ อัยการพิเศษ\n\n<table>" + separator.join(rows) + "</table>\n\nฐานความผิด ฉ้อโกง"
+    units = evidence_units(CaseSourceItem("S1", "document", text))
+    assert "".join(unit.text for unit in units) == text
+    for row in rows:
+        matches = [unit for unit in units if row in unit.text]
+        assert len(matches) == 1
+        assert matches[0].text.count("<tr>") == 1
+        assert matches[0].text == text[matches[0].start : matches[0].end]
+
+
+def test_nested_table_stays_with_its_outer_row():
+    row = "<tr><td>John<table><tr><td>Victim</td></tr></table></td><td>45</td></tr>"
+    text = f"<TABLE>{row}<tr><td>Jane</td><td>Witness</td></tr></TABLE>"
+    units = evidence_units(CaseSourceItem("S1", "document", text))
+    assert len(units) == 2
+    assert row in units[0].text
+    assert "".join(unit.text for unit in units) == text
+
+
+def test_segmentation_version_makes_old_unit_ids_stale():
+    import hashlib
+
+    text = "John reported the incident."
+    old_revision = hashlib.sha256(f"evidence_units_v1\0{text}".encode()).hexdigest()[:16]
+    assert old_revision != evidence_revision(text)
+    index = EvidenceIndex((CaseSourceItem("S1", "narrative", text),))
+    assert index.resolve("S1", f"S1:U001-{old_revision}") == (None, "stale_id")

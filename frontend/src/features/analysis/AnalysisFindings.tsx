@@ -8,32 +8,31 @@ import { useSourceDrawer } from "@/features/citations/useSourceDrawer";
 import { CaseFindingsSection } from "./CaseFindingsSection";
 import { useCaseOverview } from "./useCaseOverview";
 
+type FindingsFilter = "all" | "supported" | "not_confirmed";
+
 export function AnalysisFindings() {
   const { caseId } = useParams<{ caseId: string }>();
   const searchParams = useSearchParams();
   const { analysisResult, overview } = useCaseOverview(caseId);
   const drawer = useSourceDrawer();
-  const [onlyUnconfirmed, setOnlyUnconfirmed] = useState(
-    () => searchParams?.get("status") === "not_confirmed",
+  const [filter, setFilter] = useState<FindingsFilter>(() =>
+    searchParams?.get("status") === "not_confirmed" ? "not_confirmed" : "all",
   );
-  const [searchQuery, setSearchQuery] = useState("");
 
   if (!analysisResult || !overview.hasAnalysis) return null;
 
   const unconfirmed = overview.findings.filter(
     (finding) => finding.epistemicStatus === "not_confirmed",
   );
-  const filtered = onlyUnconfirmed && unconfirmed.length > 0;
-  const baseFindings = filtered ? unconfirmed : overview.findings;
-  const query = searchQuery.trim().toLowerCase();
-  const displayedFindings = query
-    ? baseFindings.filter(
-        (finding) =>
-          finding.text.toLowerCase().includes(query) ||
-          finding.id.toLowerCase().includes(query) ||
-          (finding.reasoningSummary && finding.reasoningSummary.toLowerCase().includes(query)),
-      )
-    : baseFindings;
+  const supported = overview.findings.filter(
+    (finding) => finding.traceability.semanticSupport === "supported",
+  );
+  const displayedFindings =
+    filter === "supported"
+      ? supported
+      : filter === "not_confirmed"
+        ? unconfirmed
+        : overview.findings;
 
   const handleSelectSource = (
     sourceRef: SourceMessageRef,
@@ -45,38 +44,27 @@ export function AnalysisFindings() {
   return (
     <div className="mx-auto w-full max-w-[52rem] px-5 sm:px-8">
       <div className="pt-6 space-y-4">
-        {overview.findings.length > 3 && (
-          <div className="relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search findings (e.g. name, date, case number)…"
-              className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink placeholder:text-ink-muted transition-colors focus:border-line-strong focus:outline-none focus:ring-1 focus:ring-ink/10"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-ink-muted hover:text-ink px-1.5 py-0.5 rounded"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-        )}
-
-        {unconfirmed.length > 0 && (
+        {(supported.length > 0 || unconfirmed.length > 0 || filter !== "all") && (
           <div>
-            <div role="group" aria-label="Show findings" className="flex items-center gap-5">
-              <FilterButton pressed={!filtered} onClick={() => setOnlyUnconfirmed(false)}>
+            <div
+              role="group"
+              aria-label="Show findings"
+              className="flex flex-wrap items-center gap-x-5 gap-y-3"
+            >
+              <FilterButton pressed={filter === "all"} onClick={() => setFilter("all")}>
                 All <span className="text-ink-muted">{overview.findings.length}</span>
               </FilterButton>
-              <FilterButton pressed={filtered} onClick={() => setOnlyUnconfirmed(true)}>
+              <FilterButton pressed={filter === "supported"} onClick={() => setFilter("supported")}>
+                Supported <span className="text-established">{supported.length}</span>
+              </FilterButton>
+              <FilterButton
+                pressed={filter === "not_confirmed"}
+                onClick={() => setFilter("not_confirmed")}
+              >
                 Not confirmed <span className="text-unresolved">{unconfirmed.length}</span>
               </FilterButton>
             </div>
-            {filtered && (
+            {filter === "not_confirmed" && (
               <p className="mt-3 max-w-[68ch] text-[13px] leading-6 text-ink-secondary">
                 These findings are marked as not confirmed in the saved analysis. Review their
                 Source linkage and cited text before relying on them; semantic support is shown
@@ -85,32 +73,17 @@ export function AnalysisFindings() {
             )}
           </div>
         )}
-
-        {query && (
-          <div className="flex items-center justify-between text-xs text-ink-muted">
-            <span>
-              Found {displayedFindings.length} of {baseFindings.length} findings
-            </span>
-          </div>
-        )}
       </div>
 
-      {displayedFindings.length === 0 && query ? (
-        <div className="py-12 text-center text-sm text-ink-muted">
-          No findings matching &ldquo;{searchQuery}&rdquo;.
-          <div className="mt-2">
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className="text-xs font-medium text-ink underline underline-offset-2"
-            >
-              Clear search filter
-            </button>
-          </div>
-        </div>
+      {filter !== "all" && displayedFindings.length === 0 ? (
+        <p className="py-6 text-sm text-ink-muted">
+          {filter === "supported"
+            ? "No supported findings in this analysis."
+            : "No findings marked not confirmed."}
+        </p>
       ) : (
         <CaseFindingsSection
-          key={`${analysisResult.id}:${filtered ? "not_confirmed" : "all"}:${query}`}
+          key={`${analysisResult.id}:${filter}`}
           caseId={caseId}
           findings={displayedFindings}
           focusId={searchParams?.get("finding") ?? null}

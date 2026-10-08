@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
 import { AnalysisLayout } from "@/features/analysis/AnalysisLayout";
 import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
-import { useCaseAnalysis, useIsCaseAnalysisRunning } from "@/features/analysis/queries";
+import { useAnalysisAvailability, useCaseAnalysis } from "@/features/analysis/queries";
 import { useCaseSources } from "@/features/sources/queries";
 import { useIsFollowupPending } from "@/features/chat/useCaseChat";
 import {
@@ -33,7 +33,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/features/analysis/queries", () => ({
   useCaseAnalysis: vi.fn(),
-  useIsCaseAnalysisRunning: vi.fn(),
+  useAnalysisAvailability: vi.fn(),
 }));
 vi.mock("@/features/analysis/useRunCaseAnalysis", () => ({
   useRunCaseAnalysis: () => state.runAnalysis,
@@ -102,6 +102,7 @@ interface MockOverrides {
   sourcesFailed?: boolean;
   followupPending?: boolean;
   analysisRunning?: boolean;
+  waitingForFollowup?: boolean;
 }
 
 function configureAndRender(
@@ -125,7 +126,12 @@ function configureAndRender(
     isLoadingError: overrides.sourcesFailed ?? false,
     refetch: state.refetchSources,
   } as never);
-  vi.mocked(useIsCaseAnalysisRunning).mockReturnValue(overrides.analysisRunning ?? false);
+  const isUpdating = Boolean(overrides.analysisRunning || overrides.followupPending);
+  vi.mocked(useAnalysisAvailability).mockReturnValue({
+    isUpdating,
+    isWaitingForFollowup: overrides.waitingForFollowup ?? false,
+    canAnalyze: !isUpdating && !overrides.waitingForFollowup,
+  });
   vi.mocked(useIsFollowupPending).mockReturnValue(overrides.followupPending ?? false);
 
   render(<AnalysisLayout>{children}</AnalysisLayout>);
@@ -141,6 +147,27 @@ beforeEach(() => {
 });
 
 describe("AnalysisLayout", () => {
+  it("disables the first Analyze button while a question awaits an answer", () => {
+    configureAndRender({ analysisResult: null, waitingForFollowup: true });
+    expect(screen.getByRole("heading", { name: "Waiting for your answer" })).toBeVisible();
+    expect(screen.getByText(/Analysis continues automatically/)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
+    expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();
+    expect(state.runAnalysis).not.toHaveBeenCalled();
+  });
+
+  it("blocks reanalysis of older sources while awaiting a follow-up answer", () => {
+    const projection = caseProjection({ stale: true });
+    configureAndRender({ analysisResult: projection.result, waitingForFollowup: true });
+    expect(screen.getByRole("button", { name: "Analyze latest sources" })).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent("Answer the follow-up question in Ask.");
+  });
+
+  it("withholds Analyze again while a saved analysis awaits an answer", () => {
+    configureAndRender({ waitingForFollowup: true });
+    expect(screen.queryByRole("button", { name: "Analyze again" })).not.toBeInTheDocument();
+  });
+
   it("links every section of a finished analysis, with the counts that need reading", () => {
     configureAndRender();
 

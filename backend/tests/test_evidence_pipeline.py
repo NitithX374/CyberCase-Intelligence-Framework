@@ -73,10 +73,19 @@ async def test_whole_case_claims_only_reading_direct_binding_judgement_and_join(
         assert "case_sources" not in kwargs["content"]
         assert set(reading) == {"claims"}
         assert all(
-            c["pointer_state"] == "direct"
+            set(c) == {"exact_quote"}
             for claim in reading["claims"]
             for c in claim["supporting_citations"]
         )
+        assert [
+            [citation["exact_quote"] for citation in claim["supporting_citations"]]
+            for claim in reading["claims"]
+        ] == [
+            [first.text.splitlines(keepends=True)[0]],
+            [first.text.splitlines(keepends=True)[1], second.text.splitlines(keepends=True)[0]],
+            [second.text.splitlines(keepends=True)[0]],
+            [second.text.splitlines(keepends=True)[1]],
+        ]
         return CaseProviderJudgement(
             version="case_analysis_trace_v1",
             summary="John is the victim [A-01]. The server was encrypted at 13:00, interrupting payroll [A-02, A-03].",
@@ -88,6 +97,11 @@ async def test_whole_case_claims_only_reading_direct_binding_judgement_and_join(
     final = (await bind_to_case(data, written)).trace
     assert [item["stage"] for item in seen] == ["case_reading", "case_judgement"]
     assert final.claims[1].supporting_source_ids == ["S1", "S2"]
+    assert all(
+        citation.pointer_state == "direct"
+        for claim in final.claims
+        for citation in claim.supporting_citations
+    )
     assert final.involved_parties == final.timeline == final.impacts == []
     assert [unit.support for unit in final.summary_units] == ["bound", "bound"]
     assert final.grounding.evidence_ids_claimed == final.grounding.evidence_ids_resolved == 5

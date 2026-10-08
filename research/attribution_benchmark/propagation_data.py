@@ -7,7 +7,12 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-from research.attribution_benchmark.data import cluster_key, read_split, sha256, verify_manifest
+from research.attribution_benchmark.data import (
+    cluster_key,
+    read_split,
+    sha256,
+    verify_manifest,
+)
 
 MAX_DRY_RUN_CLUSTERS = 5
 SPLITS = ("dev", "test", "test_ood")
@@ -23,9 +28,11 @@ class ResponseCluster:
         return tuple((f"A-{index:02d}", row) for index, row in enumerate(self.rows, 1))
 
 
-def select_clusters(rows: list[dict], limit: int) -> tuple[tuple[ResponseCluster, ...], dict]:
-    if not 1 <= limit <= MAX_DRY_RUN_CLUSTERS:
-        raise ValueError(f"Dry runs require 1..{MAX_DRY_RUN_CLUSTERS} clusters")
+def select_clusters(
+    rows: list[dict], limit: int, *, maximum: int = MAX_DRY_RUN_CLUSTERS
+) -> tuple[tuple[ResponseCluster, ...], dict]:
+    if not 1 <= limit <= maximum:
+        raise ValueError(f"Runs require 1..{maximum} clusters")
     if len({row["id"] for row in rows}) != len(rows):
         raise ValueError("Benchmark row IDs must be unique")
     grouped = defaultdict(list)
@@ -39,7 +46,9 @@ def select_clusters(rows: list[dict], limit: int) -> tuple[tuple[ResponseCluster
         elif any(not row["references"] for row in members):
             exclusions["empty_reference_bundle"] += 1
         else:
-            eligible.append(ResponseCluster(key, tuple(sorted(members, key=lambda row: row["id"]))))
+            eligible.append(
+                ResponseCluster(key, tuple(sorted(members, key=lambda row: row["id"])))
+            )
     if len(eligible) < limit:
         raise ValueError("Not enough eligible response clusters")
     return tuple(eligible[:limit]), {
@@ -85,16 +94,22 @@ class FrozenVerifier:
         return self.scores[row["id"]]["p_supported"] >= self.threshold
 
 
-def load_verifier(run: Path, split: str, rows: list[dict], dataset: dict) -> FrozenVerifier:
+def load_verifier(
+    run: Path, split: str, rows: list[dict], dataset: dict
+) -> FrozenVerifier:
     run = run.resolve()
     names = ("run_manifest.json", "summary.json", "selection.json", "verification.json")
-    manifest, summary, selection, verification = (read_json(run / name) for name in names)
+    manifest, summary, selection, verification = (
+        read_json(run / name) for name in names
+    )
     if manifest["status"] != "complete" or verification["status"] != "passed":
         raise ValueError("Verifier run must be complete and independently verified")
     if manifest["summary_sha256"] != verification["summary_sha256"]:
         raise ValueError("Frozen verifier summary hash mismatch")
     frozen_hashes = {
-        "summary.json": verify_text_hash(run / "summary.json", manifest["summary_sha256"])
+        "summary.json": verify_text_hash(
+            run / "summary.json", manifest["summary_sha256"]
+        )
     }
     for recorded in (manifest["dataset"], summary["dataset"]):
         if any(
@@ -102,7 +117,10 @@ def load_verifier(run: Path, split: str, rows: list[dict], dataset: dict) -> Fro
             for key in ("dataset", "configuration", "revision", "files")
         ):
             raise ValueError("Verifier dataset differs from pinned raw data")
-    if manifest["model"] != summary["model"] or verification["model"] != manifest["model"]["key"]:
+    if (
+        manifest["model"] != summary["model"]
+        or verification["model"] != manifest["model"]["key"]
+    ):
         raise ValueError("Frozen verifier model identity mismatch")
     if not manifest["model"]["revision"] or selection != summary["selection"]:
         raise ValueError("Frozen model revision/selection mismatch")
@@ -129,7 +147,9 @@ def load_verifier(run: Path, split: str, rows: list[dict], dataset: dict) -> Fro
     scores = {}
     score_rows = [
         json.loads(line)
-        for line in (run / f"scores_{split}.jsonl").read_text(encoding="utf-8").splitlines()
+        for line in (run / f"scores_{split}.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
     ]
     if len(score_rows) != len(rows):
         raise ValueError("Frozen score row count mismatch")

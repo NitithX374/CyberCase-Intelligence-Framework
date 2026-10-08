@@ -14,7 +14,13 @@ const state = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({ useParams: () => ({ caseId }) }));
 vi.mock("@/features/cases/queries", () => ({ useCase: () => ({ data: undefined }) }));
-vi.mock("@/features/analysis/queries", () => ({ useIsAnalysisUpdating: () => false }));
+vi.mock("@/features/analysis/queries", () => ({
+  useAnalysisAvailability: () => ({
+    isUpdating: false,
+    isWaitingForFollowup: false,
+    canAnalyze: true,
+  }),
+}));
 vi.mock("@/features/analysis/useRunCaseAnalysis", () => ({
   useRunCaseAnalysis: () => vi.fn(),
 }));

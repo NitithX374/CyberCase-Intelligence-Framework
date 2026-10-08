@@ -208,7 +208,10 @@ describe("the case workspace", () => {
       </CaseAnalysisLayout>
     ));
 
-    expect(await screen.findByRole("heading", { name: "Not analyzed yet" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Waiting for your answer" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();
     await screen.findByText(question.content);
     const composer = screen.getByLabelText("Chat message");
     fireEvent.change(composer, { target: { value: "Around 02:00." } });

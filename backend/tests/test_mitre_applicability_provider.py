@@ -70,11 +70,14 @@ def test_gate_uses_fixed_prompt_strict_schema_and_deterministic_options(
     assert result.decision == "RETRIEVE"
     assert resolved_models == ["vendor/custom-model"]
     assert captured["model"] == "vendor/custom-model"
-    assert captured["system"] == MITRE_APPLICABILITY_SYSTEM_PROMPT
+    assert captured["system"].startswith(MITRE_APPLICABILITY_SYSTEM_PROMPT + "\n")
     assert captured["temperature"] == 0.0
     assert captured["max_tokens"] == 1024 + AnalysisPipelineConfig().thinking_tokens
     assert captured["messages"][0]["content"] == build_mitre_applicability_prompt([source])
-    schema = captured["output_config"]["format"]["schema"]
+    assert "output_config" not in captured
+    schema = json.loads(
+        captured["system"].split("<response_contract>\n")[1].split("\n</response_contract>")[0]
+    )
     assert schema["additionalProperties"] is False
     assert set(schema["required"]) == {
         "decision",
