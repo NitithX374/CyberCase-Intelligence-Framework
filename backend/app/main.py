@@ -1,8 +1,10 @@
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
+logger = logging.getLogger(__name__)
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,12 +24,39 @@ from app.reports import routes as reports
 from app.sources import routes as sources
 
 
+def _warmup_models() -> None:
+    if not settings.warmup_models:
+        return
+    logger.info("Warming up case analysis models on startup...")
+    try:
+        from app.trace.sentences import get_sat_segmenter
+
+        get_sat_segmenter()
+    except Exception as exc:
+        logger.warning("SaT sentence segmenter warmup skipped: %s", exc)
+
+    try:
+        from app.trace.source_selector import load_selector
+
+        load_selector()
+    except Exception as exc:
+        logger.warning("Source selector warmup skipped: %s", exc)
+
+    try:
+        from app.trace.nli_model import load_nli
+
+        load_nli()
+    except Exception as exc:
+        logger.warning("NLI model warmup skipped: %s", exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         validate_single_process_runtime()
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
+        await asyncio.to_thread(_warmup_models)
         yield
     finally:
         await engine.dispose()

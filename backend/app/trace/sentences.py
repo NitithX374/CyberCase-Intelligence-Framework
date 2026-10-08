@@ -25,6 +25,9 @@ def get_sat_segmenter() -> Any:
         with _sat_lock:
             if _sat_model is None:
                 try:
+                    import warnings
+
+                    warnings.filterwarnings("ignore", message=".*XLMRobertaTokenizerFast.*")
                     from wtpsplit import SaT
 
                     _sat_model = SaT("sat-3l-sm")

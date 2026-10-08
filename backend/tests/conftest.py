@@ -13,6 +13,11 @@ def no_shadow_gate(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_model_warmup(monkeypatch):
+    monkeypatch.setattr(settings, "warmup_models", False)
+
+
+@pytest.fixture(autouse=True)
 def no_real_meaning_model(monkeypatch):
     monkeypatch.setattr(nli_model, "load_nli", lambda: FakeNli())
 
