@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
-DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-v4.1-flash"
+DEFAULT_OPENROUTER_MODEL = "google/gemma-4-26b-a4b-it"
 
 
 @dataclass(frozen=True)
@@ -70,10 +70,17 @@ CURATED_MODEL_PRESETS: tuple[ModelPreset, ...] = (
     ),
     ModelPreset(
         canonical_id=DEFAULT_OPENROUTER_MODEL,
+        display_name="Gemma-4 26B A4B IT",
+        family="Gemma",
+        aliases=("gemma-4-26b-a4b-it", "gemma-4-26b", "gemma", "default"),
+        description="Gemma-4 26B A4B IT, the default",
+    ),
+    ModelPreset(
+        canonical_id="deepseek/deepseek-v4.1-flash",
         display_name="DeepSeek V4.1 Flash",
         family="DeepSeek",
-        aliases=("deepseek-v4.1-flash", "deepseek", "default"),
-        description="DeepSeek V4.1 Flash, the default",
+        aliases=("deepseek-v4.1-flash", "deepseek"),
+        description="DeepSeek V4.1 Flash",
     ),
 )
 
