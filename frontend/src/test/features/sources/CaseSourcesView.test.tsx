@@ -179,6 +179,35 @@ describe("CaseSourcesView", () => {
     expect(definitions).toEqual(["มีหมายจับหรือไม่", "ไม่มี"]);
   });
 
+  it("shows Add source as a labelled primary button, not a bare icon", () => {
+    renderSources({ sources: [caseSource()] });
+
+    const button = screen.getByRole("button", { name: "Add source" });
+
+    expect(button).toHaveTextContent("Add source");
+    expect(button).not.toContainHTML("sr-only");
+    expect(button).toHaveClass("btn-primary");
+    expect(button).not.toHaveAttribute("title");
+  });
+
+  it("says why Add source is unavailable while an analysis runs", () => {
+    renderSources({
+      sources: [caseSource()],
+      analysis: {
+        freshness: "current",
+        isRunning: true,
+        isWaitingForFollowup: false,
+        canAnalyze: false,
+        onAnalyze: vi.fn(),
+      },
+    });
+
+    expect(screen.getByRole("button", { name: "Add source" })).toHaveAttribute(
+      "title",
+      "Wait for the analysis to finish",
+    );
+  });
+
   it("adds a case narrative from the plus menu", async () => {
     const onAddNarrative = vi.fn().mockResolvedValue(true);
     renderSources({ sources: [caseSource()], onAddNarrative });

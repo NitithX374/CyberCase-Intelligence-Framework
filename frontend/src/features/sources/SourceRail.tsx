@@ -232,11 +232,11 @@ function AddSourceMenu({
         aria-expanded={isOpen}
         disabled={isUploading || isAnalysing}
         onClick={() => setIsOpen((open) => !open)}
-        title={isAnalysing ? "Wait for the analysis to finish" : "Add source"}
-        className="icon-btn disabled:cursor-wait"
+        title={isAnalysing ? "Wait for the analysis to finish" : undefined}
+        className="btn-primary h-8 px-3"
       >
         <Icon name="plus" className="h-4 w-4" />
-        <span className="sr-only">Add source</span>
+        Add source
       </button>
 
       {isOpen && (
