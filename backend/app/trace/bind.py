@@ -6,15 +6,15 @@ from typing import TypeVar
 
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import EvidenceIndex
+from app.trace.citations import CaseUnverifiedCitation
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseEpistemicStatus,
     CaseFollowupExchange,
     CaseSourceCitation,
-    CaseUnverifiedCitation,
 )
 from app.trace.evidence_binding import bind_citations
-from app.trace.grounding import grounding_report as grounding_report
+from app.trace.grounding import grounding_report
 from app.trace.summary import summary_pieces
 from app.trace.trace import (
     CaseAnalysisTrace,
@@ -265,7 +265,6 @@ __all__ = [
     "bound_references",
     "context_technique_ids",
     "followup_registry_items",
-    "grounding_report",
     "item_support",
     "resolve_case_trace",
     "resolve_claim",

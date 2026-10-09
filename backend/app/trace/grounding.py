@@ -13,11 +13,7 @@ def grounding_report(
     registry: dict[str, CaseSourceItem],
     *,
     evidence: EvidenceIndex | None = None,
-    associations_outside_context: int = 0,
-    associations_without_claim: int = 0,
     claims_dropped: int = 0,
-    search: object = None,
-    **kwargs,
 ) -> CaseGroundingReport:
     evidence = evidence or EvidenceIndex(tuple(registry.values()))
     counts = evidence_counts(written, kept, evidence)
@@ -53,8 +49,6 @@ def grounding_report(
         claims_duplicated=claims_dropped,
         citations_duplicated=duplicated_ids,
         citations_marked=sum(1 for c in all_citations(kept) if c.review_flags),
-        associations_outside_context=associations_outside_context,
-        associations_without_claim=associations_without_claim,
         sources_cited=len({c.source_id for c in all_citations(kept)}),
         sources_total=len(registry),
         **counts,

@@ -9,6 +9,7 @@ from fastapi import status
 from pydantic import ValidationError
 
 from app.analysis.prompts import case_assessment_prompt
+from app.analysis.reading_sources import provider_source_payload
 from app.analysis.stream import announce
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.analysis.technical_context.gate import mitre_gate
@@ -17,7 +18,7 @@ from app.analysis.technical_context.retrieve import (
     CaseMitreAugmentation,
     run_case_mitre_augmentation,
 )
-from app.analysis.write import provider_source_payload, write_trace
+from app.analysis.write import write_trace
 from app.errors import CaseAnalysisFailure
 from app.followup.clarification import (
     FollowupDecision,

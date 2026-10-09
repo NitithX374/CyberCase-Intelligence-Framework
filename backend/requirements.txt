@@ -20,15 +20,12 @@ tiktoken>=0.8.0
 pyjwt>=2.8.0
 email-validator>=2.2.0
 
-# Thai sentence segmentation: the sentence shown around each quotation, the
-# words of a near-match pointer, and the MITRE applicability gate.
+# Thai sentence segmentation: the sentence shown around each quotation and the
+# MITRE applicability gate.
 # wtpsplit provides the robust SaT neural sentence segmenter;
 # pythainlp and python-crfsuite provide fallbacks.
 wtpsplit>=2.1.0
 pythainlp>=5.0.0
 python-crfsuite>=0.9.11
-
-# The candidate passages of a near-match pointer for an unlocated quote.
-rapidfuzz>=3.9.0
 
 watchfiles>=0.24.0

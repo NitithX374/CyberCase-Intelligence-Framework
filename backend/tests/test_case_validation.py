@@ -70,8 +70,8 @@ def test_exact_page_spans_are_contiguous_and_fail_closed_for_repeated_or_edited_
     provenance = bind_exact_page_spans(
         {
             "pages": [
-                {"page_number": 1, "merged_text": "first page"},
-                {"page_number": 2, "merged_text": "second page"},
+                {"page_number": 1, "text": "first page"},
+                {"page_number": 2, "text": "second page"},
             ]
         },
         content,
@@ -89,8 +89,8 @@ def test_exact_page_spans_are_contiguous_and_fail_closed_for_repeated_or_edited_
     repeated_pages = bind_exact_page_spans(
         {
             "pages": [
-                {"page_number": 1, "merged_text": "same"},
-                {"page_number": 2, "merged_text": "same"},
+                {"page_number": 1, "text": "same"},
+                {"page_number": 2, "text": "same"},
             ]
         },
         repeated,
@@ -273,11 +273,7 @@ def test_a_quote_spanning_more_pages_than_a_citation_holds_keeps_no_page_locator
     lines = [f"line {number}" for number in range(1, 11)]
     content = "\n\n".join(lines)
     provenance = bind_exact_page_spans(
-        {
-            "pages": [
-                {"page_number": number, "merged_text": line} for number, line in enumerate(lines, 1)
-            ]
-        },
+        {"pages": [{"page_number": number, "text": line} for number, line in enumerate(lines, 1)]},
         content,
     )
     quote = "\n\n".join(lines[:9])

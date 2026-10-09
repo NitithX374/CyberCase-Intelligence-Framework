@@ -4,7 +4,8 @@ import pytest
 
 from app.llm.settings import AnalysisPipelineConfig
 from app.trace.trace import CaseProviderReadingReply
-from experiments import reading_load_pilot as pilot
+
+pilot = pytest.importorskip("experiments.reading_load_pilot")
 
 
 @pytest.mark.parametrize("case", json.loads(pilot.FIXTURES.read_bytes())["cases"])

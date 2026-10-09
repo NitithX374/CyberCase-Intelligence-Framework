@@ -11,7 +11,7 @@ from typing import Any
 from pythainlp.tokenize import sent_tokenize
 
 from app.sources.bundle import CaseSourceItem
-from app.trace.claims import MAX_CONTEXT_CHARS, CaseQuoteContext
+from app.trace.citations import MAX_CONTEXT_CHARS, CaseQuoteContext
 
 MIN_SENTENCE_CHARS = 25
 

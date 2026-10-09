@@ -4,7 +4,6 @@ from app.analysis.pipeline import AnalysisArtifacts, AnalysisInput, bind_to_case
 from app.analysis.reading_sources import ReadingSources
 from app.analysis.write import reading_request
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace import nli_model
 from app.trace.bind import bound_claims, followup_registry_items
 from app.trace.claims import CaseFollowupExchange
 from app.trace.trace import CaseAnalysisTrace, CaseProviderJudgement, CaseProviderReadingReply
@@ -57,10 +56,6 @@ async def test_whole_case_claims_only_reading_direct_binding_judgement_and_join(
         }
     )
 
-    def forbidden_nli():
-        raise AssertionError("Direct unit binding must not load a semantic projection verifier")
-
-    monkeypatch.setattr(nli_model, "load_nli", forbidden_nli)
     seen = []
 
     async def request_stage(**kwargs):

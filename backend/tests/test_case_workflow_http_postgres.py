@@ -211,20 +211,6 @@ async def case_with_source(factory, text: str) -> tuple:
     return case_id, user_id
 
 
-def citing(text: str, quote: str):
-    def cite(content: dict) -> dict:
-        [source] = [
-            s
-            for s in content["case_sources"]
-            if "".join(unit["text"] for unit in s["evidence_units"]) == text
-        ]
-        unit_ids = [unit["unit_id"] for unit in source["evidence_units"] if quote in unit["text"]]
-        assert unit_ids, "the Reader fixture must select supplied source units"
-        return reading(claim("A-01", source["source_id"], unit_ids))
-
-    return cite
-
-
 def legacy_citing(text: str, quote: str, monkeypatch):
     def cite(content: dict) -> dict:
         [source] = [

@@ -16,7 +16,7 @@ def bind_exact_page_spans(
         if not isinstance(raw_page, Mapping):
             break
         page_number = raw_page.get("page_number")
-        page_text = raw_page.get("text") if "text" in raw_page else raw_page.get("merged_text")
+        page_text = raw_page.get("text")
         if type(page_number) is not int or page_number < 1 or not isinstance(page_text, str):
             break
         if not page_text:

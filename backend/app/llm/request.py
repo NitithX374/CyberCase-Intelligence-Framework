@@ -20,7 +20,6 @@ from app.llm.response import (
     extract_visible_text,
     log_response_shape,
     usage_summary,
-    validate_response_payload,
 )
 from app.llm.schema import validate_structured_json
 from app.llm.settings import AnalysisPipelineConfig
@@ -198,6 +197,5 @@ __all__ = [
     "thinking_option",
     "token_count",
     "usage_summary",
-    "validate_response_payload",
     "validated_reply",
 ]

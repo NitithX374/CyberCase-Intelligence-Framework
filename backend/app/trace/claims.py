@@ -15,41 +15,14 @@ from pydantic import (
 )
 
 from app.trace.citations import (
-    MAX_CONTEXT_CHARS as MAX_CONTEXT_CHARS,
-)
-from app.trace.citations import (
-    CaseEvidenceReference as CaseEvidenceReference,
-)
-from app.trace.citations import (
+    CaseEvidenceReference,
     CaseInvalidEvidence,
+    CaseProviderCitation,
+    CaseUnverifiedCitation,
     normalized_citation,
 )
 from app.trace.citations import (
-    CaseMeaningPassage as CaseMeaningPassage,
-)
-from app.trace.citations import (
-    CaseNearPassage as CaseNearPassage,
-)
-from app.trace.citations import (
-    CaseProviderCitation as CaseProviderCitation,
-)
-from app.trace.citations import (
-    CaseQuoteContext as CaseQuoteContext,
-)
-from app.trace.citations import (
-    CaseQuoteDifference as CaseQuoteDifference,
-)
-from app.trace.citations import (
-    CaseReviewFlag as CaseReviewFlag,
-)
-from app.trace.citations import (
     CaseSourceCitation as CaseSourceCitation,
-)
-from app.trace.citations import (
-    CaseUnverifiedCitation as CaseUnverifiedCitation,
-)
-from app.trace.citations import (
-    stored_review_flags as stored_review_flags,
 )
 
 MAX_CLARIFICATION_QUESTION_CHARS = 300

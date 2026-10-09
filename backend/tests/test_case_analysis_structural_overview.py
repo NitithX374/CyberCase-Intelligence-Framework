@@ -6,9 +6,9 @@ import pytest
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.bind import resolve_case_trace
+from app.trace.citations import CaseProviderCitation
 from app.trace.claims import (
     CaseAnalysisClaim,
-    CaseProviderCitation,
     CaseProviderClaim,
     CaseSourceCitation,
 )

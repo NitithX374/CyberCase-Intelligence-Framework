@@ -167,11 +167,3 @@ def check_response_payload(response_payload: Mapping[str, object], *, stage: str
             "The analysis provider response was invalid",
             status.HTTP_502_BAD_GATEWAY,
         )
-
-
-def validate_response_payload(
-    response: httpx.Response, *, stage: str = "analysis"
-) -> dict[str, object]:
-    response_payload = decode_response(response)
-    check_response_payload(response_payload, stage=stage)
-    return response_payload

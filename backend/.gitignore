@@ -33,10 +33,6 @@ cover/
 *.db
 *.sqlite3
 
-# Alembic
-alembic/versions/__pycache__/
-alembic.ini
-
 # Logs
 logs/
 *.log
