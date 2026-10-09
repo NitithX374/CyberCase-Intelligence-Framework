@@ -8,9 +8,9 @@ from fastapi import status
 from pydantic import ValidationError
 
 from app.analysis.claim_gate import (
-    admitted_reading,
     check_judgement_references,
     checked_claim_support,
+    usable_reading,
 )
 from app.analysis.prompts import CASE_JUDGEMENT_SYSTEM_PROMPT, CASE_READING_JSON_PROMPT
 from app.analysis.reading_sources import ReadingSources, provider_source_payload
@@ -64,46 +64,50 @@ async def write_trace(
     reading, grounding = await checked_reading(
         reading_from(reply, reading_sources=reading_sources), sources, followup_history
     )
-    announce("verify")
-    reading, grounding = await checked_claim_support(reading, grounding)
-    factual_reading = admitted_reading(reading)
-    if not factual_reading.claims:
+    judged = usable_reading(reading)
+    if not judged.claims:
+        announce("verify")
+        reading, grounding = await checked_claim_support(reading, grounding)
         judgement = CaseProviderJudgement(
             version="case_analysis_trace_v1",
             summary=(
-                "ไม่มีข้อค้นพบที่ผ่านการตรวจการรองรับจาก Source จึงยังไม่สร้างบทสรุปคดี"
+                "ไม่มีข้อค้นพบที่ผ่านการตรวจการอ้างอิง Source จึงยังไม่สร้างบทสรุปคดี"
                 if language in ("thai", "th")
-                else "No findings passed Source support verification; no case summary was generated."
+                else "No finding passed the Source citation checks; no case summary was generated."
             ),
         )
         return joined_trace(reading, judgement, technical_context, grounding)
+    announce("verify")
+    verify_task = asyncio.create_task(checked_claim_support(reading, grounding))
     announce("views")
-    view_task = asyncio.create_task(derive_claim_views(factual_reading.claims, config=config))
-    try:
-        announce("judge")
-        judgement = await request_stage(
+    view_task = asyncio.create_task(derive_claim_views(judged.claims, config=config))
+    announce("judge")
+    judge_task = asyncio.create_task(
+        request_stage(
             config=config,
             stage="case_judgement",
             system=CASE_JUDGEMENT_SYSTEM_PROMPT,
-            content=judgement_request(
-                factual_reading, language, followup_history, technical_context
-            ),
+            content=judgement_request(judged, language, followup_history, technical_context),
             schema=CaseProviderJudgement,
         )
-        check_judgement_references(judgement, factual_reading)
-        views = await view_task
-        admitted_ids = {claim.claim_id for claim in factual_reading.claims}
-        views.extraction = views.extraction.model_copy(
-            update={
-                "excluded_claim_ids": [
-                    claim.claim_id for claim in reading.claims if claim.claim_id not in admitted_ids
-                ]
-            }
-        )
+    )
+    tasks = (judge_task, view_task, verify_task)
+    try:
+        judgement, views, (reading, grounding) = await asyncio.gather(*tasks)
+        check_judgement_references(judgement, judged)
     except BaseException:
-        view_task.cancel()
-        await asyncio.gather(view_task, return_exceptions=True)
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
         raise
+    judged_ids = {claim.claim_id for claim in judged.claims}
+    views.extraction = views.extraction.model_copy(
+        update={
+            "excluded_claim_ids": [
+                claim.claim_id for claim in reading.claims if claim.claim_id not in judged_ids
+            ]
+        }
+    )
     return joined_trace(reading, judgement, technical_context, grounding, views=views)
 
 

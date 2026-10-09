@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from threading import Event
 from time import perf_counter
 from typing import Protocol
 
@@ -16,6 +17,10 @@ from app.trace.b1_verifier import (
 from app.trace.claims import CaseAnalysisClaim, CaseClaimGrounding
 
 
+class VerificationStopped(Exception):
+    pass
+
+
 class Scorer(Protocol):
     name: str
 
@@ -24,14 +29,6 @@ class Scorer(Protocol):
 
 def load_scorer() -> Scorer:
     return load_verifier()
-
-
-def admitted_claims(claims: Sequence[CaseAnalysisClaim]) -> list[CaseAnalysisClaim]:
-    return [
-        claim
-        for claim in claims
-        if claim.semantic_grounding is not None and claim.semantic_grounding.verdict == "supported"
-    ]
 
 
 def resolved_support(claim: CaseAnalysisClaim):
@@ -82,6 +79,14 @@ def assessment_blocker(claim: CaseAnalysisClaim, premise: str) -> str | None:
     return None
 
 
+def claim_blocker(claim: CaseAnalysisClaim) -> str | None:
+    return assessment_blocker(claim, source_premise(claim))
+
+
+def usable_claims(claims: Sequence[CaseAnalysisClaim]) -> list[CaseAnalysisClaim]:
+    return [claim for claim in claims if claim_blocker(claim) is None]
+
+
 @dataclass(frozen=True)
 class ClaimValidationStats:
     supported: int
@@ -94,14 +99,15 @@ class ClaimValidationStats:
     considered: int
     selected: int
     truncated: int
+    unavailable: int = 0
 
     def grounding(self) -> dict[str, object]:
         return {
             "claims_semantically_supported": self.supported,
             "claims_semantically_not_supported": self.not_supported,
             "claims_semantically_unassessed": self.unassessed,
-            "claims_admitted_to_judgement": self.supported,
-            "claims_withheld_from_judgement": self.not_supported + self.unassessed,
+            "claims_admitted_to_judgement": self.supported + self.not_supported + self.unavailable,
+            "claims_withheld_from_judgement": self.unassessed - self.unavailable,
             "claim_verifier_calls": self.calls,
             "claim_validation_ms": self.duration_ms,
             "claim_verifier_model": self.model,
@@ -117,6 +123,7 @@ def validate_claims(
     claims: Sequence[CaseAnalysisClaim],
     *,
     provider: Callable[[], Scorer] | None = None,
+    stop: Event | None = None,
 ) -> tuple[list[CaseAnalysisClaim], ClaimValidationStats]:
     started = perf_counter()
     threshold = THRESHOLD
@@ -125,6 +132,8 @@ def validate_claims(
     calls = 0
     considered = selected = truncated = 0
     for claim in claims:
+        if stop is not None and stop.is_set():
+            raise VerificationStopped
         claim_started = perf_counter()
         premise = source_premise(claim)
         reason = assessment_blocker(claim, premise)
@@ -184,4 +193,36 @@ def validate_claims(
         considered=considered,
         selected=selected,
         truncated=truncated,
+    )
+
+
+def unverified_claims(
+    claims: Sequence[CaseAnalysisClaim],
+) -> tuple[list[CaseAnalysisClaim], ClaimValidationStats]:
+    started = perf_counter()
+    checked: list[CaseAnalysisClaim] = []
+    unavailable = 0
+    for claim in claims:
+        reason = claim_blocker(claim)
+        unavailable += int(reason is None)
+        verdict = CaseClaimGrounding(
+            verdict="unassessed",
+            reason=reason or "verifier_unavailable",
+            threshold=THRESHOLD,
+            method=METHOD,
+            artifact_sha256=ARTIFACT_SHA256,
+        )
+        checked.append(claim.model_copy(update={"semantic_grounding": verdict}))
+    return checked, ClaimValidationStats(
+        supported=0,
+        not_supported=0,
+        unassessed=len(checked),
+        calls=0,
+        duration_ms=(perf_counter() - started) * 1_000,
+        model=None,
+        threshold=THRESHOLD,
+        considered=0,
+        selected=0,
+        truncated=0,
+        unavailable=unavailable,
     )

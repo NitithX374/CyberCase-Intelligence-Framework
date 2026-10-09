@@ -51,6 +51,7 @@ def report_limitations(report_input: CaseReportInput) -> list[str]:
     meaning = meaning_pointer_limitation(report_input.analysis_trace)
     if meaning is not None:
         limitations.append(meaning)
+    limitations.extend(source_check_limitations(report_input.analysis_trace))
     return limitations
 
 
@@ -73,3 +74,19 @@ def meaning_pointer_limitation(trace: CaseAnalysisTrace) -> str | None:
         f"({shown}) จึงไม่มีข้อความที่อาจเกี่ยวข้องให้ตรวจสำหรับ "
         f"{grounding.meaning_pointer_unavailable} รายการ"
     )
+
+
+def source_check_limitations(trace: CaseAnalysisTrace) -> list[str]:
+    checks = [claim.semantic_grounding for claim in trace.claims if claim.semantic_grounding]
+    limitations = []
+    if any(check.verdict == "not_supported" for check in checks):
+        limitations.append(
+            "ป้ายเตือนจากตัวตรวจอัตโนมัติว่า Source รองรับข้อค้นพบหรือไม่ เป็นเพียงสัญญาณคัดกรอง "
+            "ไม่ใช่คำตัดสินว่าข้อค้นพบถูกหรือผิด"
+        )
+    if any(check.reason == "verifier_unavailable" for check in checks):
+        limitations.append(
+            "ตัวตรวจอัตโนมัติว่า Source รองรับข้อค้นพบหรือไม่ ไม่พร้อมใช้งานในการวิเคราะห์นี้ "
+            "ข้อค้นพบจึงยังไม่ได้ผ่านการตรวจดังกล่าว"
+        )
+    return limitations

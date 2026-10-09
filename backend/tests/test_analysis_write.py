@@ -233,7 +233,7 @@ def test_the_judgement_excludes_a_claim_whose_unit_was_not_found_but_retains_it_
     assert trace.grounding.citations_verified == 1
 
 
-def test_the_judgement_is_told_admitted_claims_passed_support_verification():
+def test_the_judgement_is_not_told_the_claims_were_verified():
     bundle = case_with_one_narrative()
     reading = reading_of(bundle)
     reading = reading.model_copy(
@@ -243,13 +243,9 @@ def test_the_judgement_is_told_admitted_claims_passed_support_verification():
     _, (_, judgement_call) = written(bundle, reading)
 
     system = " ".join(judgement_call["system"].split())
-    assert (
-        "Each supplied claim has already passed semantic support verification against its "
-        "resolved supporting evidence." in system
-    )
-    assert (
-        "Treat only these admitted claims as case-specific factual input for synthesis." in system
-    )
+    assert "semantic support verification" not in system
+    assert "admitted" not in system
+    assert "Treat these claims as the case-specific factual input for synthesis." in system
     assert "not_confirmed" not in system
     assert [claim["claim_id"] for claim in judgement_call["content"]["reading"]["claims"]] == [
         "A-01"

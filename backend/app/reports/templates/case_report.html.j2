@@ -286,6 +286,7 @@
                 <td>
                   {{ finding.status }}
                   {% if finding.is_inference %}<span class="minor">ข้อสันนิษฐานเชิงวิเคราะห์</span>{% endif %}
+                  {% if finding.source_check == "not_supported" %}<span class="minor">ตัวตรวจอัตโนมัติไม่พบว่า Source ที่อ้างรองรับข้อค้นพบนี้ ควรตรวจกับต้นฉบับ</span>{% endif %}
                 </td>
                 <td class="ref">
                   {{ finding.source_labels | join(", ") or "-" }}

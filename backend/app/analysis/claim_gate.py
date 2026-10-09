@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 
 from fastapi import status
 
 from app.errors import CaseAnalysisFailure
-from app.trace.claim_validation import admitted_claims, validate_claims
+from app.trace.claim_validation import unverified_claims, usable_claims, validate_claims
 from app.trace.nli_model import NliUnavailable
 from app.trace.summary import summary_pieces
 from app.trace.trace import CaseGroundingReport, CaseProviderJudgement, CaseProviderReading
@@ -17,15 +18,15 @@ logger = logging.getLogger("app.case_analysis")
 async def checked_claim_support(
     reading: CaseProviderReading, grounding: CaseGroundingReport
 ) -> tuple[CaseProviderReading, CaseGroundingReport]:
+    stop = threading.Event()
     try:
-        claims, counts = await asyncio.to_thread(validate_claims, reading.claims)
+        claims, counts = await asyncio.to_thread(validate_claims, reading.claims, stop=stop)
+    except asyncio.CancelledError:
+        stop.set()
+        raise
     except NliUnavailable as error:
-        logger.error("Claim support verifier unavailable: %s", error.reason)
-        raise CaseAnalysisFailure(
-            "case_claim_verifier_unavailable",
-            f"Claim support verification is unavailable: {error.reason}",
-            status.HTTP_503_SERVICE_UNAVAILABLE,
-        ) from error
+        logger.error("Claim support verifier unavailable, claims not assessed: %s", error.reason)
+        claims, counts = unverified_claims(reading.claims)
     logger.info(
         "Claim support: %d supported, %d not supported, %d unassessed; %d calls in %.1f ms",
         counts.supported,
@@ -39,8 +40,8 @@ async def checked_claim_support(
     )
 
 
-def admitted_reading(reading: CaseProviderReading) -> CaseProviderReading:
-    return reading.model_copy(update={"claims": admitted_claims(reading.claims)})
+def usable_reading(reading: CaseProviderReading) -> CaseProviderReading:
+    return reading.model_copy(update={"claims": usable_claims(reading.claims)})
 
 
 def check_judgement_references(
@@ -59,6 +60,6 @@ def check_judgement_references(
     if references - allowed:
         raise CaseAnalysisFailure(
             "case_judgement_invalid_claim",
-            "Judgement referenced a Claim that was not admitted after Source support verification",
+            "Judgement referenced a Claim that was not given to it",
             status.HTTP_502_BAD_GATEWAY,
         )

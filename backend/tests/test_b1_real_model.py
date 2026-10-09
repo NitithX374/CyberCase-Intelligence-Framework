@@ -142,11 +142,11 @@ async def test_real_en_th_cross_document_and_qa_gate_completes_native_pipeline(
         "not_supported",
         "supported",
     ]
-    assert views_input == ["A-01", "A-03", "A-05"]
+    assert views_input == ["A-01", "A-02", "A-03", "A-04", "A-05"]
     assert [claim["claim_id"] for claim in calls[1]["content"]["reading"]["claims"]] == views_input
-    assert "attacker" not in json.dumps(calls[1]["content"])
+    assert "semantic_grounding" not in json.dumps(calls[1]["content"])
     assert "answer" not in calls[1]["content"]["followup_history"][0]
-    assert trace.grounding.claims_admitted_to_judgement == 3
+    assert trace.grounding.claims_admitted_to_judgement == 5
     assert trace.grounding.evidence_ids_claimed == trace.grounding.evidence_ids_resolved == 7
     assert trace.claims[-1].semantic_grounding.selected_citation_indices == [0, 2]
     assert trace.claims[-1].supporting_citations[-1].page_numbers == [2]

@@ -204,6 +204,7 @@ class CaseClaimGrounding(BaseModel):
         "input_too_long",
         "lr_supported",
         "lr_not_supported",
+        "verifier_unavailable",
     ]
     model: str | None = Field(default=None, max_length=200)
     label: Literal["entailment", "neutral", "contradiction"] | None = None

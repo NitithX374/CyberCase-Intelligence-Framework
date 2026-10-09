@@ -1,21 +1,24 @@
 from __future__ import annotations
 
+import asyncio
 import json
+import threading
 
 import pytest
 from fake_nli import FakeNli
 
 from app.analysis import write
-from app.analysis.claim_gate import check_judgement_references
+from app.analysis.claim_gate import check_judgement_references, checked_claim_support
 from app.analysis.views import DerivedCaseViews
 from app.errors import CaseAnalysisFailure
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import evidence_units
 from app.trace import claim_validation
-from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange
+from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, CaseSourceCitation
 from app.trace.nli_model import Judgement, NliUnavailable
 from app.trace.trace import (
+    CaseGroundingReport,
     CaseProviderJudgement,
     CaseProviderReading,
     CaseProviderReadingReply,
@@ -70,8 +73,20 @@ def scorer_for_claims():
     )
 
 
+def with_stale_unit(claims, index):
+    claims[index]["supporting_citations"][0]["evidence_unit_ids"] = ["S1:U001-stale"]
+    return claims
+
+
 async def run_pipeline(
-    monkeypatch, *, scorer=None, claims=None, history=(), summary="John sent an email [A-01]."
+    monkeypatch,
+    *,
+    scorer=None,
+    claims=None,
+    history=(),
+    summary="John sent an email [A-01].",
+    on_judgement=None,
+    language="english",
 ):
     bundle, initial = fixtures()
     calls = []
@@ -89,6 +104,8 @@ async def run_pipeline(
                 }
             )
         assert kwargs["stage"] == "case_judgement"
+        if on_judgement is not None:
+            await on_judgement()
         return CaseProviderJudgement(version="case_analysis_trace_v1", summary=summary)
 
     async def views(accepted, *, config):
@@ -110,7 +127,7 @@ async def run_pipeline(
     monkeypatch.setattr(write, "derive_claim_views", views)
     trace = await write.write_trace(
         sources=bundle,
-        language="english",
+        language=language,
         followup_history=history,
         config=AnalysisPipelineConfig(),
     )
@@ -118,7 +135,7 @@ async def run_pipeline(
 
 
 @pytest.mark.asyncio
-async def test_semantically_unsupported_claim_is_preserved_for_review_but_never_sent_downstream(
+async def test_a_claim_the_check_does_not_support_still_reaches_judgement_and_views_unlabelled(
     monkeypatch,
 ):
     scorer = scorer_for_claims()
@@ -127,18 +144,26 @@ async def test_semantically_unsupported_claim_is_preserved_for_review_but_never_
     assert [call["stage"] for call in calls] == ["case_reading", "case_judgement"]
     assert [claim["claim_id"] for claim in calls[1]["content"]["reading"]["claims"]] == [
         "A-01",
+        "A-02",
         "A-03",
     ]
-    assert [claim.claim_id for claim in views] == ["A-01", "A-03"]
+    assert [claim.claim_id for claim in views] == ["A-01", "A-02", "A-03"]
+    assert all(claim.semantic_grounding is None for claim in views)
+    sent = json.dumps(calls[1]["content"])
+    for label in ("semantic_grounding", "not_supported", "lr_not_supported", "verdict"):
+        assert label not in sent
+    assert "attacker" in sent
+    assert "not_supported" not in calls[1]["system"]
     assert [claim.claim_id for claim in trace.claims] == ["A-01", "A-02", "A-03"]
     assert trace.claims[1].supporting_citations[0].exact_quote == "John sent an email."
     assert trace.claims[1].semantic_grounding.verdict == "not_supported"
-    assert "attacker" not in json.dumps(calls[1]["content"])
-    assert "semantic_grounding" not in json.dumps(calls[1]["content"])
-    assert trace.grounding.claims_admitted_to_judgement == 2
-    assert trace.grounding.claims_withheld_from_judgement == 1
+    assert trace.claims[0].semantic_grounding.verdict == "supported"
+    assert trace.grounding.claims_admitted_to_judgement == 3
+    assert trace.grounding.claims_withheld_from_judgement == 0
+    assert trace.grounding.claims_semantically_not_supported == 1
     assert trace.grounding.claim_verifier_calls == 3
     assert trace.grounding.evidence_ids_resolved == 3
+    assert trace.view_extraction.excluded_claim_ids == []
 
 
 @pytest.mark.asyncio
@@ -153,24 +178,27 @@ async def test_unresolved_id_is_withheld_even_if_another_claim_has_resolved_evid
         "A-01",
         "A-03",
     ]
+    assert trace.grounding.claims_withheld_from_judgement == 1
+    assert trace.view_extraction.excluded_claim_ids == ["A-02"]
 
 
 @pytest.mark.asyncio
-async def test_rejected_fact_cannot_leak_through_raw_followup_answer_or_question(monkeypatch):
+async def test_raw_followup_answer_and_question_never_reach_the_judgement(monkeypatch):
     history = (
-        CaseFollowupExchange("QA-01", "who", "Is John the attacker?", "John is the attacker."),
+        CaseFollowupExchange("QA-01", "when", "When did it arrive?", "It arrived on Monday."),
     )
     _, calls, _ = await run_pipeline(monkeypatch, scorer=scorer_for_claims(), history=history)
 
     assert calls[0]["content"]["followup_history"][0]["answer"] == history[0].answer
     assert calls[1]["content"]["followup_history"] == [
-        {"qa_id": "QA-01", "gap_key": "who", "answered": True}
+        {"qa_id": "QA-01", "gap_key": "when", "answered": True}
     ]
-    assert "attacker" not in json.dumps(calls[1]["content"])
+    assert history[0].answer not in json.dumps(calls[1]["content"])
+    assert history[0].question not in json.dumps(calls[1]["content"])
 
 
 @pytest.mark.asyncio
-async def test_followup_answer_still_supports_a_claim_through_the_same_source_unit_gate(
+async def test_followup_answer_still_supports_a_claim_through_the_same_source_unit_check(
     monkeypatch,
 ):
     history = (
@@ -195,9 +223,9 @@ async def test_followup_answer_still_supports_a_claim_through_the_same_source_un
         monkeypatch, scorer=scorer_for_claims(), claims=claims, history=history
     )
 
-    approved = calls[1]["content"]["reading"]["claims"]
-    assert [claim["claim_id"] for claim in approved] == ["A-01", "A-03", "A-04"]
-    assert approved[-1]["supporting_citations"] == [{"exact_quote": history[0].answer}]
+    sent = calls[1]["content"]["reading"]["claims"]
+    assert [claim["claim_id"] for claim in sent] == ["A-01", "A-02", "A-03", "A-04"]
+    assert sent[-1]["supporting_citations"] == [{"exact_quote": history[0].answer}]
     citation = trace.claims[-1].supporting_citations[0]
     assert citation.source_id == "QA-03"
     assert citation.evidence_unit_ids == [evidence_units(qa)[0].unit_id]
@@ -205,30 +233,89 @@ async def test_followup_answer_still_supports_a_claim_through_the_same_source_un
 
 
 @pytest.mark.asyncio
-async def test_no_admitted_claims_abstains_without_calling_judgement_or_views(monkeypatch):
-    trace, calls, views = await run_pipeline(monkeypatch, scorer=FakeNli())
+async def test_no_claim_with_resolved_support_abstains_without_calling_judgement_or_views(
+    monkeypatch,
+):
+    _, claims = fixtures()
+    for claim in claims:
+        claim["supporting_citations"][0]["evidence_unit_ids"] = ["S1:U001-stale"]
+    trace, calls, views = await run_pipeline(monkeypatch, scorer=FakeNli(), claims=claims)
 
     assert [call["stage"] for call in calls] == ["case_reading"]
     assert views == []
     assert "no case summary was generated" in trace.summary
     assert len(trace.claims) == 3
+    assert all(claim.semantic_grounding.verdict == "unassessed" for claim in trace.claims)
     assert trace.grounding.claims_admitted_to_judgement == 0
     assert trace.grounding.claims_withheld_from_judgement == 3
+    assert trace.grounding.claim_verifier_calls == 0
     assert (
         trace.involved_parties == trace.timeline == trace.impacts == trace.mitre_associations == []
     )
 
 
 @pytest.mark.asyncio
-async def test_model_unavailability_stops_analysis_instead_of_using_unchecked_claims(monkeypatch):
+@pytest.mark.parametrize(
+    ("language", "words"), [("english", "no case summary"), ("thai", "บทสรุปคดี")]
+)
+async def test_claims_withheld_by_the_citation_checks_abstain_in_the_readers_language(
+    monkeypatch, language, words
+):
+    _, claims = fixtures()
+    for claim in claims:
+        claim["epistemic_status"] = "suspected"
+    trace, calls, _ = await run_pipeline(
+        monkeypatch, scorer=FakeNli(), claims=claims, language=language
+    )
+
+    assert [call["stage"] for call in calls] == ["case_reading"]
+    assert words in trace.summary
+    assert "Source passage" not in trace.summary
+    assert all(claim.semantic_grounding.reason == "claim_uncertain" for claim in trace.claims)
+
+
+@pytest.mark.asyncio
+async def test_claims_the_check_does_not_support_are_labels_not_an_abstention(monkeypatch):
+    trace, calls, views = await run_pipeline(monkeypatch, scorer=FakeNli())
+
+    assert [call["stage"] for call in calls] == ["case_reading", "case_judgement"]
+    assert [claim.claim_id for claim in views] == ["A-01", "A-02", "A-03"]
+    assert trace.summary == "John sent an email [A-01]."
+    assert all(claim.semantic_grounding.verdict == "not_supported" for claim in trace.claims)
+    assert trace.grounding.claims_admitted_to_judgement == 3
+    assert trace.grounding.claims_withheld_from_judgement == 0
+
+
+@pytest.mark.asyncio
+async def test_an_unavailable_verifier_leaves_claims_unassessed_and_the_analysis_completes(
+    monkeypatch, caplog
+):
     def unavailable():
         raise NliUnavailable("weights_missing")
 
     monkeypatch.setattr(claim_validation, "load_scorer", unavailable)
-    with pytest.raises(CaseAnalysisFailure) as raised:
-        await run_pipeline(monkeypatch)
-    assert raised.value.code == "case_claim_verifier_unavailable"
-    assert raised.value.status_code == 503
+    _, claims = fixtures()
+    with_stale_unit(claims, 1)
+    with caplog.at_level("ERROR", logger="app.case_analysis"):
+        trace, calls, views = await run_pipeline(monkeypatch, claims=claims)
+
+    assert [call["stage"] for call in calls] == ["case_reading", "case_judgement"]
+    assert [claim.claim_id for claim in views] == ["A-01", "A-03"]
+    assert [claim.semantic_grounding.verdict for claim in trace.claims] == [
+        "unassessed",
+        "unassessed",
+        "unassessed",
+    ]
+    assert [claim.semantic_grounding.reason for claim in trace.claims] == [
+        "verifier_unavailable",
+        "no_resolved_source",
+        "verifier_unavailable",
+    ]
+    assert trace.grounding.claims_admitted_to_judgement == 2
+    assert trace.grounding.claims_withheld_from_judgement == 1
+    assert trace.grounding.claim_verifier_calls == 0
+    assert trace.summary == "John sent an email [A-01]."
+    assert "weights_missing" in caplog.text
 
 
 @pytest.mark.asyncio
@@ -241,23 +328,119 @@ async def test_verifier_exception_stops_analysis_without_a_successful_fallback(m
 
 
 @pytest.mark.asyncio
-async def test_judgement_cannot_reintroduce_a_withheld_claim_id_in_its_summary(monkeypatch):
+async def test_the_checks_and_the_judgement_wait_for_each_other_so_they_run_together(
+    monkeypatch,
+):
+    requested = threading.Event()
+    started = threading.Event()
+
+    def judge(premise, hypothesis):
+        started.set()
+        assert requested.wait(5), "the checks finished before the judgement was requested"
+        return Judgement("entailment", 0.99)
+
+    async def on_judgement():
+        requested.set()
+        assert await asyncio.to_thread(started.wait, 5), "the judgement ran before the checks"
+
+    trace, calls, _ = await run_pipeline(
+        monkeypatch, scorer=FakeNli(judge=judge), on_judgement=on_judgement
+    )
+
+    assert [call["stage"] for call in calls] == ["case_reading", "case_judgement"]
+    assert all(claim.semantic_grounding.verdict == "supported" for claim in trace.claims)
+
+
+@pytest.mark.asyncio
+async def test_cancelling_the_checks_stops_the_scoring_of_the_remaining_claims(monkeypatch):
+    first = threading.Event()
+    release = threading.Event()
+
+    def judge(premise, hypothesis):
+        first.set()
+        release.wait(5)
+        return Judgement("entailment", 0.99)
+
+    scorer = FakeNli(judge=judge)
+    monkeypatch.setattr(claim_validation, "load_scorer", lambda: scorer)
+    claims = [
+        CaseAnalysisClaim(
+            claim_id=f"A-0{number}",
+            claim_type="reported",
+            text="John sent an email.",
+            epistemic_status="reported",
+            supporting_citations=[
+                CaseSourceCitation(
+                    source_id="S1",
+                    exact_quote="John sent an email.",
+                    pointer_state="direct",
+                    start=0,
+                    end=19,
+                    evidence_unit_ids=["S1:U001-fixture"],
+                )
+            ],
+        )
+        for number in (1, 2, 3)
+    ]
+    reading = CaseProviderReading(version="case_analysis_trace_v1", claims=claims)
+    task = asyncio.create_task(checked_claim_support(reading, CaseGroundingReport()))
+
+    try:
+        assert await asyncio.to_thread(first.wait, 5)
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+    finally:
+        release.set()
+    await asyncio.sleep(0.3)
+
+    assert task.cancelled()
+    assert len(scorer.judged) == 1
+
+
+@pytest.mark.asyncio
+async def test_a_failed_judgement_cancels_the_checks_running_beside_it(monkeypatch):
+    release = threading.Event()
+
+    def judge(premise, hypothesis):
+        release.wait(5)
+        return Judgement("entailment", 0.99)
+
+    async def on_judgement():
+        raise CaseAnalysisFailure("case_judgement_failed", "The judgement failed", 502)
+
+    try:
+        with pytest.raises(CaseAnalysisFailure) as raised:
+            await run_pipeline(monkeypatch, scorer=FakeNli(judge=judge), on_judgement=on_judgement)
+        assert raised.value.code == "case_judgement_failed"
+        pending = [task for task in asyncio.all_tasks() if task is not asyncio.current_task()]
+        assert pending == []
+    finally:
+        release.set()
+
+
+@pytest.mark.asyncio
+async def test_judgement_cannot_cite_a_claim_that_was_withheld_before_it(monkeypatch):
+    _, claims = fixtures()
+    with_stale_unit(claims, 1)
     with pytest.raises(CaseAnalysisFailure) as raised:
         await run_pipeline(
-            monkeypatch, scorer=scorer_for_claims(), summary="John is the attacker [A-02]."
+            monkeypatch,
+            scorer=scorer_for_claims(),
+            claims=claims,
+            summary="John is the attacker [A-02].",
         )
     assert raised.value.code == "case_judgement_invalid_claim"
 
 
 @pytest.mark.asyncio
-async def test_long_input_is_scored_with_research_truncation_and_negative_verdict_withheld(
+async def test_long_input_is_scored_with_research_truncation_and_a_negative_verdict_is_a_label(
     monkeypatch,
 ):
     scorer = FakeNli(fits=lambda premise, hypothesis: False)
     trace, calls, _ = await run_pipeline(monkeypatch, scorer=scorer)
     assert all(claim.semantic_grounding.reason == "lr_not_supported" for claim in trace.claims)
     assert all(claim.semantic_grounding.truncated for claim in trace.claims)
-    assert [call["stage"] for call in calls] == ["case_reading"]
+    assert [call["stage"] for call in calls] == ["case_reading", "case_judgement"]
 
 
 @pytest.mark.parametrize(
@@ -293,7 +476,7 @@ async def test_long_input_is_scored_with_research_truncation_and_negative_verdic
     ],
 )
 def test_withheld_claim_ids_cannot_return_through_gaps_or_technical_associations(fields):
-    admitted = CaseProviderReading(
+    given = CaseProviderReading(
         version="case_analysis_trace_v1",
         claims=[
             CaseAnalysisClaim(
@@ -308,5 +491,5 @@ def test_withheld_claim_ids_cannot_return_through_gaps_or_technical_associations
         version="case_analysis_trace_v1", summary="John sent an email [A-01].", **fields
     )
     with pytest.raises(CaseAnalysisFailure) as raised:
-        check_judgement_references(judgement, admitted)
+        check_judgement_references(judgement, given)
     assert raised.value.code == "case_judgement_invalid_claim"
