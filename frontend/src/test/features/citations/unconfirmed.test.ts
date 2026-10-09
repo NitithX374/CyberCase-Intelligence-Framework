@@ -12,7 +12,6 @@ function source(id: string, exactQuote: string | null): SourceMessageRef {
   return {
     id,
     label: id,
-    excerpt: "",
     displayContent: "",
     exactQuote,
     quoteContext: null,

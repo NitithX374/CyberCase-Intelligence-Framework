@@ -35,13 +35,12 @@ describe("Saved Finding Source linkage", () => {
           },
         }),
       );
-      expect(state.direct).toBe(1);
       expect(state.semanticSupport).toBe(verdict);
       expect(state.semanticReason).toBeDefined();
     },
   );
 
-  it("separates direct, recovered and legacy pointers without implying semantic support", () => {
+  it("does not imply semantic support from direct, recovered and legacy pointers", () => {
     const state = findingTraceabilityData(
       claim("John sent an email.", "S1", {
         supporting_citations: [
@@ -51,61 +50,10 @@ describe("Saved Finding Source linkage", () => {
         ],
       }),
     );
-    expect(state).toEqual({
-      direct: 1,
-      recovered: 1,
-      legacy: 1,
-      unresolved: 0,
-      semanticSupport: "unassessed",
-    });
+    expect(state).toEqual({ semanticSupport: "unassessed" });
   });
 
-  it("does not inflate counts for repeated citations or a duplicate-ID diagnostic", () => {
-    const state = findingTraceabilityData(
-      claim("John sent an email.", "S1", {
-        supporting_citations: [direct, direct],
-        invalid_evidence: [
-          {
-            source_id: "S1",
-            evidence_unit_id: "S1:U001-revision",
-            role: "supporting",
-            pointer_state: "unresolved",
-            reason: "duplicate_id",
-          },
-        ],
-      }),
-    );
-    expect(state.direct).toBe(1);
-    expect(state.unresolved).toBe(0);
-  });
-
-  it("counts a bad pointer once when both invalid and unverified records describe it", () => {
-    const state = findingTraceabilityData(
-      claim("A reported transfer.", "S1", {
-        supporting_citations: [],
-        invalid_evidence: [
-          {
-            source_id: "S1",
-            evidence_unit_id: "S1:U001-old",
-            role: "supporting",
-            pointer_state: "unresolved",
-            reason: "stale_id",
-          },
-        ],
-        unverified_citations: [
-          {
-            source_id: "S1",
-            evidence_unit_id: "S1:U001-old",
-            role: "supporting",
-            written_quote: "",
-          },
-        ],
-      }),
-    );
-    expect(state.unresolved).toBe(1);
-  });
-
-  it("keeps NLI meaning pointers unresolved and excludes conflicting pointers from supporting counts", () => {
+  it("does not imply semantic support from NLI meaning pointers", () => {
     const state = findingTraceabilityData(
       claim("A reported transfer.", "S1", {
         supporting_citations: [],
@@ -127,12 +75,6 @@ describe("Saved Finding Source linkage", () => {
         ],
       }),
     );
-    expect(state).toEqual({
-      direct: 0,
-      recovered: 0,
-      legacy: 0,
-      unresolved: 1,
-      semanticSupport: "unassessed",
-    });
+    expect(state).toEqual({ semanticSupport: "unassessed" });
   });
 });

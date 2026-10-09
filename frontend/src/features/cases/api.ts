@@ -5,8 +5,8 @@ export async function listCases(signal?: AbortSignal): Promise<CaseRead[]> {
   return (await http.get<CaseRead[]>("/cases", { signal })).data;
 }
 
-export async function createCase(title = "New case"): Promise<CaseRead> {
-  return (await http.post<CaseRead>("/cases", { title })).data;
+export async function createCase(): Promise<CaseRead> {
+  return (await http.post<CaseRead>("/cases", { title: "New case" })).data;
 }
 
 export async function getCase(caseId: string, signal?: AbortSignal): Promise<CaseRead> {

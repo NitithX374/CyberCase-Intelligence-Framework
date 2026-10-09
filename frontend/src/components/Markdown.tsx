@@ -13,7 +13,7 @@ export function Markdown({ content, allowHtml = false }: MarkdownProps) {
   const rehypePlugins = allowHtml ? [rehypeRaw] : [];
 
   return (
-    <div className="markdown-content text-[15px] leading-7 text-ink">
+    <div className="text-[15px] leading-7 text-ink">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={rehypePlugins}

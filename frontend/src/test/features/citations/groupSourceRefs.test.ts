@@ -6,7 +6,6 @@ function source(overrides: Partial<SourceMessageRef> = {}): SourceMessageRef {
   return {
     id: "S1",
     label: "report.pdf · p. 1",
-    excerpt: "John sent an email.",
     displayContent: "John sent an email.",
     exactQuote: "John sent an email.",
     quoteContext: null,
