@@ -4,14 +4,11 @@ interface ExtractionPageItem {
   page_number?: number;
   text?: string;
   merged_text?: string;
-  text_method?: string;
-  verification_status?: string;
 }
 
 interface ExtractionPage {
   pageNumber: number;
   text: string;
-  method?: string;
 }
 
 export function documentPages(source: CaseSourceRead): ExtractionPage[] {
@@ -32,7 +29,6 @@ export function documentPages(source: CaseSourceRead): ExtractionPage[] {
         : typeof page.merged_text === "string"
           ? page.merged_text
           : "",
-    method: typeof page.text_method === "string" ? page.text_method : undefined,
   }));
 }
 

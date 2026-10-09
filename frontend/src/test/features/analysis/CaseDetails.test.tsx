@@ -6,7 +6,6 @@ import type { SourceMessageRef } from "@/features/citations/types";
 const statement: SourceMessageRef = {
   id: "source-1",
   label: "statement.pdf · p. 4",
-  excerpt: "received 52,000 baht",
   displayContent: "received 52,000 baht",
   exactQuote: "received 52,000 baht",
   quoteContext: null,

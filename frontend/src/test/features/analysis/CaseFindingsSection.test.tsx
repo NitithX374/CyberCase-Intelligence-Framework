@@ -18,10 +18,6 @@ function finding(
     epistemicStatus,
     reasoningSummary: null,
     traceability: {
-      direct: 0,
-      recovered: 0,
-      legacy: 0,
-      unresolved: 0,
       semanticSupport: "unassessed",
     },
     supportingSources: [],
@@ -129,7 +125,6 @@ describe("Grouped case findings", () => {
   const passage = {
     id: "narrative-1",
     label: "Case narrative #1",
-    excerpt: "The transfer happened on 17 March 2026 at noon.",
     displayContent: "The transfer happened on 17 March 2026 at noon.",
     exactQuote: "The transfer happened on 17 March 2026",
     quoteContext: null,
@@ -140,7 +135,6 @@ describe("Grouped case findings", () => {
     quoteLabel: "Nearest passage",
   };
   const unverified = {
-    writtenQuote: "The transfer happened on 11 March 2026 quickly",
     places: [
       { written: "11", source: "17" },
       { written: "quickly", source: "" },
@@ -158,10 +152,7 @@ describe("Grouped case findings", () => {
         findings={[
           {
             ...finding("transfer", "reported", "not_confirmed"),
-            unverifiedQuotes: [
-              unverified,
-              { writtenQuote: "Invented.", places: [], passage: null, meaningPassage: null },
-            ],
+            unverifiedQuotes: [unverified, { places: [], passage: null, meaningPassage: null }],
           },
         ]}
         onSelectSource={onSelectSource}
@@ -194,9 +185,7 @@ describe("Grouped case findings", () => {
         findings={[
           {
             ...finding("encrypted", "reported", "not_confirmed"),
-            unverifiedQuotes: [
-              { writtenQuote: "Invented.", places: [], passage: null, meaningPassage },
-            ],
+            unverifiedQuotes: [{ places: [], passage: null, meaningPassage }],
           },
         ]}
         onSelectSource={onSelectSource}
@@ -223,9 +212,7 @@ describe("Grouped case findings", () => {
         findings={[
           {
             ...finding("encrypted", "reported", "not_confirmed"),
-            unverifiedQuotes: [
-              { writtenQuote: "Invented.", places: [], passage: null, meaningPassage },
-            ],
+            unverifiedQuotes: [{ places: [], passage: null, meaningPassage }],
           },
         ]}
         onSelectSource={vi.fn()}
@@ -345,7 +332,6 @@ it("explains an unresolved evidence ID without claiming a quote mismatch", () =>
           ...finding("A-01", "reported", "not_confirmed"),
           unverifiedQuotes: [
             {
-              writtenQuote: "",
               evidenceUnitId: "unknown-id",
               places: [],
               passage: null,

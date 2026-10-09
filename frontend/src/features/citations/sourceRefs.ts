@@ -116,7 +116,6 @@ function sourceRef(
   return {
     id: source.id,
     label: pageNumbers.length ? `${identity} · ${formatPageReference(pageNumbers)}` : identity,
-    excerpt: source.text.length > 120 ? `${source.text.slice(0, 120)}…` : source.text,
     displayContent: pages.length
       ? pages.map((page) => page.text).join("\n\n")
       : contextualExcerpt(source.text, quote, citation),

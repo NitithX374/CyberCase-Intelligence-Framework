@@ -7,7 +7,7 @@ export const authQueryKeys = {
   session: () => [...authQueryKeys.all, "session"] as const,
 };
 
-export function useAuth({ enabled = true }: { enabled?: boolean } = {}) {
+export function useAuth() {
   const queryClient = useQueryClient();
 
   const sessionQuery = useQuery({
@@ -28,7 +28,6 @@ export function useAuth({ enabled = true }: { enabled?: boolean } = {}) {
     refetchOnWindowFocus: true,
     refetchInterval: 60_000,
     retry: false,
-    enabled,
   });
 
   useEffect(() => {

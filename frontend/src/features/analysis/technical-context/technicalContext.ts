@@ -201,7 +201,7 @@ function emptyTechnicalContext(
 function failureStageForCode(code: string | null): TechnicalFailureStage | null {
   if (!code) return null;
   if (code.startsWith("mitre_mapping")) return "mapping";
-  if (code.startsWith("rag_") || code === "rag_timeout") return "retrieval";
+  if (code.startsWith("rag_")) return "retrieval";
   if (code.includes("applicability")) return "applicability";
   if (code.includes("augmentation") || code.includes("trace")) return "metadata";
   return "augmentation";

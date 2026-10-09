@@ -18,7 +18,6 @@ export type CaseReportCreate = Schemas["CaseReportCreate"];
 export type CaseReportRead = Schemas["CaseReportRead"];
 export type CaseSourceCitation = Schemas["CaseSourceCitation"];
 export type CaseProjectionGrounding = Schemas["CaseProjectionGrounding"];
-export type CaseClaimSpan = Schemas["CaseClaimSpan"];
 export type CaseSourceCreate = Schemas["CaseSourceCreate"];
 export type CaseSourceRead = Schemas["CaseSourceRead"];
 export type ChatAnswerUnit = Schemas["ChatAnswerUnit"];

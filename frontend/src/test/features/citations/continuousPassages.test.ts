@@ -17,7 +17,6 @@ function source(passages: CitedSourcePassage[]): SourceMessageRef {
   return {
     id: "S1",
     label: "report.pdf",
-    excerpt: "",
     displayContent: "",
     exactQuote: null,
     quoteContext: null,
