@@ -33,17 +33,19 @@ from app.reports.render import (
 from app.reports.schemas import CaseReportContent, ReportQuoteContext
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.bind import resolve_case_trace
+from app.trace.citations import (
+    CaseMeaningPassage,
+    CaseNearPassage,
+    CaseQuoteDifference,
+    CaseReviewFlag,
+    CaseUnverifiedCitation,
+)
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseClaimGrounding,
     CaseFollowupExchange,
-    CaseMeaningPassage,
-    CaseNearPassage,
-    CaseQuoteDifference,
-    CaseReviewFlag,
     CaseSourceCitation,
-    CaseUnverifiedCitation,
 )
 from app.trace.trace import (
     CaseAnalysisTrace,

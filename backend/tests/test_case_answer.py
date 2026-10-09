@@ -10,7 +10,8 @@ import pytest
 import app.chat.compose as module
 from app.analysis.technical_context.contracts import CaseRagContextPayload, LegalReferenceResult
 from app.chat.answer import answer_metadata
-from app.chat.compose import CHAT_OUTPUT_TOKENS, UNANSWERED, generate_case_answer
+from app.chat.compose import CHAT_OUTPUT_TOKENS, generate_case_answer
+from app.chat.grounding import UNANSWERED
 from app.config import settings
 from app.errors import CaseAnalysisFailure
 from app.llm.request import thinking_option

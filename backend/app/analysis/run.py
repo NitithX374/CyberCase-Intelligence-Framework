@@ -12,7 +12,6 @@ from app.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts, AnalysisIn
 from app.analysis.store import (
     AnalysisStep,
     CaseUnderAnalysis,
-    external_context,
     store_analysis,
     store_assessment,
 )
@@ -163,7 +162,6 @@ async def reusable_context(
 __all__ = [
     "AnalysisStep",
     "UnassessedAdvance",
-    "external_context",
     "read_case_for_analysis",
     "run_case_analysis",
     "store_analysis",

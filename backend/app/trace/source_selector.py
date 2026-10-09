@@ -69,9 +69,3 @@ def load_selector() -> SourceSelector:
     if isinstance(_state, NliUnavailable):
         raise NliUnavailable(_state.reason)
     return _state
-
-
-def forget() -> None:
-    global _state
-    with loading:
-        _state = None

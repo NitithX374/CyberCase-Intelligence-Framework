@@ -25,12 +25,8 @@ WEIGHTS = Path(__file__).resolve().parents[1] / "nli_mdeberta"
 HAS_WEIGHTS = (WEIGHTS / "model.safetensors").is_file()
 
 
-REAL_LOAD = nli_model.load_nli
-
-
 @pytest.fixture(autouse=True)
-def fresh_state(monkeypatch):
-    monkeypatch.setattr(nli_model, "load_nli", REAL_LOAD)
+def fresh_state():
     nli_model.forget()
     yield
     nli_model.forget()
@@ -233,15 +229,6 @@ def test_inference_is_one_at_a_time():
         thread.join()
 
     assert running["most"] == 1
-
-
-SOURCE = (
-    "The outage began on Monday morning in the main office. "
-    "The attackers encrypted the file server on Monday night. "
-    "Staff were sent home early on Tuesday as a precaution. "
-    "A ransom note appeared on every desktop in the building."
-)
-UNRELATED_QUOTE = "Quantum widgets shimmer under violet moonlight beyond the horizon."
 
 
 needs_weights = pytest.mark.skipif(not HAS_WEIGHTS, reason="the NLI weights are not in the folder")

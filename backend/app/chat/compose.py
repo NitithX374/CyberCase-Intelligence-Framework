@@ -7,7 +7,6 @@ from app.analysis.language import ResponseLanguage
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.analysis.write import write_request
 from app.chat.answer_contract import CaseAnalysisOutput, ChatReply
-from app.chat.grounding import UNANSWERED as UNANSWERED
 from app.chat.grounding import answer_from
 from app.llm.request import request_stage
 from app.llm.settings import configured_pipeline
@@ -142,4 +141,4 @@ def analysis_payload(trace: CaseAnalysisTrace, summary: str | None) -> dict[str,
     }
 
 
-__all__ = ["CaseAnalysisOutput", "generate_case_answer"]
+__all__ = ["generate_case_answer"]

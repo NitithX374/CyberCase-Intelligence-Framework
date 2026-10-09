@@ -44,8 +44,6 @@ def bind_citations(
     role: Literal["supporting", "contradicting"],
     index: EvidenceIndex,
     seen: set[str],
-    *args,
-    **kwargs,
 ) -> tuple[list[CaseSourceCitation], list[CaseInvalidEvidence], list[CaseUnverifiedCitation]]:
     bound: list[CaseSourceCitation] = []
     invalid: list[CaseInvalidEvidence] = []

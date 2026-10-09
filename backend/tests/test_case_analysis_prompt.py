@@ -14,13 +14,13 @@ from app.analysis.prompts import (
     case_assessment_prompt,
 )
 from app.errors import CaseAnalysisFailure
-from app.llm.request import validate_response_payload
+from app.llm.request import decode_response
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.citations import CaseProviderCitation
 from app.trace.claims import (
     MAX_CLARIFICATION_QUESTION_CHARS,
     CaseAssessmentTrace,
-    CaseProviderCitation,
     CaseProviderClaim,
 )
 from app.trace.trace import CaseProviderAnalysis, CaseProviderJudgement, CaseProviderReadingReply
@@ -216,6 +216,6 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
 )
 def test_provider_status_errors_keep_timeout_specificity(status_code: int, error_code: str) -> None:
     with pytest.raises(CaseAnalysisFailure) as raised:
-        validate_response_payload(httpx.Response(status_code, json={"error": "failed"}))
+        decode_response(httpx.Response(status_code, json={"error": "failed"}))
 
     assert raised.value.code == error_code
