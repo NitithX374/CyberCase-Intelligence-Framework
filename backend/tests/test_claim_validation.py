@@ -4,7 +4,12 @@ import pytest
 from fake_nli import FakeNli
 
 from app.trace.b1_verifier import THRESHOLD
-from app.trace.claim_validation import admitted_claims, source_premise, validate_claims
+from app.trace.claim_validation import (
+    source_premise,
+    unverified_claims,
+    usable_claims,
+    validate_claims,
+)
 from app.trace.claims import CaseAnalysisClaim, CaseInvalidEvidence, CaseSourceCitation
 from app.trace.nli_model import Judgement, NliUnavailable
 
@@ -53,7 +58,7 @@ def test_complete_claim_support_uses_frozen_lr_decision(text, label, score, expe
     assert checked[0].semantic_grounding.entailment == score
     assert checked[0].semantic_grounding.threshold == THRESHOLD
     assert checked[0].semantic_grounding.method == "b1-lr-wice-train-v1"
-    assert bool(admitted_claims(checked)) == (expected == "supported")
+    assert usable_claims(checked) == checked
     assert stats.calls == 1
     assert stats.supported + stats.not_supported + stats.unassessed == 1
     assert original.semantic_grounding is None
@@ -69,7 +74,9 @@ def test_complete_claim_support_uses_frozen_lr_decision(text, label, score, expe
         ("Jane reported the loss.", "Jane committed fraud."),
     ],
 )
-def test_bound_citations_do_not_bypass_a_negative_semantic_verdict(source_text, hypothesis):
+def test_bound_citations_do_not_bypass_a_negative_semantic_verdict_which_only_labels(
+    source_text, hypothesis
+):
     original = claim(
         hypothesis,
         [
@@ -88,8 +95,9 @@ def test_bound_citations_do_not_bypass_a_negative_semantic_verdict(source_text, 
 
     assert scorer.judged == [(source_text, hypothesis)]
     assert checked[0].semantic_grounding.verdict == "not_supported"
-    assert admitted_claims(checked) == []
-    assert stats.grounding()["claims_withheld_from_judgement"] == 1
+    assert usable_claims(checked) == checked
+    assert stats.grounding()["claims_admitted_to_judgement"] == 1
+    assert stats.grounding()["claims_withheld_from_judgement"] == 0
 
 
 def test_multiple_units_and_documents_form_one_complete_premise_without_duplicate_spans():
@@ -128,7 +136,7 @@ def test_long_input_follows_research_truncation_policy_and_records_it():
     assert checked[0].semantic_grounding.truncated is True
     assert len(scorer.judged) == 1
     assert stats.calls == stats.truncated == 1
-    assert admitted_claims(checked) == []
+    assert usable_claims(checked) == checked
 
 
 @pytest.mark.parametrize(
@@ -163,14 +171,15 @@ def test_long_input_follows_research_truncation_policy_and_records_it():
         ),
     ],
 )
-def test_unassessed_or_conflicting_claims_are_not_admitted(changes, reason):
+def test_unassessed_or_conflicting_claims_stay_withheld(changes, reason):
     scorer = FakeNli(judge=lambda premise, hypothesis: Judgement("entailment", 0.99))
     checked, stats = validate_claims([claim(**changes)], provider=lambda: scorer)
 
     assert checked[0].semantic_grounding.reason == reason
     assert stats.unassessed == 1
     assert stats.calls == 0
-    assert admitted_claims(checked) == []
+    assert usable_claims(checked) == []
+    assert stats.grounding()["claims_withheld_from_judgement"] == 1
 
 
 @pytest.mark.parametrize("reason", ["stale_id", "unknown_unit", "duplicate_id"])
@@ -185,17 +194,38 @@ def test_invalid_support_is_withheld_but_duplicate_diagnostics_do_not_change_mea
     scorer = FakeNli(judge=lambda premise, hypothesis: Judgement("entailment", 0.99))
     checked, _ = validate_claims([claim(invalid_evidence=[invalid])], provider=lambda: scorer)
 
-    assert bool(admitted_claims(checked)) == (reason == "duplicate_id")
+    assert bool(usable_claims(checked)) == (reason == "duplicate_id")
     if reason != "duplicate_id":
         assert checked[0].semantic_grounding.reason == "unresolved_source_reference"
 
 
-def test_verifier_unavailability_is_an_error_instead_of_admitting_unchecked_claims():
+def test_the_validator_reports_an_unavailable_verifier_to_its_caller():
     def unavailable():
         raise NliUnavailable("weights_missing")
 
     with pytest.raises(NliUnavailable, match="weights_missing"):
         validate_claims([claim()], provider=unavailable)
+
+
+def test_claims_stay_unassessed_and_usable_when_the_verifier_is_unavailable():
+    eligible = claim()
+    blocked = claim(citations=[])
+
+    checked, stats = unverified_claims([eligible, blocked])
+
+    assert [item.semantic_grounding.verdict for item in checked] == [
+        "unassessed",
+        "unassessed",
+    ]
+    assert [item.semantic_grounding.reason for item in checked] == [
+        "verifier_unavailable",
+        "no_resolved_source",
+    ]
+    assert stats.calls == 0
+    assert stats.grounding()["claims_admitted_to_judgement"] == 1
+    assert stats.grounding()["claims_withheld_from_judgement"] == 1
+    assert usable_claims(checked) == [checked[0]]
+    assert eligible.semantic_grounding is None
 
 
 def test_frozen_lr_threshold_is_recorded_and_entailment_is_not_the_admission_score():
@@ -209,7 +239,6 @@ def test_frozen_lr_threshold_is_recorded_and_entailment_is_not_the_admission_sco
 def test_saved_legacy_claims_have_no_invented_verdict():
     original = claim()
     assert original.semantic_grounding is None
-    assert admitted_claims([original]) == []
 
 
 def test_selection_diagnostics_address_original_citation_indices_after_source_ordering():

@@ -4,6 +4,10 @@ Updated 2026-10-07. The working tree integrates the selected verifier; deploymen
 into a newly built Docker image must be checked separately. Historical saved
 analyses retain their original methods and thresholds.
 
+Updated 2026-10-09 (owner decision): the verdict is a warning label, not a filter.
+The sections below describe the label; the matched downstream experiment measured
+the earlier hard gate, which production no longer applies.
+
 The 20-cluster downstream replay and all 3,296 EN/Google MT-TH pairs are complete.
 [Measured results and limitations](B1_RESULTS_2026-10-07.md) distinguish admission,
 row-ID utilization, language transfer, runtime and deferred deployment.
@@ -16,7 +20,7 @@ to original offsets, text and document/page provenance. Binding establishes an
 address, not semantic support or real-world truth.
 
 Only the resolved **supporting** units linked to each Claim are candidates for
-verification. The filter does not search other Case Sources or create citations.
+verification. The check does not search other Case Sources or create citations.
 Duplicate spans are removed; Source order follows first appearance and located
 units within each Source are ordered by offsets. Original unit text is retained,
 including OCR markup. No quote search, text normalization or context-window
@@ -33,7 +37,8 @@ The frozen method is:
    `b5113eb38ab63efdd7f280f8c144ea8b13f978ce`, forward premise/Claim pair,
    `truncation=True`, `max_length=512` (longest first).
 4. Feed `[P(entailment), P(neutral), P(contradiction)]` to the frozen WiCE
-   TRAIN-fitted logistic regression, admitting its score >= 0.50.
+   TRAIN-fitted logistic regression. Its score >= 0.50 is `supported`; lower is
+`not_supported`.
 
 `backend/app/trace/b1_lr.json` holds the coefficients, pins and original artifact
 hash. They are not retrained at startup. The score is a task-specific linear
@@ -44,24 +49,26 @@ Claims with no resolved support, an unresolved nonduplicate supporting pointer,
 declared conflicting support or an uncertain epistemic status remain
 `unassessed` and withheld. Eligible scored Claims are `supported` or
 `not_supported`. Excess length is truncated and recorded rather than itself
-causing abstention. Missing or mismatched model assets raise an error; there is
-no fail-open verifier.
+causing abstention. Missing or mismatched model assets are logged and every
+eligible Claim is marked `unassessed` with reason `verifier_unavailable`; the
+analysis still completes.
 
-Only admitted Claims reach Views and Judgement. Parties, Timeline and Impacts
-are display projections derived from those Claims; they are not independent
-Judgement inputs. Raw follow-up answers cannot bypass the gate. Zero admission
-produces an abstention without calling Judgement. Final references to withheld
-Claims fail validation. All original Claims, citations, verdicts and provenance
-remain in the trace, including selected/considered citation indices, similarities,
-three NLI probabilities, LR score, raw token count, truncation and timing.
+Every Claim that passes the structural checks above reaches Views and Judgement,
+whatever its verdict. `not_supported` is shown as a plain warning on the Claim in the analysis
+view and the report; the verdict never enters a Judgement, Views or chat prompt.
+Verification runs concurrently with Judgement and the Views. Parties, Timeline and
+Impacts are display projections derived from those Claims; they are not
+independent Judgement inputs. Raw follow-up answers cannot bypass the structural
+checks. An analysis abstains without calling Judgement only when no Claim
+passes the structural checks. Final references to Claims that were not given to Judgement fail
+validation. All original Claims, citations, verdicts and provenance remain in the
+trace, including selected/considered citation indices, similarities, three NLI
+probabilities, LR score, raw token count, truncation and timing.
 
-Judgement still receives the original bound citation text attached to admitted
-Claims, including units excluded by semantic selection. The filter controls the
-verification premise; it does not redact their text from Judgement.
-Consequently a withheld proposition could be reconstructed from another admitted
-Claim or its Source passages. Reference validation controls cited IDs, not every
-implicit statement. Downstream row-ID utilization must not be presented as proof
-that all unsupported factual content was eliminated.
+Judgement receives the original bound citation text attached to each Claim,
+including units excluded by semantic selection; the selection controls the
+verification premise only. Downstream row-ID utilization in the replay below must
+not be read as a measure of what production now does.
 
 Production payload cleanup, 2026-10-08: citation records sent to Judgement contain
 only `exact_quote`, reproduced by the backend. Claim IDs remain; Source/unit IDs,
@@ -115,8 +122,9 @@ Both arms use identical fixed A IDs, original Claims, native Judgement prompt,
 model/provider configuration and temperature 0. No Reader is called. The
 `unfiltered` arm admits all Claims, while `verified` admits B1-LR positives.
 Claim-link-only admission is equivalent to unfiltered in this slice because
-every selected row has valid links. The old `experiments/analysis_arms.py` calls
-the production gate in both conditions and is not a clean No-Gate control.
+every selected row has valid links. The old `experiments/analysis_arms.py` runs the
+production pipeline in every condition; production no longer filters on the
+verdict, so it is not a gate arm.
 
 PowerShell example, run from the repository root:
 
@@ -170,7 +178,7 @@ retry quota/authentication failures or change providers, inputs or gold labels.
 ## Scope of conclusions
 
 Focused unit/pipeline checks establish addressing, decision implementation and
-admission routing. Real EN/TH/multi-unit smoke checks are diagnostic examples.
+verdict routing. Real EN/TH/multi-unit smoke checks are diagnostic examples.
 AttributionBench metrics estimate support classification on that benchmark.
 The downstream experiment measures citation utilization under a fixed replay;
 it cannot establish whole-system factual or legal correctness. Translation

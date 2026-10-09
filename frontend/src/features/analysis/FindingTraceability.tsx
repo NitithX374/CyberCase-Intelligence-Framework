@@ -5,20 +5,25 @@ import type { FindingTraceabilityData } from "./findingTraceabilityData";
 const SEMANTIC_LABELS = {
   english: {
     supported: "NLI: Source passages support this finding",
-    not_supported: "NLI: Source support not established — withheld from Judgement",
+    not_supported:
+      "Source check: the cited Source did not clearly support this finding. Check it before relying on it.",
     unassessed: "Meaning support not assessed",
   },
   thai: {
     supported: "NLI: ข้อความ Source รองรับ Finding",
-    not_supported: "NLI: Source ไม่รองรับ Finding — ไม่ส่งเข้า Judgement",
+    not_supported:
+      "ตัวตรวจอัตโนมัติ: Source ที่อ้างไม่ชัดว่ารองรับ Finding นี้ ควรตรวจกับต้นฉบับก่อนใช้",
     unassessed: "ยังไม่ได้ตรวจการรองรับทางความหมาย",
   },
 };
 
 const SEMANTIC_REASONS = {
   english: {
-    lr_supported: "Selected Source passages passed the frozen B1-LR admission gate.",
-    lr_not_supported: "Selected Source passages did not pass the frozen B1-LR admission gate.",
+    lr_supported: "Selected Source passages scored above the cutoff of the B1-LR support check.",
+    lr_not_supported:
+      "Selected Source passages scored below the cutoff of the B1-LR support check. This is a screening signal, not proof that the finding is wrong.",
+    verifier_unavailable:
+      "The support check could not run for this analysis, so this finding was neither confirmed nor flagged.",
     entailed: "The cited Source passages passed the NLI entailment threshold for this finding.",
     neutral: "The NLI model did not find that the cited Source passages entail this finding.",
     contradiction:
@@ -31,8 +36,11 @@ const SEMANTIC_REASONS = {
     input_too_long: "The complete Source passages and finding exceed the NLI input limit.",
   },
   thai: {
-    lr_supported: "ข้อความ Source ที่เลือกผ่านเกณฑ์ B1-LR ที่ตรึงไว้",
-    lr_not_supported: "ข้อความ Source ที่เลือกไม่ผ่านเกณฑ์ B1-LR ที่ตรึงไว้",
+    lr_supported: "ข้อความ Source ที่เลือกได้คะแนนสูงกว่าเกณฑ์ของตัวตรวจ B1-LR",
+    lr_not_supported:
+      "ข้อความ Source ที่เลือกได้คะแนนต่ำกว่าเกณฑ์ของตัวตรวจ B1-LR เป็นเพียงสัญญาณคัดกรอง ไม่ใช่การยืนยันว่า Finding ผิด",
+    verifier_unavailable:
+      "ตัวตรวจไม่พร้อมใช้งานในการวิเคราะห์นี้ จึงไม่ได้ยืนยันหรือติดป้าย Finding นี้",
     entailed: "ข้อความ Source ที่อ้างผ่านเกณฑ์การรองรับ Finding ของ NLI",
     neutral: "NLI ไม่พบว่าข้อความ Source ที่อ้างรองรับเนื้อหา Finding",
     contradiction: "NLI พบว่าข้อความ Source ที่อ้างขัดแย้งกับ Finding",
@@ -61,7 +69,9 @@ export function FindingTraceability({
         className={
           isSupported
             ? "inline-flex items-start gap-1.5 rounded-md bg-established/10 px-2.5 py-1 font-semibold text-established"
-            : "text-ink-muted"
+            : traceability.semanticSupport === "not_supported"
+              ? "font-medium text-unresolved"
+              : "text-ink-muted"
         }
         title={
           traceability.semanticReason
@@ -73,9 +83,13 @@ export function FindingTraceability({
       >
         {isSupported && <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0" />}
         {traceability.semanticSupport === "unassessed" && traceability.semanticReason
-          ? thai
-            ? "ตรวจการรองรับไม่ได้ — ไม่ส่งเข้า Judgement"
-            : "Support could not be assessed — withheld from Judgement"
+          ? traceability.semanticReason === "verifier_unavailable"
+            ? thai
+              ? "ตัวตรวจ Source ไม่พร้อมใช้งาน — ยังไม่ได้ประเมิน"
+              : "Source check unavailable — not assessed"
+            : thai
+              ? "ตรวจการรองรับไม่ได้ — ไม่ส่งเข้า Judgement"
+              : "Support could not be assessed — withheld from Judgement"
           : SEMANTIC_LABELS[language][traceability.semanticSupport]}
       </p>
     </div>

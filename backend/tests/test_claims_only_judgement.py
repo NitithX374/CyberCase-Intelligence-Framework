@@ -14,7 +14,12 @@ from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import evidence_units
 from app.trace.bind import bound_claims, bound_references
-from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, CaseSourceCitation
+from app.trace.claims import (
+    CaseAnalysisClaim,
+    CaseClaimGrounding,
+    CaseFollowupExchange,
+    CaseSourceCitation,
+)
 from app.trace.trace import (
     CaseAnalysisTrace,
     CaseProviderJudgement,
@@ -184,6 +189,39 @@ def test_the_chat_still_receives_the_sources_and_the_sentence_around_each_quote(
     }
 
 
+def test_the_chat_never_sees_a_verdict_or_the_reason_for_it():
+    bundle, reading = bundle_and_reading()
+    checked, _ = bound_claims(reading, bundle)
+    labelled = [
+        checked.claims[0].model_copy(
+            update={"semantic_grounding": CaseClaimGrounding(verdict=verdict, reason=reason)}
+        )
+        for verdict, reason in (("not_supported", "lr_not_supported"),)
+    ]
+    unchecked = checked.claims[0].model_copy(
+        update={
+            "claim_id": "A-09",
+            "semantic_grounding": CaseClaimGrounding(
+                verdict="unassessed", reason="verifier_unavailable"
+            ),
+        }
+    )
+    trace = CaseAnalysisTrace(
+        analysis_mode="case_overview", summary="A summary.", claims=[*labelled, unchecked]
+    )
+
+    sent = json.dumps(analysis_payload(trace, None)["claims"])
+
+    for label in (
+        "semantic_grounding",
+        "not_supported",
+        "lr_not_supported",
+        "verifier_unavailable",
+    ):
+        assert label not in sent
+    assert "A-09" in sent
+
+
 def test_the_judgement_request_builder_takes_the_checked_reading_and_nothing_of_the_sources():
     bundle, reading = bundle_and_reading()
     checked, _ = bound_claims(reading, bundle)
@@ -228,13 +266,9 @@ def test_the_rest_of_the_judgement_prompt_is_unchanged():
 
     assert "Citation records contain source text only." in prompt
     assert "cite the supplied claim IDs in your output." in prompt
-    assert (
-        "Each supplied claim has already passed semantic support verification against its "
-        "resolved supporting evidence." in prompt
-    )
-    assert (
-        "Treat only these admitted claims as case-specific factual input for synthesis." in prompt
-    )
+    assert "semantic support verification" not in prompt
+    assert "admitted" not in prompt
+    assert "Treat these claims as the case-specific factual input for synthesis." in prompt
     assert "not_confirmed" not in prompt
     assert "Keep it concise, readable, and complete." in prompt
     assert "Two supplied claims attributing the same event differently" in prompt

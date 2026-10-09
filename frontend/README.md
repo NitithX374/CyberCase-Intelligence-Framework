@@ -54,9 +54,10 @@ Supported Findings have a teal accent and checked support label. The Supported f
 Source chips group citations by Source/page while preserving every
 distinct cited span in the drawer, including separate occurrences of identical text.
 New LLM extraction and Judgement run independently in parallel over the
-same NLI-admitted Claims. All original Findings remain available for review with
-their saved `semantic_grounding` verdict; rejected/unassessed Findings are withheld
-from Judgement and new Views. Older saved results remain unassessed until reanalysis.
+same Claims. All original Findings remain available for review with
+their saved `semantic_grounding` verdict; a `not_supported` Finding shows a plain
+warning and is still sent to Judgement and the Views, while a Finding that fails the
+structural checks is withheld from both. Older saved results remain unassessed until reanalysis.
 Details preserves Parties, Timeline and Impacts and their
 links to Findings/full Claim context in a collapsed Related findings disclosure. Unknown role/time render as unspecified;
 new LLM rows have no fabricated offsets, confidence or semantic verdict. They are

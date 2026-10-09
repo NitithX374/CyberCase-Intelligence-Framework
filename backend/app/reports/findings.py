@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from app.reports.contracts import CaseReportInput
 from app.reports.schemas import (
     ReportFinding,
@@ -98,9 +100,17 @@ def report_findings(
                 contradicting_marked=marked_places(claim.contradicting_citations),
                 unverified_quotes=unverified_quotes(claim),
                 reasoning_summary=claim.reasoning_summary,
+                source_check=source_check(claim),
             )
         )
     return findings, ordinals
+
+
+def source_check(claim: CaseAnalysisClaim) -> Literal["not_supported"] | None:
+    grounding = claim.semantic_grounding
+    if grounding is not None and grounding.verdict == "not_supported":
+        return "not_supported"
+    return None
 
 
 def quotes(citations: list[CaseSourceCitation]) -> list[str]:

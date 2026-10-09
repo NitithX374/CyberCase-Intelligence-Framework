@@ -40,16 +40,17 @@ Reading receives every source's exact unit text with local IDs such as `U001`, t
 The Reader returns only `version` and canonical `claims`. The backend resolves
 Source-unit IDs to original text/provenance. One prompt-structured LLM call batches
 exactly the Claims supplied to Judgement into Parties, Timeline and Impacts.
-Both calls run independently in parallel after binding and frozen B1-LR Claim admission; views never enter
+Both calls run independently in parallel after binding, beside the frozen B1-LR Claim check; views never enter
 Judgement/chat and are not authoritative factual records. The extractor input is
 only Claim IDs/text. Schema and nonempty known Claim links are checked; any row
 with an unknown ID is dropped and logged. Roles and combined date/time may be
 null. Views receive no independent semantic verifier or fabricated offsets/citations. Existing
 `bound`/`mixed`/`unbound`/`no_claim` meanings remain structural. Historical extractor
-and projection metadata remain readable through generic records. Mandatory B1-LR
-checks Claims against selected Source units before either call; its LR boundary
-is0.50 with longest-first NLI truncation512. It fails if a pinned model is
-unavailable, and abstains if no Claim is admitted. See [the verifier contract](../research/attribution_benchmark/B1_INTEGRATION.md).
+and projection metadata remain readable through generic records. B1-LR
+checks Claims against selected Source units beside both calls and only labels them;
+its LR boundary is0.50 with longest-first NLI truncation512. If a pinned model is
+unavailable the Claims are marked not assessed and the analysis completes; it
+abstains only if no Claim passes the structural checks. See [the verifier contract](../research/attribution_benchmark/B1_INTEGRATION.md).
 
 `CASE_READING_THINKING_TOKENS` can override Reading reasoning without changing Judgement or assessment. Use 0 to disable, or at least 1,024; absent historical pipeline fields inherit the shared budget. Compose keeps 8,192 following the small matched pilot: faster reasoning-off generations did not consistently satisfy the strict Reader schema. Output limits, retries and production timeouts are unchanged. From `backend`, `python -m experiments.reading_load_pilot --output-dir <new-folder>` measures payload sizes; add `--execute` explicitly to call the configured provider on two prelabelled fixtures. The pilot records raw replies, retries, binding and a separate experiment-only 300-second wall limit; it never writes Cases or calls Judgement, derived-view extraction or RAG.
 

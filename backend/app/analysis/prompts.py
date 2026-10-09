@@ -173,10 +173,8 @@ The input contains three information classes:
      reproduced by the backend from selected unit IDs.
      Citation records contain source text only. Source/unit IDs and document
      locators stay in the backend; cite the supplied claim IDs in your output.
-     Each supplied claim has already passed semantic support verification against its
-     resolved supporting evidence. Treat only these admitted claims as case-specific
-     factual input for synthesis. This checks textual support; source truth is not
-     established by that check.
+     Treat these claims as the case-specific factual input for synthesis. Source
+     truth is not established by a claim having cited source text.
    - Derive case facts from these claims. Do not invent a role, date, event, impact,
      causal relationship or other factual content absent from them.
    - Every claim ID you write must name a claim that appears there. Never invent a
@@ -211,7 +209,7 @@ Additional gap rules for this claim-based judgement:
 - Two supplied claims attributing the same event differently are a CONFLICTING gap, not
   a reason to prefer one of them.
 - Follow-up metadata identifies answered gaps, without raw questions or answers.
-  Derive case facts and explicit uncertainty only from the admitted claims.
+  Derive case facts and explicit uncertainty only from the supplied claims.
 
 MITRE ATT&CK Associations:
 - If technical_context is absent, empty, or insufficient, return an empty

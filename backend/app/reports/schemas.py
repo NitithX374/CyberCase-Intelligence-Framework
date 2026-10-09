@@ -84,6 +84,7 @@ class ReportFinding(ReportRow):
     contradicting_marked: list[list[ReportMark]] = Field(default_factory=list)
     unverified_quotes: list[ReportUnverifiedQuote] = Field(default_factory=list)
     reasoning_summary: str | None = None
+    source_check: Literal["not_supported"] | None = None
 
 
 class ReportTechnique(ReportRow):

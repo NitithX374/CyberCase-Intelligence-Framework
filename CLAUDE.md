@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CyberCase Intelligence Framework** provides whole-Case summarization and analysis, with conditional MITRE ATT&CK augmentation. The case owns multiple documents and narratives, the analysis, its conversation and reports. A cheap gap assessment can pause before expensive work. Otherwise Reading writes canonical claims only, selecting source-unit IDs; the backend derives source lists and resolves those IDs to original source spans. After binding, frozen B1-LR selects resolved Source units with MPNet cosine >=0.20 (first maximum retained if none pass), concatenates retained original text with a single newline, runs pinned mDeBERTa with longest-first truncation at512 tokens, and applies the WiCE TRAIN-fitted LR to ordered E/N/C probabilities. Only LR score >=0.50 reaches Judgement and the batched Parties/Timeline/Impacts extractor. Other Claims stay in Findings with their saved semantic verdict; verifier unavailability fails analysis, and zero admitted Claims produces an abstention without downstream model calls. Raw follow-up questions/answers are excluded from Judgement; QA IDs, gap keys and answered flags remain. One batched structured LLM call extracts Parties, Timeline and Impacts from exactly those admitted Claims, for display and reports. The two calls run independently in parallel; extractor failure records a warning and empty views without failing Judgement. Judgement receives claims, follow-up history and optional external technical context; extracted views never enter Judgement or chat as factual input. No projection-specific NLI checks run; historical saved views remain readable. Every summary sentence ends with supporting claim IDs. All structured model stages use a complete JSON contract in the system prompt, with strict local Pydantic validation before DTO normalization and at most one generation retry for invalid or truncated output; no provider schema grammar is sent. There is no run row or queue. The existing agentic RAG pipeline supplies conditional external interpretation and never Case evidence. Reports are deterministic snapshots of stored analysis. [The production verifier contract](research/attribution_benchmark/B1_INTEGRATION.md) records schemas, examples, state semantics and validation.
+**CyberCase Intelligence Framework** provides whole-Case summarization and analysis, with conditional MITRE ATT&CK augmentation. The case owns multiple documents and narratives, the analysis, its conversation and reports. A cheap gap assessment can pause before expensive work. Otherwise Reading writes canonical claims only, selecting source-unit IDs; the backend derives source lists and resolves those IDs to original source spans. After binding, frozen B1-LR selects resolved Source units with MPNet cosine >=0.20 (first maximum retained if none pass), concatenates retained original text with a single newline, runs pinned mDeBERTa with longest-first truncation at512 tokens, and applies the WiCE TRAIN-fitted LR to ordered E/N/C probabilities. The verdict is a warning label, not a filter: every Claim that passes the structural checks reaches Judgement and the batched Parties/Timeline/Impacts extractor, a Claim scored below 0.50 (`not_supported`) is shown with a plain warning in the analysis view and the report, and the verdict never enters a model prompt. The check runs concurrently with Judgement and the views. Verifier unavailability is logged and marks the Claims not assessed without failing the analysis; an analysis abstains without downstream model calls only when no Claim passes the structural checks. Raw follow-up questions/answers are excluded from Judgement; QA IDs, gap keys and answered flags remain. One batched structured LLM call extracts Parties, Timeline and Impacts from exactly the Claims Judgement receives, for display and reports. The two calls run independently in parallel; extractor failure records a warning and empty views without failing Judgement. Judgement receives claims, follow-up history and optional external technical context; extracted views never enter Judgement or chat as factual input. No projection-specific NLI checks run; historical saved views remain readable. Every summary sentence ends with supporting claim IDs. All structured model stages use a complete JSON contract in the system prompt, with strict local Pydantic validation before DTO normalization and at most one generation retry for invalid or truncated output; no provider schema grammar is sent. There is no run row or queue. The existing agentic RAG pipeline supplies conditional external interpretation and never Case evidence. Reports are deterministic snapshots of stored analysis. [The production verifier contract](research/attribution_benchmark/B1_INTEGRATION.md) records schemas, examples, state semantics and validation.
 
 ## Service Layout
 
@@ -230,7 +230,7 @@ trace/                  what the analysis, chat and reports share
   source_selector.py    local pinned multilingual MPNet, normalized cosine, serialized CPU inference
   claim_validation.py   structural blockers then B1-LR; saved per-Claim verdict/features/selection
   nli_model.py          pinned mDeBERTa full E/N/C vector; longest-first truncation512,
-                        raw token count/truncation recorded; unavailable model fails analysis
+                        raw token count/truncation recorded; unavailable model leaves Claims unassessed
   sentences.py          the sentence around a quotation: PyThaiNLP crfcut, line
                         by line; the encoder gate splits with it too
   bind.py               stable orchestration: resolve claim source references
@@ -278,13 +278,14 @@ analysis/               producing an analysis of a case; routes, schemas
   assess.py             the cheap gaps-only call that runs first
   write.py              write_trace: a claims-only reading call (selected Source
                         unit IDs; prompt JSON, no grammar), deterministic source
-                        binding (bound_claims), Claim/Source NLI admission,
+                        binding (bound_claims), the Claim/Source warning check,
                         independent batched LLM views for display, concurrent
                         with a judgement call (summary, gaps, ATT&CK
                         associations) over the checked claims alone: no case
                         sources and no sentence around each quotation
-  claim_gate.py         worker-thread verification, admitted reading and final
-                        summary/gap/ATT&CK claim-ID checks
+  claim_gate.py         worker-thread verification (a warning label), the
+                        structural filter and final summary/gap/ATT&CK
+                        claim-ID checks
   language.py           which language to write in: Thai when any source has
                         a Thai character; a chat question in its own language
   progress.py           announce(step): the steps write, retrieve and the
@@ -442,28 +443,32 @@ question and answer. `MITRE_GATE_MODEL_PATH` points at the encoder's weights;
 
 The dedicated Reader contract contains `version` and `claims` only. Each claim contains its ID, type, text, epistemic status and supporting/contradicting unit citations. The backend derives source-ID lists and citation locations; the Reader cannot generate copied quotations, reasoning summaries, metadata or separate parties/timeline/impacts. `reported` covers attributed or qualified source assertions; `unknown` describes uncertainty explicitly stated in a source. Higher-level inference belongs to Judgement. Removing duplicated structured facts also removes projection-specific NLI verification. Historical views and saved verdicts remain readable for existing records but are never input authority for Judgement or chat. `support=bound` means linked claims have resolved supporting citations, not semantic or factual confirmation. The single-call `CaseProviderAnalysis` contract remains solely for the existing experimental baseline, separate from the production Reader.
 
-Judgement receives each admitted Claim's `claim_id`, type, text and epistemic status, plus supporting/contradicting citation text only. Source IDs, Evidence Unit IDs and document/page/offset metadata remain on the original Claims for binding, NLI, traceability and reports. This serialization does not alter the stored Claims or remove their attached Source text from Judgement.
+Judgement receives each supplied Claim's `claim_id`, type, text and epistemic status, plus supporting/contradicting citation text only. Source IDs, Evidence Unit IDs and document/page/offset metadata remain on the original Claims for binding, NLI, traceability and reports. This serialization does not alter the stored Claims or remove their attached Source text from Judgement.
 
 ### Claim views (backend)
 
 `analysis/views.py` makes one prompt-structured `case_views` call over exactly the
-NLI-admitted canonical Claims supplied to Judgement. Each input contains only
+canonical Claims supplied to Judgement. Each input contains only
 `claim_id` and `text`. After binding, `analysis/claim_gate.py` runs the frozen
-B1-LR Claim/Source gate in a worker thread. MPNet retains original resolved units
+B1-LR Claim/Source check in a worker thread, concurrently with Judgement and the views. MPNet retains original resolved units
 at cosine >=0.20, or the first highest-similarity unit if none pass; mDeBERTa
 scores the single-newline concatenation with longest-first truncation512. The
-ordered E/N/C vector enters the frozen WiCE TRAIN LR; score >=0.50 admits.
-This task-specific linear decision boundary is not calibrated factual confidence.
+ordered E/N/C vector enters the frozen WiCE TRAIN LR; score >=0.50 is `supported`,
+lower is `not_supported`. This task-specific linear decision boundary is not
+calibrated factual confidence. The verdict is a warning label: it filters nothing
+and is never sent to a model.
 All binding citations remain stored; selected indices/IDs, similarities, three
 NLI probabilities, LR score, artifact hash and truncation are separate diagnostics.
 Unresolved support, missing support, conflicts and uncertain status still withhold
-before inference. Missing/invalid model assets fail analysis. Zero admission skips
-Views/Judgement. Historical .80 verdicts keep their original meaning; rerunning
+before inference. Missing/invalid model assets are logged and mark the Claims
+`unassessed` (`verifier_unavailable`) without failing the analysis. Judgement and
+the views still run when every Claim is `not_supported`; they are skipped only when
+no Claim passes those structural checks. Historical .80 verdicts keep their original meaning; rerunning
 analysis is required to obtain B1-LR verdicts.
 
 The extractor uses the configured analysis model and provider order, without
 thinking, with at most 4,096 output tokens and a 60-second overall deadline. It
-runs concurrently with Judgement after binding and Claim support validation. Required nonempty `claim_ids`
+runs concurrently with Judgement after binding. Required nonempty `claim_ids`
 link every view to its Claims. An item with any unknown ID is dropped and logged;
 invalid schema, transport failure or timeout records failed extraction and empty
 views while Judgement completes independently. A failed Judgement cancels the
@@ -489,8 +494,8 @@ contract is in [B1-LR integration](research/attribution_benchmark/B1_INTEGRATION
 Quote contexts, tolerated differences, near/meaning pointers and their counts
 remain accepted in stored traces and reports. There is no active meaning-pointer
 recovery or quote matcher in new analysis binding. `nli_model.py` serves the
-mandatory Claim support gate; unavailable weights no longer produce advisory
-success. `CLAIM_NLI_PATH` and `CLAIM_SELECTOR_PATH` name the two local model
+Claim support check; unavailable weights leave Claims unassessed rather than
+failing the analysis. `CLAIM_NLI_PATH` and `CLAIM_SELECTOR_PATH` name the two local model
 folders. Compose mounts them read-only; provisioning is explicit and no model
 is downloaded by an analysis request. Test fixtures replace the verifier to
 avoid accidental real model/provider calls.

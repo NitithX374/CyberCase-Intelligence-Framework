@@ -36,6 +36,7 @@ from app.trace.bind import resolve_case_trace
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
+    CaseClaimGrounding,
     CaseFollowupExchange,
     CaseMeaningPassage,
     CaseNearPassage,
@@ -479,6 +480,63 @@ def test_an_analysis_stored_before_the_status_existed_makes_a_report_with_none()
     assert [party.support for party in report.parties] == [None]
     assert [event.support for event in report.timeline] == [None]
     assert [impact.support for impact in report.impacts] == [None]
+
+
+CHECK_WARNING = "ตัวตรวจอัตโนมัติไม่พบว่า Source ที่อ้างรองรับข้อค้นพบนี้"
+
+
+def _input_with_check(verdict: str, reason: str) -> CaseReportInput:
+    report_input = _input()
+    trace = report_input.analysis_trace
+    checked = trace.claims[0].model_copy(
+        update={"semantic_grounding": CaseClaimGrounding(verdict=verdict, reason=reason)}
+    )
+    trace = trace.model_copy(update={"claims": [checked, *trace.claims[1:]]})
+    return report_input.model_copy(update={"analysis_trace": trace})
+
+
+def test_a_finding_the_source_check_did_not_support_is_printed_with_a_plain_warning() -> None:
+    stored = _stored(_input_with_check("not_supported", "lr_not_supported"))
+
+    html = render_case_report_html(stored, ISSUE)
+
+    assert [finding.source_check for finding in stored.findings] == ["not_supported"]
+    assert html.count(CHECK_WARNING) == 1
+    assert "ป้ายเตือนจากตัวตรวจอัตโนมัติ" in html
+    assert "ยังรวมอยู่ในการวิเคราะห์" not in html
+
+
+@pytest.mark.parametrize(
+    ("verdict", "reason"),
+    [("supported", "lr_supported"), ("unassessed", "verifier_unavailable")],
+)
+def test_a_supported_or_unchecked_finding_prints_no_warning(verdict, reason) -> None:
+    stored = _stored(_input_with_check(verdict, reason))
+
+    html = render_case_report_html(stored, ISSUE)
+
+    assert [finding.source_check for finding in stored.findings] == [None]
+    assert CHECK_WARNING not in html
+    assert "ป้ายเตือนจากตัวตรวจอัตโนมัติ" not in html
+
+
+def test_the_report_says_when_the_source_check_was_unavailable() -> None:
+    report = build_case_report_content(_input_with_check("unassessed", "verifier_unavailable"))
+
+    assert any("ไม่พร้อมใช้งานในการวิเคราะห์นี้" in line for line in report.limitations)
+
+
+def test_a_report_stored_before_the_source_check_existed_validates_and_prints_no_warning() -> None:
+    written = _stored(_input_with_check("not_supported", "lr_not_supported")).model_dump(
+        mode="json"
+    )
+    for finding in written["findings"]:
+        del finding["source_check"]
+
+    stored = CaseReportContent.model_validate(written)
+
+    assert [finding.source_check for finding in stored.findings] == [None]
+    assert CHECK_WARNING not in render_case_report_html(stored, ISSUE)
 
 
 TOLERATED_LINE = "พบในเอกสารเมื่อไม่นับรูปแบบ"

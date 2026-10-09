@@ -98,16 +98,20 @@ thread. Frozen B1-LR selects resolved Source units with pinned multilingual
 MPNet cosine >=0.20, retaining the first maximum when none pass. Original
 retained units are joined with a single newline. Pinned mDeBERTa applies
 longest-first truncation512 and returns E/N/C probabilities; the frozen WiCE
-TRAIN-fitted LR admits at0.50. This is a task-specific decision boundary,
-not calibrated factual confidence. Structural blockers still withhold missing,
-unresolved, conflicting or uncertain support before inference. Unavailable
-models fail the analysis. All Claims/citations remain stored, with selected
-indices/IDs, probabilities, LR score, artifact hash and truncation diagnostics.
-Grounding counts admission, selection, calls and duration. Zero admission
-abstains without Views/Judgement. Historical .80 verdicts remain historical.
+TRAIN-fitted LR scores at0.50: `supported` at or above, `not_supported` below.
+This is a task-specific decision boundary, not calibrated factual confidence.
+The verdict is a warning label: it filters nothing and is never sent to a model.
+The check runs concurrently with Judgement and the Views. Structural blockers
+still withhold missing, unresolved, conflicting or uncertain support before
+inference. An unavailable model is logged and the Claims are marked `unassessed`
+(`verifier_unavailable`) without failing the analysis. All Claims/citations remain
+stored, with selected indices/IDs, probabilities, LR score, artifact hash and
+truncation diagnostics. Grounding counts passed and withheld Claims, selection,
+calls and duration. An analysis abstains without Views/Judgement only when no
+Claim passes the structural checks. Historical .80 verdicts remain historical.
 See [the exact method and experiments](../research/attribution_benchmark/B1_INTEGRATION.md).
 
-`analysis/views.py` batches the admitted Claims from the same reading into one
+`analysis/views.py` batches the Claims supplied to Judgement from the same reading into one
 prompt-structured LLM call. Input is only Claim IDs and text. Parties, Timeline and
 Impacts use the existing `claim_ids` public shape.
 Roles and combined date/time may be null. The backend validates schema and known
@@ -125,7 +129,7 @@ Historical local-extraction metadata and offsets remain readable. The former
 local loader/per-Claim runtime and Compose service are removed. The encoder
 and Claim support verifier have separate purposes; the stopped research experiments remain separate.
 
-The judgement therefore reads only admitted claims: their statuses, and only the
+The judgement therefore reads only claims that pass the structural checks: their statuses, and only the
 source spans that were resolved. Its payload retains Claim IDs but citation records
 contain only original Source text. Source IDs, Evidence Unit IDs and document/page/
 offset locators stay on the original Claims for binding, NLI, traceability and reports.
@@ -139,7 +143,7 @@ separate context around each quotation. Attached Source spans can contain conten
 beyond the Claim text; valid Claim references do not verify every generated fact.
 Follow-up input is limited to QA IDs, gap keys and answered flags; raw
 questions/answers remain Reader Sources and stored provenance, preventing that
-route from bypassing the gate. Technical context remains external. Judgement
+route from bypassing the structural checks. Technical context remains external. Judgement
 references to withheld/unknown Claim IDs fail before joining the trace. Every
 summary sentence ends with the IDs of the claims it rests on. Older saved Claims
 without `semantic_grounding` remain unassessed; reads/reports do not run NLI.
