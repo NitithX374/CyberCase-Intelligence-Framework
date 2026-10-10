@@ -111,7 +111,6 @@ export function buildCaseOverview(
         .filter((association) => association.claim_ids.includes(claim.claim_id))
         .map((association) => association.technique_id),
       unverifiedQuotes: (claim.unverified_citations ?? []).map((item) => ({
-        writtenQuote: item.written_quote,
         ...(item.evidence_unit_id ? { evidenceUnitId: item.evidence_unit_id } : {}),
         places: (item.near_passage?.differences ?? []).map(({ written, source }) => ({
           written,
@@ -230,7 +229,6 @@ function summaryUnits(
     const note = supportNote(unit.support, writtenText);
     return {
       text: unit.text,
-      claimIds: unit.claim_ids ?? [],
       marks,
       closing: aligned ? closings[index] : "",
       supportNote: note,

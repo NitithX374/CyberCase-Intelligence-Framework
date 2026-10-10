@@ -28,7 +28,6 @@ export interface QuotePlace {
 }
 
 export interface UnverifiedQuote {
-  writtenQuote: string;
   evidenceUnitId?: string | null;
   places: QuotePlace[];
   passage: SourceMessageRef | null;
@@ -52,7 +51,6 @@ export interface FindingMark {
 
 export interface SummaryUnit {
   text: string;
-  claimIds: string[];
   marks: FindingMark[];
   closing: string;
   supportNote: string | null;

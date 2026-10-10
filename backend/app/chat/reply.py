@@ -143,7 +143,6 @@ async def record_or_replay(
             return await analyse_after_round(
                 case_id=case_id,
                 user_id=user_id,
-                request=request,
                 first_new_ordinal=sent.ordinal,
                 session_factory=session_factory,
             )
@@ -174,7 +173,6 @@ async def record_or_replay(
     return await analyse_after_round(
         case_id=case_id,
         user_id=user_id,
-        request=request,
         first_new_ordinal=recorded.first_new_ordinal,
         session_factory=session_factory,
     )
@@ -218,7 +216,6 @@ async def analyse_after_round(
     *,
     case_id: UUID,
     user_id: UUID | None,
-    request: ChatMessageCreate,
     first_new_ordinal: int,
     session_factory: Callable,
 ) -> tuple[list[ChatMessage], AnalysisStep | None]:

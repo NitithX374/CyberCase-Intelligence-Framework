@@ -142,7 +142,11 @@ describe("Case overview projection", () => {
       summary,
       trace_json: trace({
         summary,
-        claims: [claim("A", sourceId)],
+        claims: [
+          claim("A", sourceId),
+          claim("B", sourceId, { claim_id: "A-02", supporting_citations: [] }),
+          claim("C", sourceId, { claim_id: "A-03", supporting_citations: [] }),
+        ],
         summary_units: [
           { text: "A share was encrypted", claim_ids: ["A-01"], support: "bound" },
           { text: "Both demands", claim_ids: ["A-01", "A-02"], support: "mixed" },
@@ -152,35 +156,43 @@ describe("Case overview projection", () => {
       }),
     });
 
-  it("gives each summary unit its claims and the line its status calls for", () => {
+  it("gives each summary unit its finding marks and the line its status calls for", () => {
     const overview = buildCaseOverview(unitsOf("A share was encrypted [A-01]."), [
       narrativeSource(quote),
     ]);
 
     expect(
-      overview.summaryUnits.map(({ text, claimIds, supportNote, noteMark }) => ({
+      overview.summaryUnits.map(({ text, marks, supportNote, noteMark }) => ({
         text,
-        claimIds,
+        marks,
         supportNote,
         noteMark,
       })),
     ).toEqual([
-      { text: "A share was encrypted", claimIds: ["A-01"], supportNote: null, noteMark: null },
+      {
+        text: "A share was encrypted",
+        marks: [{ number: 1, claimId: "A-01" }],
+        supportNote: null,
+        noteMark: null,
+      },
       {
         text: "Both demands",
-        claimIds: ["A-01", "A-02"],
+        marks: [
+          { number: 1, claimId: "A-01" },
+          { number: 2, claimId: "A-02" },
+        ],
         supportNote: "Only some linked claims have resolved source citations.",
         noteMark: "a",
       },
       {
         text: "Ten bitcoin",
-        claimIds: ["A-03"],
+        marks: [{ number: 3, claimId: "A-03" }],
         supportNote: "None of the linked claims has a resolved source citation.",
         noteMark: "b",
       },
       {
         text: "Someone is to blame",
-        claimIds: [],
+        marks: [],
         supportNote: "Not linked to any claim.",
         noteMark: "c",
       },
@@ -530,7 +542,6 @@ describe("Case overview projection", () => {
       quoteLabel: "Nearest passage",
     });
     expect(second).toEqual({
-      writtenQuote: "Something else",
       places: [],
       passage: null,
       meaningPassage: null,

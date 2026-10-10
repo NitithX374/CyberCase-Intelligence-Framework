@@ -111,7 +111,6 @@ class AuthConfig(BaseModel):
     jwt_expire_minutes: int = 60 * 24 * 7
     jwt_cookie_name: str = "cybercase_auth_token"
     jwt_cookie_secure: bool = False
-    frontend_base_url: str = "http://localhost:3000"
 
 
 class Settings(
@@ -130,8 +129,6 @@ class Settings(
         case_sensitive=False,
         extra="ignore",
     )
-
-    debug: bool = False
 
 
 settings = Settings()

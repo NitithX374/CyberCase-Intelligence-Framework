@@ -21,12 +21,8 @@ export const backendEnvironment = {
   POSTGRES_DB: "cybercase_framework",
   JWT_SECRET_KEY: "e2e-local-secret-key-for-playwright-tests",
   OPENROUTER_CYBERCASE: "e2e-local-key",
-  OPENROUTER_BASE_URL: "http://127.0.0.1:8099/v1",
   OPENROUTER_MESSAGES_URL: "http://127.0.0.1:8099/v1/messages",
-  CORE_LLM_PROVIDER: "openrouter",
-  CASE_ANALYSIS_PIPELINE: "raw_direct",
   CORS_ORIGINS: "http://127.0.0.1:3100,http://localhost:3100",
-  FRONTEND_BASE_URL: "http://127.0.0.1:3100",
   RAG_SERVICE_URL: "http://127.0.0.1:8001",
   PYTHONUNBUFFERED: "1",
 };

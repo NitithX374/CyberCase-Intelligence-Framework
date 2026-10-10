@@ -1,7 +1,6 @@
 export interface SourceMessageRef {
   id: string;
   label: string;
-  excerpt: string;
   displayContent: string;
   exactQuote: string | null;
   quoteContext: QuoteContext | null;

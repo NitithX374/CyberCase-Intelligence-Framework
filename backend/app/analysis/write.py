@@ -253,7 +253,6 @@ __all__ = [
     "checked_reading",
     "joined_trace",
     "judgement_request",
-    "provider_source_payload",
     "reading_from",
     "reading_payload",
     "reading_request",

@@ -55,7 +55,6 @@ const REFUSAL_MESSAGES = new Map<string, string>([
     "กรุณาตอบคำถามเพิ่มเติมใน Ask ให้ครบ ระบบจะวิเคราะห์ต่อให้อัตโนมัติ",
   ],
   ["extraction_text_empty", "ไม่พบข้อความที่อ่านได้ในเอกสารนี้"],
-  ["extraction_text_missing", "ไม่พบข้อความที่อ่านได้ในเอกสารนี้"],
   ["unsupported_document_type", "ระบบไม่รองรับไฟล์ประเภทนี้"],
   ["invalid_document", "ไม่สามารถอ่านไฟล์นี้ได้ ไฟล์อาจเสียหายหรือภาพมีขนาดใหญ่เกินไป"],
   ["document_size_limit_exceeded", "ไฟล์มีขนาดใหญ่เกินกว่าที่ระบบรองรับ"],

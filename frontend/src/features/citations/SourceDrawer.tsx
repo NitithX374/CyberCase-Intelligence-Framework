@@ -205,7 +205,7 @@ export function highlightQuote(text: string, quoteOrQuotes: string | string[] | 
 
 function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
   const pages = sourceRef.sourcePages;
-  const content = sourceRef.displayContent || sourceRef.excerpt;
+  const content = sourceRef.displayContent;
   const quotes = sourceRef.passages?.length
     ? sourceRef.passages.map((p) => p.quote)
     : sourceRef.exactQuote;

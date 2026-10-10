@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from app.analysis.write import provider_source_payload
+from app.analysis.reading_sources import provider_source_payload
 from app.sources.bundle import CaseSourceItem
 
 

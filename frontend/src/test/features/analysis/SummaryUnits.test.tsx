@@ -8,7 +8,6 @@ const findings = `/case/${caseId}/analysis/findings`;
 
 function unit(overrides: Partial<SummaryUnit> & Pick<SummaryUnit, "text">): SummaryUnit {
   return {
-    claimIds: [],
     marks: [],
     closing: "",
     supportNote: null,
@@ -20,13 +19,11 @@ function unit(overrides: Partial<SummaryUnit> & Pick<SummaryUnit, "text">): Summ
 const units: SummaryUnit[] = [
   unit({
     text: "A share was encrypted",
-    claimIds: ["A-01"],
     marks: [{ number: 1, claimId: "A-01" }],
     closing: ".",
   }),
   unit({
     text: "Both demands were made",
-    claimIds: ["A-03", "A-07"],
     marks: [
       { number: 3, claimId: "A-03" },
       { number: 12, claimId: "A-07" },
@@ -139,7 +136,6 @@ describe("Summary units", () => {
     const many = Array.from({ length: 40 }, (_, index) =>
       unit({
         text: `ผู้เสียหายรายที่ ${index + 1} โอนเงินไปยังบัญชีของคนร้าย`,
-        claimIds: [`A-${String(index + 1).padStart(2, "0")}`],
         marks: [{ number: index + 1, claimId: `A-${String(index + 1).padStart(2, "0")}` }],
       }),
     );

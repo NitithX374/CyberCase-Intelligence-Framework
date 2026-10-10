@@ -8,7 +8,7 @@ from app.analysis.pipeline import (
     retrieve_technical_context,
     write_analysis,
 )
-from app.analysis.run import external_context
+from app.analysis.store import external_context
 from app.analysis.technical_context import gate as gate_module
 from app.analysis.technical_context.contracts import LegalReferenceResult, QueryResponse
 from app.analysis.technical_context.rag_client import RagCallFailure
