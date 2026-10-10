@@ -69,7 +69,7 @@ All application routes use `/api/v1`. The primary surface is authenticated Case 
 doppler run -- docker compose up --build
 ```
 
-Or run services separately. `install_deps.py` installs `backend/requirements-dev.txt` (the backend plus its test tools) and `rag_service/requirements.txt` into the active Python environment:
+Or run services separately. `install_deps.py` installs `backend/requirements.txt` (the backend, its verifier stack and its test tools) and `rag_service/requirements.txt` into the active Python environment:
 
 ```powershell
 python install_deps.py

@@ -23,10 +23,6 @@ COPY requirements.txt ./requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
 
-COPY requirements-encoder.txt ./requirements-encoder.txt
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements-encoder.txt
-
 # Copy backend application code
 COPY app ./app
 COPY alembic ./alembic

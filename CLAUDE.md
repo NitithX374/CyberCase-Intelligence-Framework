@@ -22,7 +22,7 @@ The RAG pipeline code lives at `rag_service/app/RAG/GraphRAG/` (it was migrated 
 
 ### Install Dependencies
 ```bash
-# Installs backend/requirements-dev.txt (requirements.txt plus the test tools) +
+# Installs backend/requirements.txt (backend, verifier stack, test tools) +
 # rag_service/requirements.txt into the active Python
 python install_deps.py
 ```
@@ -406,7 +406,7 @@ all. `MITRE_GATE_MODE` picks between three gates, which live together in
 | Mode | What decides | Notes |
 |------|--------------|-------|
 | `llm` (default) | one prompt over the case, each source cut to at most 4,000 characters (20,000 across all sources); `input_truncated` on the record says whether anything was cut | `technical_context/gate_llm.py`, model from `CASE_ANALYSIS_MODEL`, sent through `request_stage` like every other model call |
-| `encoder` | XLM-R over one sentence at a time | `technical_context/gate_encoder.py`; needs `torch`/`transformers`, which are **not** in `backend/requirements.txt` |
+| `encoder` | XLM-R over one sentence at a time | `technical_context/gate_encoder.py`; needs `torch`/`transformers`, pinned in `backend/requirements.txt` |
 | `never` | nothing — always SKIP | the ablation, for measuring what technical context is worth |
 
 **Shadow gate.** `MITRE_GATE_SHADOW=encoder` runs the XLM-R gate beside the LLM gate, concurrently.

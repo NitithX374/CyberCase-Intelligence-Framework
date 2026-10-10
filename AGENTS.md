@@ -93,8 +93,7 @@ in the same change rather than leaving the next person to discover it.
   `app/`. Frontend tests are in `frontend/src/test/`, at the path of the file
   they test, import through `@/`, and `npm run lint` fails on a test file
   anywhere else.
-- The test tools are in `backend/requirements-dev.txt`, which also pulls in
-  `requirements.txt`.
+- The test tools are in `backend/requirements.txt`.
 - `cd backend && python -m pytest tests -q` skips the PostgreSQL tests
   **silently** unless `CYBERCASE_TEST_DATABASE_URL` is set. Check the count,
   not just the colour.

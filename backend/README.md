@@ -85,10 +85,10 @@ The report template's `case_evidence` and `evidence_to_examine` sections (`app/r
 
 ```powershell
 cd backend
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 python -m alembic upgrade head
 uvicorn app.main:app --reload
 python -m pytest -q
 ```
 
-`requirements-dev.txt` adds the test tools to `requirements.txt`. The PostgreSQL tests skip unless `CYBERCASE_TEST_DATABASE_URL` is set.
+`requirements.txt` includes the test tools. The PostgreSQL tests skip unless `CYBERCASE_TEST_DATABASE_URL` is set.

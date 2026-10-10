@@ -186,6 +186,6 @@ context was worth.
 threshold and which output index means "attack pattern" — nothing in the
 checkpoint itself says.
 
-`torch` is deliberately **not** in `backend/requirements.txt`; it would add
-roughly 2 GB to an image that installs no ML stack today. Only `pythainlp` and
-`python-crfsuite` went in, for the splitter.
+`torch` is pinned in `backend/requirements.txt` from the PyTorch CPU index, not
+from PyPI, where the CUDA wheel would add roughly 2 GB to the image. The splitter
+uses `wtpsplit`, `pythainlp` and `python-crfsuite` from the same file.

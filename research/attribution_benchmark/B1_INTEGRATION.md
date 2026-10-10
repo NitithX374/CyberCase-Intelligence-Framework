@@ -94,7 +94,7 @@ The Docker backend uses local read-only mounts for `backend/nli_mdeberta` and
 `backend/scripts/copy_source_selector.py` with the exact pinned cached snapshot.
 The paths are controlled by `CLAIM_NLI_PATH` and `CLAIM_SELECTOR_PATH`; the old
 meaning-pointer environment names no longer configure the current verifier.
-`sentence-transformers==6.0.0` is required by `requirements-encoder.txt`.
+`sentence-transformers==6.0.0` is pinned in `backend/requirements.txt`.
 
 The observed native integration uses CPU with checkpoint float16 NLI and float32
 selector weights. The transfer harness can explicitly use the same frozen assets

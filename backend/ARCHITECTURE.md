@@ -422,15 +422,15 @@ you do.
 
 ```powershell
 cd backend
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 python -m alembic upgrade head
 uvicorn app.main:app --reload
 python -m pytest tests -q
 python -m ruff format . ; python -m ruff check .
 ```
 
-`requirements-dev.txt` is `requirements.txt` plus pytest, pytest-asyncio, ruff
-and reportlab. The schema comes from one migration,
+`requirements.txt` holds the backend, the verifier stack and the test tools
+(pytest, pytest-asyncio, ruff, reportlab, pypdf). The schema comes from one migration,
 `alembic/versions/0001_initial_schema.py`, and
 `tests/test_database_schema_parity_alembic.py` checks that it matches the
 models. The PostgreSQL tests skip unless `CYBERCASE_TEST_DATABASE_URL` is set.
