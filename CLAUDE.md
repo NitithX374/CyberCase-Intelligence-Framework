@@ -231,8 +231,9 @@ trace/                  what the analysis, chat and reports share
   claim_validation.py   structural blockers then B1-LR; saved per-Claim verdict/features/selection
   nli_model.py          pinned mDeBERTa full E/N/C vector; longest-first truncation512,
                         raw token count/truncation recorded; unavailable model leaves Claims unassessed
-  sentences.py          the sentence around a quotation: PyThaiNLP crfcut, line
-                        by line; the encoder gate splits with it too
+  sentences.py          the sentence around a quotation: SaT (sat-3l-sm,
+                        threshold 0.05) line by line, PyThaiNLP crfcut when
+                        SaT cannot load; the encoder gate splits with it too
   bind.py               stable orchestration: resolve claim source references
                         before Judgement; check final references and
                         derive summary units afterwards
@@ -424,7 +425,7 @@ all. `MITRE_GATE_MODE` picks between three gates, which live together in
     installed for the active legacy NLI recovery path.
   - `tests/conftest.py` keeps it off whatever the local `.env` says.
 
-The `encoder` gate splits its input with PyThaiNLP `crfcut` (`trace/sentences.py`, which also cuts the sentence shown around a quotation);
+The `encoder` gate splits its input with SaT at threshold 0.05, or PyThaiNLP `crfcut` when SaT cannot load (`trace/sentences.py`, which also cuts the sentence shown around a quotation);
 every sentence is an exact substring of its source, so the encoder's `trigger_text`
 is grounded by construction. The `llm` gate does not split sentences: it reads each
 source cut to its share of the budget, and the `trigger_text` it returns is checked

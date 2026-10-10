@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+import threading
 from bisect import bisect_right
 from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import cached_property
-
-import threading
 from typing import Any
 
 from pythainlp.tokenize import sent_tokenize
@@ -14,6 +13,7 @@ from app.sources.bundle import CaseSourceItem
 from app.trace.citations import MAX_CONTEXT_CHARS, CaseQuoteContext
 
 MIN_SENTENCE_CHARS = 25
+SAT_THRESHOLD = 0.05
 
 _sat_model: Any = None
 _sat_lock = threading.Lock()
@@ -40,7 +40,7 @@ def tokenize_sentences(segment_text: str) -> list[str]:
     segmenter = get_sat_segmenter()
     if segmenter is not None:
         try:
-            return segmenter.split(segment_text)
+            return segmenter.split(segment_text, threshold=SAT_THRESHOLD)
         except Exception:
             pass
     return sent_tokenize(segment_text, engine="crfcut")
@@ -161,6 +161,7 @@ def quote_context(index: SentenceIndex, quote: str) -> CaseQuoteContext | None:
 
 __all__ = [
     "MIN_SENTENCE_CHARS",
+    "SAT_THRESHOLD",
     "Sentence",
     "SentenceIndex",
     "get_sat_segmenter",

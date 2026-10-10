@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.sources.bundle import CaseSourceItem
+from app.trace import sentences
 from app.trace.sentences import split_sources, split_text
 
 THAI_REPORT = """เมื่อวันที่ 4 พฤศจิกายน 2563 ผู้เสียหายเข้าแจ้งความ
@@ -51,3 +52,17 @@ def test_each_sentence_carries_the_source_it_came_from():
     by_id = {source.source_id: source.text for source in sources}
     for sentence in sentences:
         assert sentence.text in by_id[sentence.source_id]
+
+
+def test_sat_splits_at_the_project_threshold(monkeypatch):
+    seen = []
+
+    class Segmenter:
+        def split(self, text, threshold=None):
+            seen.append(threshold)
+            return [text]
+
+    monkeypatch.setattr(sentences, "get_sat_segmenter", lambda: Segmenter())
+
+    assert sentences.tokenize_sentences("ข้อความทดสอบ") == ["ข้อความทดสอบ"]
+    assert seen == [0.05]

@@ -331,7 +331,8 @@ not deterministic, so "ask again" is not free and not neutral.
 **A quotation's context is exact; only its display is cleaned.** When a quote
 binds, `trace/bind.py` stores beside it the text around it, cut from the same
 stored source by `trace/sentences.py`: the sentence before and the sentences the
-quote touches, PyThaiNLP `crfcut` line by line, at most 400 characters besides
+quote touches, SaT at threshold 0.05 (PyThaiNLP `crfcut` when SaT cannot load)
+line by line, at most 400 characters besides
 the quote, with a trimmed side flagged. A quote found more than once gets none, because nothing
 says which occurrence was meant. The drawer and the report show the OCR's own
 markup — `<table>` rows and cells, `<page_number>` — as plain text, and leave
