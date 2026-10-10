@@ -9,6 +9,7 @@ from fastapi import FastAPI
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from RAG import GraphRAGAgent  # noqa: E402
+from RAG.GraphRAG.config import STANDALONE_CHAT  # noqa: E402
 from routers.rag import router as rag_router  # noqa: E402
 
 
@@ -66,6 +67,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Cybercase RAG Service", lifespan=lifespan)
 app.include_router(rag_router)
+
+# The service used on its own: one conversation per case, and a page to hold
+# it on. Off unless asked for — the backend calls POST /query and nothing else.
+if STANDALONE_CHAT:
+    from routers.conversation import router as conversation_router  # noqa: E402
+
+    app.include_router(conversation_router)
+    print("[RAG Service] Standalone chat: on — open /chat")
 
 
 if __name__ == "__main__":
