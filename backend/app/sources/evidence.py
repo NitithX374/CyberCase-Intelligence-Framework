@@ -10,7 +10,7 @@ from app.sources.markup import source_tables
 from app.trace.quotes import MAX_QUOTE_CHARS
 from app.trace.sentences import sentence_spans
 
-EVIDENCE_VERSION = "evidence_units_v2"
+EVIDENCE_VERSION = "evidence_units_v3"
 UNIT_PATTERN = re.compile(
     r"(?P<source>[^:]{1,160}):U(?P<number>[0-9]{3,})-(?P<revision>[a-f0-9]{16})"
 )
