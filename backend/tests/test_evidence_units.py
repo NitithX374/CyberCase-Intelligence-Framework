@@ -100,11 +100,12 @@ def test_nested_table_stays_with_its_outer_row():
     assert "".join(unit.text for unit in units) == text
 
 
-def test_segmentation_version_makes_old_unit_ids_stale():
+@pytest.mark.parametrize("version", ["evidence_units_v1", "evidence_units_v2"])
+def test_segmentation_version_makes_old_unit_ids_stale(version):
     import hashlib
 
     text = "John reported the incident."
-    old_revision = hashlib.sha256(f"evidence_units_v1\0{text}".encode()).hexdigest()[:16]
+    old_revision = hashlib.sha256(f"{version}\0{text}".encode()).hexdigest()[:16]
     assert old_revision != evidence_revision(text)
     index = EvidenceIndex((CaseSourceItem("S1", "narrative", text),))
     assert index.resolve("S1", f"S1:U001-{old_revision}") == (None, "stale_id")

@@ -14,6 +14,7 @@ from app.sources.bundle import CaseSourceItem
 from app.trace.citations import MAX_CONTEXT_CHARS, CaseQuoteContext
 
 MIN_SENTENCE_CHARS = 25
+SAT_THRESHOLD = 0.025
 
 _sat_model: Any = None
 _sat_lock = threading.Lock()
@@ -40,7 +41,7 @@ def tokenize_sentences(segment_text: str) -> list[str]:
     segmenter = get_sat_segmenter()
     if segmenter is not None:
         try:
-            return segmenter.split(segment_text)
+            return segmenter.split(segment_text, threshold=SAT_THRESHOLD)
         except Exception:
             pass
     return sent_tokenize(segment_text, engine="crfcut")
