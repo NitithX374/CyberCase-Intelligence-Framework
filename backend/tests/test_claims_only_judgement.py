@@ -5,10 +5,16 @@ import json
 from unittest.mock import patch
 from uuid import uuid4
 
+import pytest
 from case_mitre_test_support import _fixtures
 
 from app.analysis.prompts import CASE_JUDGEMENT_SYSTEM_PROMPT
-from app.analysis.write import judgement_request, write_request, write_trace
+from app.analysis.write import (
+    judgement_request,
+    summary_sentence_limit,
+    write_request,
+    write_trace,
+)
 from app.chat.compose import analysis_payload
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
@@ -111,6 +117,7 @@ def test_the_judgement_request_has_no_case_sources():
     assert "case_sources" in reading_call["content"]
     assert set(judgement_call["content"]) == {
         "response_language",
+        "summary_sentence_limit",
         "followup_history",
         "reading",
     }
@@ -257,6 +264,43 @@ def test_the_judgement_prompt_asks_every_summary_sentence_to_end_with_claim_ids(
     assert "Those belong to the fields that hold them" not in prompt
 
 
+def reading_of(count: int) -> CaseProviderReading:
+    _, reading = bundle_and_reading()
+    claim = reading.claims[0]
+    return CaseProviderReading(
+        version="case_analysis_trace_v1",
+        claims=[claim.model_copy(update={"claim_id": f"A-{n:02d}"}) for n in range(1, count + 1)],
+    )
+
+
+@pytest.mark.parametrize(
+    ("claims", "limit"),
+    [(1, 2), (6, 2), (7, 3), (9, 3), (10, 4), (20, 7), (24, 8), (36, 8)],
+)
+def test_the_summary_sentence_limit_follows_the_claim_count(claims, limit):
+    assert summary_sentence_limit(claims) == limit
+
+
+def test_the_judgement_request_carries_the_sentence_limit_the_backend_computed():
+    request = judgement_request(reading_of(10), "english", ())
+
+    assert request["summary_sentence_limit"] == 4
+    assert request["summary_sentence_limit"] == summary_sentence_limit(10)
+
+
+def test_the_judgement_prompt_asks_for_an_overview_inside_the_limit_it_is_given():
+    prompt = " ".join(CASE_JUDGEMENT_SYSTEM_PROMPT.split())
+
+    assert "summary_sentence_limit in the input is the most sentences you may write." in prompt
+    assert "Count your sentences before you answer and merge claims" in prompt
+    assert "Do not restate the claims one by one." in prompt
+    assert "Put the IDs once, at the end of the sentence, never inside it." in prompt
+    assert (
+        "When you join claims, keep who reported, alleged or observed each one, and its dates, "
+        "numbers and uncertainty." in prompt
+    )
+
+
 def test_the_rest_of_the_judgement_prompt_is_unchanged():
     prompt = " ".join(CASE_JUDGEMENT_SYSTEM_PROMPT.split())
 
@@ -266,10 +310,10 @@ def test_the_rest_of_the_judgement_prompt_is_unchanged():
     assert "admitted" not in prompt
     assert "Treat these claims as the case-specific factual input for synthesis." in prompt
     assert "not_confirmed" not in prompt
-    assert "Keep it concise, readable, and complete." in prompt
+    assert "Keep it concise and readable." in prompt
+    assert "complete" not in prompt
     assert "Two supplied claims attributing the same event differently" in prompt
     assert "Follow-up metadata identifies answered gaps, without raw questions or answers" in prompt
-    assert "length" not in prompt.lower().replace("claim-based", "")
 
 
 def test_the_judgement_prompt_leaves_the_attack_mapping_to_the_rag_service():

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 from collections.abc import Sequence
 
 from fastapi import status
@@ -37,6 +38,10 @@ from app.trace.trace import (
 )
 
 logger = logging.getLogger("app.case_analysis")
+
+SUMMARY_CLAIMS_PER_SENTENCE = 3
+SUMMARY_MIN_SENTENCES = 2
+SUMMARY_MAX_SENTENCES = 8
 
 
 async def write_trace(
@@ -186,6 +191,13 @@ def write_request(
     }
 
 
+def summary_sentence_limit(claim_count: int) -> int:
+    return max(
+        SUMMARY_MIN_SENTENCES,
+        min(SUMMARY_MAX_SENTENCES, math.ceil(claim_count / SUMMARY_CLAIMS_PER_SENTENCE)),
+    )
+
+
 def judgement_request(
     reading: CaseProviderReading,
     language: str,
@@ -193,6 +205,7 @@ def judgement_request(
 ) -> dict[str, object]:
     return {
         "response_language": language,
+        "summary_sentence_limit": summary_sentence_limit(len(reading.claims)),
         "followup_history": [
             {"qa_id": item.qa_id, "gap_key": item.gap_key, "answered": True}
             for item in followup_history
@@ -253,6 +266,7 @@ __all__ = [
     "reading_from",
     "reading_payload",
     "reading_request",
+    "summary_sentence_limit",
     "write_request",
     "write_trace",
 ]
