@@ -383,6 +383,62 @@ class GraphRetriever:
                 for rec in records
             }
 
+    def stix_ids_for(self, attack_ids: list[str]) -> dict[str, str]:
+        """The node behind each ATT&CK ID (T1105, G0016, M1031, …).
+
+        For a reader who names an entity by its ID: a bare ID is a poor search
+        query (it pulls metadata matches, see ``query_sanitizer``), but it is
+        an exact key here.
+
+        Returns:
+            ``{attack_id: stix_id}`` for the IDs that matched a node. An ID
+            two domains share resolves to the Enterprise node.
+        """
+        ids = list(dict.fromkeys(filter(None, attack_ids)))
+        if not ids:
+            return {}
+
+        with self.driver.session() as session:
+            records = session.run(
+                Query("""
+                UNWIND $ids AS aid
+                MATCH (n:Entity {attack_id: aid})
+                RETURN aid AS aid, n.stix_id AS stix_id, n.domain AS domain
+                """),
+                ids=ids,
+            )
+            found: dict[str, str] = {}
+            for rec in records:
+                if rec["aid"] not in found or rec["domain"] == "enterprise":
+                    found[rec["aid"]] = rec["stix_id"]
+            return found
+
+    def domains_of(self, stix_ids: list[str]) -> dict[str, str]:
+        """The ATT&CK domain each node belongs to (``enterprise``, ``mobile``, ``ics``).
+
+        Entity search is already held to one domain (``ATTACK_DOMAIN_FILTER``),
+        but relationship documents carry no domain of their own: whether a
+        "mitigates" relationship is an Enterprise one is a question about its
+        two ends, and this answers it.
+
+        Returns:
+            ``{stix_id: domain}`` for the ids that matched a node.
+        """
+        ids = list(dict.fromkeys(filter(None, stix_ids)))
+        if not ids:
+            return {}
+
+        with self.driver.session() as session:
+            records = session.run(
+                Query("""
+                UNWIND $ids AS sid
+                MATCH (n:Entity {stix_id: sid})
+                RETURN sid AS sid, n.domain AS domain
+                """),
+                ids=ids,
+            )
+            return {rec["sid"]: rec["domain"] or "" for rec in records}
+
     def enterprise_techniques(self) -> list[dict]:
         """Every Enterprise parent technique, for the MITRE table re-read.
 

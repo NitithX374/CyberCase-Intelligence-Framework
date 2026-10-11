@@ -180,6 +180,8 @@ Every case route is authenticated and ownership-scoped; ownership is one check, 
 
 RAG service (`rag_service/app/main.py`, port 8001, no prefix): `GET /health`, `POST /query`, `GET /retrieval-contexts/{context_id}`.
 
+With `STANDALONE_CHAT=true` (off by default — the backend never uses it) the RAG service also serves a conversation of its own, for running it without the backend: `POST /conversations` (a case file → the same pipeline `/query` runs, and a conversation about that case), `GET`/`DELETE /conversations/{id}`, `POST /conversations/{id}/messages`, and the page at `GET /chat`. A message is a `question` (planned, optionally looked up in ATT&CK, answered — the analysis and the table do not change and the pipeline does not run) or `facts` (appended to the case file, which is analysed again). Code: `rag_service/app/RAG/GraphRAG/pipeline/conversation/` and `routers/conversation.py`. Conversations are kept in memory only. `/query` stays stateless and the pipeline still never pauses.
+
 ### Backend Layout (`backend/app/`)
 
 ```

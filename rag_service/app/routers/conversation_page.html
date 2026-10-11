@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>สนทนารายคดี — MITRE ATT&amp;CK</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --panel: #ffffff; --ink: #1c2430; --muted: #5d6878; --line: #dde1e7;
+    --accent: #1f4e79; --accent-ink: #ffffff; --soft: #e9eff6; --mark: #ffe58a;
+    --warn: #8a5a00; --warn-bg: #fff6dd; --bad: #a12b2b; --bad-bg: #fdecec; --good: #1f6b3a;
+    --dot: #c3cad5; --shadow: 0 1px 2px rgba(20, 30, 50, .06), 0 12px 32px rgba(20, 30, 50, .08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12161c; --panel: #1b212a; --ink: #e6eaf0; --muted: #9aa5b5; --line: #2c3542;
+      --accent: #6fa8dc; --accent-ink: #0d1117; --soft: #232c38; --mark: #6b5a12;
+      --warn: #f0c36a; --warn-bg: #33290f; --bad: #f08a8a; --bad-bg: #3a1c1c; --good: #7fd19b;
+      --dot: #2f3947; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 14px 36px rgba(0, 0, 0, .28);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.65 system-ui, "Leelawadee UI", "Noto Sans Thai", "Segoe UI", sans-serif;
+    display: flex; flex-direction: column;
+  }
+  header.bar { flex: none; }
+  button, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  button:disabled { cursor: default; opacity: .55; }
+  [hidden] { display: none !important; }
+
+  header.bar {
+    display: flex; align-items: center; gap: 12px; padding: 10px 20px;
+    background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  header.bar h1 { font-size: 16px; margin: 0; font-weight: 650; }
+  header.bar .mark { width: 22px; height: 22px; flex: none; color: var(--accent);
+    fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+  header.bar .sub { color: var(--muted); font-size: 13px; flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 14px; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .btn.link { border: 0; background: none; color: var(--accent); padding: 0; text-decoration: underline; }
+
+  /* ── start ─────────────────────────────────────────────── */
+  /* A dotted field that fades out downwards: the page's one piece of pure
+     decoration, kept behind the content and out of its way. */
+  #start { flex: 1; min-height: 0; overflow-y: auto; position: relative; }
+  #start::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 460px; pointer-events: none;
+    background-image: radial-gradient(var(--dot) 1.1px, transparent 1.2px); background-size: 22px 22px;
+    -webkit-mask-image: linear-gradient(#000, transparent); mask-image: linear-gradient(#000, transparent);
+  }
+  #start .wrap { position: relative; max-width: 1140px; margin: 0 auto; padding: 44px 24px 30px; }
+  .hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 40px; align-items: start; }
+  @media (max-width: 980px) { .hero { grid-template-columns: 1fr; gap: 26px; } #start .wrap { padding-top: 28px; } }
+
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; letter-spacing: .04em;
+    color: var(--accent); background: var(--soft); border-radius: 999px; padding: 3px 12px; font-weight: 600; }
+  .eyebrow i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .pitch h2 { margin: 16px 0 12px; font-size: clamp(26px, 3.1vw, 36px); line-height: 1.28; letter-spacing: -.01em; }
+  .pitch h2 em { font-style: normal; color: var(--accent); white-space: nowrap; }
+  .pitch .lead { margin: 0 0 22px; font-size: 16px; color: var(--muted); max-width: 46ch; }
+
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: step; }
+  .steps li { display: grid; grid-template-columns: 38px 1fr; gap: 12px; align-items: start; counter-increment: step; }
+  .steps .ico { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center;
+    background: var(--panel); border: 1px solid var(--line); color: var(--accent); }
+  .steps svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .steps b { display: block; font-size: 15px; }
+  .steps b::before { content: counter(step) ". "; color: var(--muted); font-weight: 500; }
+  .steps span { color: var(--muted); font-size: 13.5px; }
+
+  #start .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px;
+    box-shadow: var(--shadow); }
+  #start .card label { display: block; font-weight: 650; margin-bottom: 8px; }
+  #start textarea { display: block; width: 100%; min-height: 250px; resize: vertical; padding: 12px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--bg); line-height: 1.7; }
+  #start textarea:focus, #composer textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .samples { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .samples button { border: 1px dashed var(--line); background: none; border-radius: 999px; padding: 3px 11px;
+    font-size: 13px; color: var(--accent); }
+  .samples button:hover { border-style: solid; background: var(--soft); }
+  #start .row { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  #start .row .grow { flex: 1; color: var(--muted); font-size: 13px; }
+  #start .row .btn.primary { padding: 8px 18px; }
+
+  /* The ATT&CK tactics in matrix order. A highlight walks along them the way
+     an incident does; it stops for anyone who asked for less motion. */
+  .chain { margin-top: 38px; }
+  .chain .cap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px;
+    font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
+  .chain ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 4px; }
+  .chain li { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 7px;
+    padding: 7px 5px 8px; font-size: 10.5px; line-height: 1.25; text-align: center; color: var(--muted);
+    min-height: 58px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+  .chain li b { font-size: 10px; font-weight: 600; color: var(--accent); opacity: .75; }
+  .chain li::after { content: ""; position: absolute; inset: 0; background: var(--accent); opacity: 0;
+    animation: walk 15s linear infinite; animation-delay: calc(var(--i) * 1s); }
+  @keyframes walk { 0% { opacity: 0; } 2% { opacity: .2; } 9% { opacity: 0; } 100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .chain li::after { animation: none; } }
+  @media (max-width: 980px) { .chain ol { grid-template-columns: repeat(5, minmax(0, 1fr)); } .chain li { min-height: 50px; } }
+  @media (max-width: 520px) { .chain ol { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+  .foot { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 12.5px; color: var(--muted); }
+  .foot span::before { content: "•"; margin-right: 7px; color: var(--accent); }
+
+  /* ── conversation ──────────────────────────────────────── */
+  #talk { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+    grid-template-rows: minmax(0, 1fr); gap: 16px; flex: 1; min-height: 0; padding: 16px 20px; }
+  @media (max-width: 960px) {
+    body { display: block; }
+    #talk { grid-template-columns: 1fr; grid-template-rows: auto; }
+  }
+  #left { display: flex; flex-direction: column; min-height: 0; }
+  #thread { flex: 1; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 14px; }
+  @media (max-width: 960px) { #thread { overflow: visible; } }
+
+  .msg { max-width: 100%; border-radius: 12px; padding: 12px 16px; border: 1px solid var(--line); background: var(--panel); }
+  .msg.user { align-self: flex-end; max-width: 78%; background: var(--soft); border-color: transparent; white-space: pre-wrap; }
+  .msg .who { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .msg h3 { font-size: 15.5px; margin: 14px 0 4px; }
+  .msg h3:first-child { margin-top: 0; }
+  .msg h4 { font-size: 15px; margin: 10px 0 2px; }
+  .msg p { margin: 6px 0; }
+  .msg ul, .msg ol { margin: 6px 0; padding-left: 24px; }
+  .msg li { margin: 3px 0; }
+  .msg code { background: var(--soft); padding: 1px 5px; border-radius: 4px; font-size: 13.5px; }
+  .meta { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line);
+    font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 10px; }
+  .chip { background: var(--soft); border-radius: 999px; padding: 1px 9px; }
+  .chip.add { color: var(--good); } .chip.del { color: var(--bad); }
+  .msg.wait { color: var(--muted); }
+  .msg.error { background: var(--bad-bg); color: var(--bad); border-color: transparent; }
+  .dots::after { content: ""; animation: dots 1.4s steps(4, end) infinite; }
+  @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+
+  #suggest { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
+  #suggest button { border: 1px solid var(--line); background: var(--panel); border-radius: 999px;
+    padding: 4px 12px; font-size: 13px; color: var(--accent); }
+
+  #composer { margin-top: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+  #composer .modes { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  #composer .modes button { border: 0; background: none; padding: 4px 12px; font-size: 13px; }
+  #composer .modes button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  #composer .hint { font-size: 12.5px; color: var(--muted); margin-left: 10px; }
+  #composer .hint.warn { color: var(--warn); }
+  #composer .line { display: flex; gap: 10px; margin-top: 8px; align-items: flex-end; }
+  #composer textarea { flex: 1; min-height: 46px; max-height: 220px; resize: vertical; padding: 9px 11px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+
+  /* ── side panel ────────────────────────────────────────── */
+  #side { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    display: flex; flex-direction: column; min-height: 0; }
+  #side .tabs { display: flex; border-bottom: 1px solid var(--line); }
+  #side .tabs button { flex: 1; border: 0; background: none; padding: 9px 6px; font-size: 13.5px;
+    color: var(--muted); border-bottom: 2px solid transparent; }
+  #side .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+  #side .pane { overflow-y: auto; padding: 12px; flex: 1; }
+  @media (max-width: 960px) { #side .pane { max-height: 420px; } }
+  .rowcard { border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; margin-bottom: 9px; cursor: pointer; }
+  .rowcard[aria-current="true"] { border-color: var(--accent); background: var(--soft); }
+  .rowcard .id { font-weight: 650; color: var(--accent); text-decoration: none; }
+  .rowcard .tactic { font-size: 12px; color: var(--muted); }
+  .rowcard .kind { font-size: 11.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; margin-left: 6px; }
+  .rowcard q { display: block; margin-top: 5px; font-size: 13px; color: var(--muted); quotes: "“" "”"; }
+  .rowcard .none { margin-top: 5px; font-size: 12.5px; color: var(--muted); font-style: italic; }
+  #casetext { white-space: pre-wrap; font-size: 14px; }
+  #casetext mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 1px 0; }
+  .note { font-size: 12.5px; color: var(--muted); margin: 0 0 10px; }
+  .prov { border-bottom: 1px solid var(--line); padding: 8px 0; }
+  .prov b { display: block; }
+  .prov span { font-size: 13px; color: var(--muted); }
+  .banner { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="6.5" r="2.4"/><circle cx="18.5" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7.7 7.2l8.4-.9M6.7 8.6l4.1 7.3M17.3 8.1l-4.1 7.8"/></svg>
+  <h1>สนทนารายคดี · MITRE ATT&amp;CK</h1>
+  <span class="sub" id="caseTitle"></span>
+  <button class="btn" id="newCase" hidden>คดีใหม่</button>
+</header>
+
+<main id="start">
+  <div class="wrap">
+    <section class="hero">
+      <div class="pitch">
+        <span class="eyebrow"><i></i>CIFra · โมดูล RAG ใช้งานเดี่ยว</span>
+        <h2>จากสำนวนภาษาไทย<br>สู่เทคนิคการโจมตีตาม <em>MITRE ATT&amp;CK</em></h2>
+        <p class="lead">วางคำบรรยายเหตุการณ์ของคดีหนึ่งฉบับ ระบบจะไล่การกระทำของผู้โจมตีทีละขั้น จับคู่กับเทคนิคใน ATT&amp;CK พร้อมชี้ประโยคในสำนวนที่ใช้อ้าง แล้วถามต่อเกี่ยวกับคดีนั้นได้ในหน้าเดียวกัน</p>
+        <ol class="steps">
+          <li>
+            <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h5M10 16h5"/></svg></span>
+            <div><b>วางสำนวน</b><span>คำบรรยายเหตุการณ์เป็นภาษาไทยได้ตรง ๆ ไม่ต้องแปล</span></div>
+          </li>
+          <li>
+            <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="2.3"/><circle cx="18" cy="6" r="2.3"/><circle cx="12" cy="17" r="2.3"/><path d="M8.1 7.6l7.7-1M7.2 9l3.6 6M16.8 8l-3.6 7"/></svg></span>
+            <div><b>ระบบวิเคราะห์</b><span>แยกเหตุการณ์เป็นขั้น ค้นฐานความรู้ทั้งแบบความหมายและแบบกราฟ แล้วอ่านสำนวนซ้ำเพื่อตัดสินตาราง</span></div>
+          </li>
+          <li>
+            <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H10l-4 4v-4H4z"/><path d="M8 9h8M8 12h5"/></svg></span>
+            <div><b>ถามต่อ</b><span>ถามเหตุผลของแต่ละแถว ขอคำอธิบายเทคนิค หรือเพิ่มข้อเท็จจริงแล้วให้วิเคราะห์ใหม่</span></div>
+          </li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <label for="caseInput">สำนวนของคดี</label>
+        <textarea id="caseInput" placeholder="เช่น เมื่อวันที่ … บริษัท … แจ้งความว่า …"></textarea>
+        <div class="samples" id="samples"><span>ลองด้วยตัวอย่าง:</span></div>
+        <div class="row">
+          <span class="grow" id="startNote"></span>
+          <button class="btn primary" id="open">วิเคราะห์สำนวนนี้</button>
+        </div>
+        <div class="msg error" id="startError" hidden style="margin-top:12px"></div>
+      </div>
+    </section>
+
+    <section class="chain" aria-label="กลยุทธ์ของ MITRE ATT&amp;CK">
+      <div class="cap">
+        <span>กลยุทธ์ของ ATT&amp;CK Enterprise เรียงตามลำดับของการโจมตี</span>
+        <span>ตารางของแต่ละคดีบอกว่าการกระทำแต่ละขั้นอยู่ในช่วงใด</span>
+      </div>
+      <ol id="chain"></ol>
+    </section>
+
+    <div class="foot">
+      <span>ฐานความรู้คือ MITRE ATT&amp;CK Enterprise เก็บทั้งแบบ vector และ graph</span>
+      <span>แถวของตารางชี้กลับไปยังประโยคในสำนวน</span>
+      <span>ผลวิเคราะห์เป็นข้อมูลทางเทคนิคประกอบการพิจารณา ไม่ใช่ความเห็นทางกฎหมาย</span>
+    </div>
+  </div>
+</main>
+
+<main id="talk" hidden>
+  <section id="left">
+    <div id="thread" aria-live="polite"></div>
+    <div id="suggest"></div>
+    <form id="composer">
+      <span class="modes" role="group" aria-label="ชนิดของข้อความ">
+        <button type="button" data-kind="question" aria-pressed="true">ถามคำถาม</button>
+        <button type="button" data-kind="facts" aria-pressed="false">เพิ่มข้อเท็จจริง</button>
+      </span>
+      <span class="hint" id="hint"></span>
+      <div class="line">
+        <textarea id="text" rows="2"></textarea>
+        <button class="btn primary" id="send">ส่ง</button>
+      </div>
+    </form>
+  </section>
+
+  <aside id="side">
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="table" aria-selected="true">ตาราง ATT&amp;CK</button>
+      <button role="tab" data-tab="case" aria-selected="false">สำนวน</button>
+      <button role="tab" data-tab="legal" aria-selected="false">ตัวบทที่อาจเกี่ยวข้อง</button>
+    </div>
+    <div class="pane" id="pane-table"></div>
+    <div class="pane" id="pane-case" hidden><p class="note" id="caseNote"></p><div id="casetext"></div></div>
+    <div class="pane" id="pane-legal" hidden></div>
+  </aside>
+</main>
+
+<script>
+"use strict";
+const KEY = "cifra.conversation";
+// Made-up incidents, written the way a case file reads: in order, in Thai,
+// with the technical terms a complainant would not use left out.
+const SAMPLES = [
+  ["อีเมลหลอกลวงแล้วเรียกค่าไถ่",
+   "เมื่อวันที่ 3 มีนาคม 2567 บริษัทขนส่งแห่งหนึ่งในจังหวัดชลบุรีแจ้งความว่าระบบจองงานของบริษัทใช้งานไม่ได้ " +
+   "จากการตรวจสอบพบว่าพนักงานฝ่ายบัญชีได้รับอีเมลที่แนบไฟล์เอกสารใบแจ้งหนี้และเปิดไฟล์ดังกล่าว " +
+   "หลังจากนั้นมีโปรแกรมควบคุมระยะไกลถูกติดตั้งลงบนเครื่องและตั้งค่าให้ทำงานทุกครั้งที่เปิดเครื่อง " +
+   "คนร้ายใช้เครื่องดังกล่าวค้นหาเครื่องแม่ข่ายอื่นในเครือข่าย แล้วเข้าสู่เครื่องแม่ข่ายฐานข้อมูลด้วยบัญชีผู้ดูแลระบบที่ได้มา " +
+   "ต่อมาไฟล์ข้อมูลลูกค้าถูกคัดลอกส่งออกไปยังเครื่องภายนอก และไฟล์งานบนเครื่องแม่ข่ายถูกเข้ารหัสลับพร้อมข้อความเรียกค่าไถ่"],
+  ["เจาะเว็บไซต์แล้วฝังสคริปต์",
+   "เมื่อวันที่ 18 สิงหาคม 2566 มหาวิทยาลัยแห่งหนึ่งในจังหวัดเชียงใหม่แจ้งความว่าเว็บไซต์รับสมัครนักศึกษาถูกเปลี่ยนหน้าแรก " +
+   "จากการตรวจสอบ log ของเว็บเซิร์ฟเวอร์พบว่าคนร้ายส่งคำสั่งฐานข้อมูลแทรกเข้ามาทางช่องค้นหาของเว็บไซต์ " +
+   "แล้วอัปโหลดไฟล์สคริปต์สำหรับสั่งการผ่านหน้าเว็บขึ้นไปไว้บนเครื่อง " +
+   "จากนั้นใช้สคริปต์ดังกล่าวอ่านไฟล์ตั้งค่าที่เก็บรหัสผ่านของฐานข้อมูล ดึงข้อมูลส่วนบุคคลของผู้สมัครออกไป " +
+   "และลบ log การเข้าใช้งานบางส่วนก่อนออกจากระบบ"],
+  ["ใช้บัญชีที่รั่วเข้าระบบจากภายนอก",
+   "เมื่อวันที่ 9 มกราคม 2567 บริษัทหลักทรัพย์แห่งหนึ่งแจ้งความว่ามีการนำข้อมูลลูกค้าออกนอกองค์กรโดยไม่ได้รับอนุญาต " +
+   "จากการตรวจสอบพบว่าคนร้ายใช้ชื่อผู้ใช้และรหัสผ่านของพนักงานที่รั่วไหลจากเว็บไซต์อื่น " +
+   "เข้าสู่ระบบ VPN ขององค์กรจากต่างประเทศในช่วงกลางคืน แล้วเชื่อมต่อไปยังเครื่องแม่ข่ายเก็บไฟล์ผ่านบริการเดสก์ท็อประยะไกล " +
+   "รวบรวมไฟล์รายงานลูกค้าบีบอัดเป็นไฟล์เดียว และอัปโหลดไปยังบริการเก็บไฟล์บนคลาวด์สาธารณะ"],
+];
+// In matrix order, as the pipeline lists them (table_reread._TACTIC_ORDER).
+// ­ is a soft hyphen: where a long word may break when its cell is narrow.
+const TACTICS = ["Reconnais­sance", "Resource Develop­ment", "Initial Access", "Execution", "Persistence",
+  "Privilege Escala­tion", "Stealth", "Defense Impair­ment", "Credential Access", "Discovery",
+  "Lateral Movement", "Collection", "Command and Control", "Exfiltra­tion", "Impact"];
+const START_NOTE = "การวิเคราะห์ครั้งแรกใช้เวลาประมาณ 1–2 นาที";
+const HINTS = {
+  question: "ตอบจากสำนวนและผลวิเคราะห์ที่มีอยู่ ค้น ATT&CK เพิ่มเมื่อจำเป็น ตารางไม่เปลี่ยน",
+  facts: "ระบบจะวิเคราะห์สำนวนใหม่ทั้งฉบับ (ประมาณ 1–2 นาที) ตารางอาจเปลี่ยน",
+};
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined) node.textContent = text;
+  return node;
+};
+
+let conversationId = null;
+let analysis = null;
+let kind = "question";
+let selectedRow = null;
+let waiting = false;
+
+// ── markdown, the little of it the answers use; everything goes in as text ──
+function inline(parent, text) {
+  for (const part of text.split(/(\*\*[^*]+\*\*|`[^`]+`)/)) {
+    if (!part) continue;
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) parent.append(el("strong", "", part.slice(2, -2)));
+    else if (part.startsWith("`") && part.endsWith("`") && part.length > 2) parent.append(el("code", "", part.slice(1, -1)));
+    else parent.append(document.createTextNode(part));
+  }
+}
+function markdown(text) {
+  const root = document.createDocumentFragment();
+  let list = null;
+  const close = () => { list = null; };
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trimEnd();
+    let m;
+    if (!line.trim()) { close(); continue; }
+    if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
+      close();
+      const h = el(m[1].length <= 2 ? "h3" : "h4");
+      inline(h, m[2]); root.append(h);
+    } else if ((m = line.match(/^\s*(\d+)[.)]\s+(.*)$/))) {
+      if (!list || list.tagName !== "OL") { list = el("ol"); list.start = Number(m[1]); root.append(list); }
+      const li = el("li"); inline(li, m[2]); list.append(li);
+    } else if ((m = line.match(/^\s*[-*•]\s+(.*)$/))) {
+      if (!list || list.tagName !== "UL") { list = el("ul"); root.append(list); }
+      const li = el("li"); inline(li, m[1]); list.append(li);
+    } else if (list && /^\s{2,}\S/.test(raw)) {
+      const li = list.lastElementChild; li.append(document.createTextNode(" ")); inline(li, line.trim());
+    } else {
+      close();
+      const p = el("p"); inline(p, line); root.append(p);
+    }
+  }
+  return root;
+}
+
+// ── thread ───────────────────────────────────────────────────────────────
+function seconds(s) { return s >= 60 ? `${Math.floor(s / 60)} นาที ${Math.round(s % 60)} วินาที` : `${Math.round(s)} วินาที`; }
+
+function addTurn(turn) {
+  const thread = $("thread");
+  if (turn.role === "user") {
+    const box = el("div", "msg user");
+    if (turn.kind === "case") {
+      box.append(el("div", "who", `สำนวน · ${turn.text.length.toLocaleString("th-TH")} ตัวอักษร`));
+      box.append(document.createTextNode(turn.text.length > 320 ? turn.text.slice(0, 320) + " …" : turn.text));
+    } else {
+      if (turn.kind === "facts") box.append(el("div", "who", "ข้อเท็จจริงเพิ่มเติม"));
+      box.append(document.createTextNode(turn.text));
+    }
+    thread.append(box);
+  } else {
+    const box = el("div", "msg");
+    box.append(markdown(turn.text || "(ไม่มีข้อความตอบกลับ)"));
+    const meta = el("div", "meta");
+    if (turn.kind === "analysis") {
+      meta.append(el("span", "chip", "วิเคราะห์ด้วย pipeline เต็ม"));
+      for (const id of turn.rows_added) meta.append(el("span", "chip add", `+ ${id}`));
+      for (const id of turn.rows_removed) meta.append(el("span", "chip del", `− ${id}`));
+      // The text is written first and the table is decided afterwards by a
+      // second reading, so the two can disagree on a step.
+      meta.append(el("span", "", "ตารางตัดสินจากการอ่านสำนวนซ้ำ จึงอาจต่างจากรหัสในข้อความนี้ — ให้ยึดตาราง"));
+    } else if (!turn.lookup_queries.length && !turn.lookup_ids.length) {
+      meta.append(el("span", "chip", "ตอบจากสำนวนและผลวิเคราะห์เดิม"));
+    } else {
+      if (turn.lookup_ids.length) meta.append(el("span", "chip", `อ่านจากกราฟ ATT&CK: ${turn.lookup_ids.join(", ")}`));
+      for (const q of turn.lookup_queries) meta.append(el("span", "chip", `ค้น ATT&CK: ${q}`));
+    }
+    if (turn.seconds) meta.append(el("span", "", seconds(turn.seconds)));
+    box.append(meta);
+    thread.append(box);
+  }
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function waitBubble(label) {
+  const box = el("div", "msg wait");
+  const text = el("span", "dots", label);
+  const clock = el("span", "", "");
+  box.append(text, document.createTextNode(" "), clock);
+  $("thread").append(box);
+  $("thread").scrollTop = $("thread").scrollHeight;
+  const started = Date.now();
+  const timer = setInterval(() => {
+    const s = Math.floor((Date.now() - started) / 1000);
+    clock.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  }, 1000);
+  return () => { clearInterval(timer); box.remove(); };
+}
+
+function errorBubble(message) {
+  $("thread").append(el("div", "msg error", message));
+  $("thread").scrollTop = $("thread").scrollHeight;
+}
+
+// ── side panel ───────────────────────────────────────────────────────────
+function showTab(name) {
+  for (const tab of document.querySelectorAll("#side .tabs button")) {
+    const on = tab.dataset.tab === name;
+    tab.setAttribute("aria-selected", String(on));
+    $(`pane-${tab.dataset.tab}`).hidden = !on;
+  }
+}
+
+function renderCase() {
+  const text = analysis.case_text;
+  const spans = (selectedRow && selectedRow.evidence || [])
+    .filter((s) => s.end > s.start && s.end <= text.length)
+    .sort((a, b) => a.start - b.start);
+  const box = $("casetext");
+  box.replaceChildren();
+  let at = 0, first = null;
+  for (const span of spans) {
+    if (span.start < at) continue;
+    box.append(document.createTextNode(text.slice(at, span.start)));
+    const mark = el("mark", "", text.slice(span.start, span.end));
+    first = first || mark;
+    box.append(mark);
+    at = span.end;
+  }
+  box.append(document.createTextNode(text.slice(at)));
+  $("caseNote").textContent = selectedRow
+    ? (spans.length ? `ส่วนที่ไฮไลต์คือประโยคที่แถว ${selectedRow.technique_id || selectedRow.name} อ้างถึง`
+                    : `แถว ${selectedRow.technique_id || selectedRow.name} ไม่มีประโยคอ้างอิงในสำนวน`)
+    : "เลือกแถวในตารางเพื่อดูว่าอ้างถึงประโยคใดของสำนวน";
+  if (first) first.scrollIntoView({ block: "center" });
+}
+
+function renderTable() {
+  const pane = $("pane-table");
+  pane.replaceChildren();
+  const rows = analysis.mitre_table;
+  pane.append(el("p", "note", rows.length
+    ? `${rows.length} แถว · คลิกแถวเพื่อดูประโยคในสำนวนที่แถวนั้นอ้างถึง`
+    : "ตารางว่าง — สำนวนอาจไม่ได้บรรยายการกระทำของผู้โจมตี"));
+  for (const row of rows) {
+    const card = el("div", "rowcard");
+    card.setAttribute("aria-current", String(row === selectedRow));
+    const head = el("div");
+    if (row.technique_id) {
+      const id = el(row.mitre_url ? "a" : "span", "id", row.technique_id);
+      if (row.mitre_url) { id.href = row.mitre_url; id.target = "_blank"; id.rel = "noopener"; id.onclick = (e) => e.stopPropagation(); }
+      head.append(id, document.createTextNode("  "));
+    }
+    head.append(el("b", "", row.name));
+    if (row.entity_type && !/technique/i.test(row.entity_type)) head.append(el("span", "kind", row.entity_type));
+    card.append(head);
+    if (row.tactic) card.append(el("div", "tactic", row.tactic));
+    const evidence = row.evidence || [];
+    if (evidence.length) for (const span of evidence.slice(0, 2)) card.append(el("q", "", span.text));
+    else card.append(el("div", "none", "ไม่มีประโยคอ้างอิงในสำนวน"));
+    card.onclick = () => { selectedRow = row; renderTable(); renderCase(); showTab("case"); };
+    pane.append(card);
+  }
+}
+
+function renderLegal() {
+  const pane = $("pane-legal");
+  pane.replaceChildren();
+  const legal = analysis.legal_reference;
+  if (!legal) { pane.append(el("p", "note", "ไม่มีข้อมูล")); return; }
+  if (legal.disclaimer) pane.append(el("p", "note", legal.disclaimer));
+  if (legal.degraded) pane.append(el("div", "banner", legal.degraded));
+  for (const p of legal.provisions || []) {
+    const box = el("div", "prov");
+    box.append(el("b", "", p.citation || p.title || "(ไม่มีชื่อ)"));
+    if (p.title && p.citation) box.append(el("span", "", p.title));
+    pane.append(box);
+  }
+  if (!legal.degraded && !(legal.provisions || []).length) pane.append(el("p", "note", "บริการไม่ได้ส่งตัวบทใดกลับมา"));
+}
+
+function renderSuggestions() {
+  const box = $("suggest");
+  box.replaceChildren();
+  const first = analysis.mitre_table.find((r) => r.technique_id && /technique/i.test(r.entity_type || ""));
+  const ideas = ["สรุปเหตุการณ์ให้สั้นลงเหลือ 3 บรรทัด"];
+  if (first) ideas.push(`ทำไมถึงจับคู่กับ ${first.technique_id}`, `${first.technique_id} ป้องกันได้อย่างไร`);
+  for (const idea of ideas) {
+    const b = el("button", "", idea);
+    b.type = "button";
+    b.onclick = () => { setKind("question"); $("text").value = idea; $("text").focus(); };
+    box.append(b);
+  }
+}
+
+function setAnalysis(next) {
+  analysis = next;
+  selectedRow = null;
+  renderTable(); renderCase(); renderLegal(); renderSuggestions();
+}
+
+// ── talking to the service ───────────────────────────────────────────────
+async function call(method, path, body) {
+  const response = await fetch(path, {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (response.status === 204) return null;
+  let payload = null;
+  try { payload = await response.json(); } catch (_) { /* not JSON */ }
+  if (!response.ok) {
+    const detail = payload && payload.detail;
+    const error = new Error(typeof detail === "string" ? detail : `คำขอไม่สำเร็จ (${response.status})`);
+    error.status = response.status;
+    throw error;
+  }
+  return payload;
+}
+
+function show(conversation) {
+  conversationId = conversation.conversation_id;
+  try { sessionStorage.setItem(KEY, conversationId); } catch (_) { /* private mode */ }
+  $("start").hidden = true; $("talk").hidden = false; $("newCase").hidden = false;
+  const title = conversation.analysis.case_text.replace(/\s+/g, " ").trim();
+  $("caseTitle").textContent = title.length > 90 ? title.slice(0, 90) + "…" : title;
+  $("thread").replaceChildren();
+  for (const turn of conversation.turns) addTurn(turn);
+  setAnalysis(conversation.analysis);
+  showTab("table");
+  $("text").focus();
+}
+
+function reset() {
+  conversationId = null; analysis = null; selectedRow = null;
+  try { sessionStorage.removeItem(KEY); } catch (_) { /* private mode */ }
+  $("talk").hidden = true; $("start").hidden = false; $("newCase").hidden = true;
+  $("caseTitle").textContent = ""; $("caseInput").value = ""; $("startError").hidden = true;
+  startNote();
+}
+
+function setBusy(on) {
+  waiting = on;
+  $("send").disabled = on; $("open").disabled = on; $("text").disabled = on;
+}
+
+function setKind(next) {
+  kind = next;
+  for (const b of document.querySelectorAll("#composer .modes button")) b.setAttribute("aria-pressed", String(b.dataset.kind === kind));
+  $("hint").textContent = HINTS[kind];
+  $("hint").className = kind === "facts" ? "hint warn" : "hint";
+  $("text").placeholder = kind === "facts" ? "พิมพ์ข้อเท็จจริงที่ได้มาเพิ่ม เช่น ผลตรวจพิสูจน์หลักฐานดิจิทัล" : "ถามเกี่ยวกับคดีนี้ เช่น ทำไมถึงจับคู่กับ T1190";
+}
+
+$("open").onclick = async () => {
+  const caseFile = $("caseInput").value;
+  if (!caseFile.trim() || waiting) return;
+  $("startError").hidden = true;
+  setBusy(true);
+  const started = Date.now();
+  const tick = setInterval(() => {
+    const s = Math.floor((Date.now() - started) / 1000);
+    $("startNote").textContent = `กำลังวิเคราะห์สำนวน… ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  }, 1000);
+  try {
+    show(await call("POST", "/conversations", { case_file: caseFile }));
+  } catch (error) {
+    $("startError").textContent = `วิเคราะห์ไม่สำเร็จ: ${error.message}`;
+    $("startError").hidden = false;
+  } finally {
+    clearInterval(tick);
+    startNote();
+    setBusy(false);
+  }
+};
+
+$("composer").onsubmit = async (event) => {
+  event.preventDefault();
+  const text = $("text").value;
+  if (!text.trim() || waiting || !conversationId) return;
+  const sent = kind;
+  addTurn({ role: "user", kind: sent, text });
+  $("text").value = "";
+  setBusy(true);
+  const done = waitBubble(sent === "facts" ? "กำลังวิเคราะห์สำนวนใหม่ทั้งฉบับ" : "กำลังตอบ");
+  try {
+    const result = await call("POST", `/conversations/${conversationId}/messages`, { text, kind: sent });
+    done();
+    addTurn(result.reply);
+    if (result.analysis) { setAnalysis(result.analysis); showTab("table"); }
+    setKind("question");
+  } catch (error) {
+    done();
+    if (error.status === 404) errorBubble("ไม่พบการสนทนานี้แล้ว (หมดอายุหรือบริการเริ่มใหม่) กรุณาเริ่มคดีใหม่");
+    else errorBubble(`ส่งข้อความไม่สำเร็จ: ${error.message}`);
+    $("text").value = text;
+  } finally {
+    setBusy(false);
+    $("text").focus();
+  }
+};
+
+$("text").addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey && !event.isComposing) { event.preventDefault(); $("composer").requestSubmit(); }
+});
+for (const b of document.querySelectorAll("#composer .modes button")) b.onclick = () => setKind(b.dataset.kind);
+for (const tab of document.querySelectorAll("#side .tabs button")) tab.onclick = () => showTab(tab.dataset.tab);
+// ── the start page ────────────────────────────────────────────────────────
+function startNote() {
+  const length = $("caseInput").value.trim().length;
+  $("startNote").textContent = length
+    ? `${length.toLocaleString("th-TH")} ตัวอักษร · ${START_NOTE}`
+    : START_NOTE;
+}
+$("caseInput").addEventListener("input", () => { if (!waiting) startNote(); });
+for (const [label, text] of SAMPLES) {
+  const chip = el("button", "", label);
+  chip.type = "button";
+  chip.onclick = () => { if (waiting) return; $("caseInput").value = text; startNote(); $("caseInput").focus(); };
+  $("samples").append(chip);
+}
+TACTICS.forEach((name, index) => {
+  const cell = el("li");
+  cell.style.setProperty("--i", index);
+  cell.append(el("b", "", String(index + 1).padStart(2, "0")), document.createTextNode(name));
+  $("chain").append(cell);
+});
+startNote();
+$("newCase").onclick = async () => {
+  if (waiting) return;
+  const old = conversationId;
+  reset();
+  if (old) { try { await call("DELETE", `/conversations/${old}`); } catch (_) { /* already gone */ } }
+};
+
+setKind("question");
+(async () => {
+  let saved = null;
+  try { saved = sessionStorage.getItem(KEY); } catch (_) { /* private mode */ }
+  if (!saved) return;
+  try { show(await call("GET", `/conversations/${saved}`)); } catch (_) { reset(); }
+})();
+</script>
+</body>
+</html>

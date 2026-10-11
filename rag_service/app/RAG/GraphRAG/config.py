@@ -354,6 +354,37 @@ MITRE_TABLE_REREAD_MAX_TOKENS = 4096
 MITRE_TABLE_EVIDENCE = os.getenv("MITRE_TABLE_EVIDENCE", "true").lower() == "true"
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Case conversation — the service used on its own (pipeline/conversation/)
+# ──────────────────────────────────────────────────────────────────────────────
+# Off by default. The backend never calls these routes: it sends a case to
+# POST /query and keeps its own conversation. Switched on, the service also
+# serves /conversations and the page at /chat, where one conversation is one
+# case: the first message is the case file and runs the same pipeline /query
+# runs, later messages are questions about it. Conversations hold the case
+# text in this process's memory and are handed back to whoever has the id, so
+# this is for a machine the reader controls, not for a shared deployment.
+STANDALONE_CHAT = os.getenv("STANDALONE_CHAT", "false").lower() == "true"
+# An idle conversation is dropped after this long, the least recently used
+# one when there are more than the capacity. Nothing is written to disk.
+CONVERSATION_TTL_SECONDS = int(os.getenv("CONVERSATION_TTL_SECONDS", str(6 * 60 * 60)))
+CONVERSATION_CAPACITY = 100
+# How much of the conversation a follow-up answer is shown: the last turns,
+# each cut to a length. The case file, its analysis and the table are always
+# shown whole, so what is cut is only the back-and-forth.
+CONVERSATION_HISTORY_TURNS = 8
+CONVERSATION_HISTORY_TURN_CHARS = 1500
+# A follow-up that needs ATT&CK knowledge the case's own retrieval did not
+# bring looks it up: at most this many queries, this many hits kept per
+# query, and this much text added to the prompt.
+CONVERSATION_LOOKUP_QUERIES = 3
+CONVERSATION_LOOKUP_PER_QUERY = 3
+CONVERSATION_LOOKUP_GRAPH = 4
+CONVERSATION_LOOKUP_CHARS = 6000
+# The planning reply is three short lines. create_core_chat_model raises this
+# to 4096 on OpenRouter whatever is asked for.
+CONVERSATION_PLAN_MAX_TOKENS = 1024
+
+# ──────────────────────────────────────────────────────────────────────────────
 # LEGACY — mmarco reranker (kept for reference / rollback)
 # ──────────────────────────────────────────────────────────────────────────────
 # RERANKER_MODEL = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
