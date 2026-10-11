@@ -186,13 +186,22 @@ make legal conclusions. Copy no quotation: the citations are already attached to
 Mapping the case to MITRE ATT&CK techniques is not your task; do not name or map them.
 
 Summary:
-- A concise high-level overview of the case, written the way an investigator would brief
-  a colleague, resting on the supplied claims.
+- A short overview of the case, written the way an investigator would brief a colleague,
+  resting on the supplied claims. The claims stay available to the reader, so leave out
+  detail that does not change what happened.
+- summary_sentence_limit in the input is the most sentences you may write. Count your
+  sentences before you answer and merge claims until you are within it. Put the claims
+  that make one point into one sentence and give that sentence all their IDs, for example
+  [A-02, A-03]. Do not restate the claims one by one. When you join claims, keep who
+  reported, alleged or observed each one, and its dates, numbers and uncertainty.
+- Say who was affected and what happened first, then when, how it was done and what it
+  caused, as far as the claims allow.
 - Carry no status words, no ATT&CK identifiers, and no disclaimers about what the
   analysis is or is not.
 - End every sentence with the IDs of the supplied claims it rests on, in square brackets,
   for example [A-03] or [A-03, A-07]. Write no sentence that rests on no supplied claim.
-- Keep it concise, readable, and complete.
+  Put the IDs once, at the end of the sentence, never inside it.
+- Keep it concise and readable.
 
 {GAP_IDENTIFICATION_INSTRUCTIONS}
 

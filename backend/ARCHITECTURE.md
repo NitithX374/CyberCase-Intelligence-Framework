@@ -77,7 +77,10 @@ without its assessment.
 trace with a claims-only `case_reading` call selecting source-unit IDs,
 then deterministic binding and NLI Claim/Source validation, followed by independent `case_views` and
 `case_judgement` calls in parallel. The latter writes summary and gaps over the
-Claims; the former writes presentation views only. Neither is shown the technical
+Claims, and its request carries `summary_sentence_limit`, the most sentences the
+summary may have (one for every three Claims, from 2 to 8, computed by
+`summary_sentence_limit` in `analysis/write.py`; asked for in the prompt, not
+enforced); the former writes presentation views only. Neither is shown the technical
 context: the ATT&CK associations are built afterwards by `bind_to_case`.
 
 `analysis/reading_sources.py` captures each source's revision before Reading and
