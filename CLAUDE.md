@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CyberCase Intelligence Framework** provides whole-Case summarization and analysis, with conditional MITRE ATT&CK augmentation. The case owns multiple documents and narratives, the analysis, its conversation and reports. A cheap gap assessment can pause before expensive work. Otherwise Reading writes canonical claims only, selecting source-unit IDs; the backend derives source lists and resolves those IDs to original source spans. After binding, frozen B1-LR selects resolved Source units with MPNet cosine >=0.20 (first maximum retained if none pass), concatenates retained original text with a single newline, runs pinned mDeBERTa with longest-first truncation at512 tokens, and applies the WiCE TRAIN-fitted LR to ordered E/N/C probabilities. The verdict is a warning label, not a filter: every Claim that passes the structural checks reaches Judgement and the batched Parties/Timeline/Impacts extractor, a Claim scored below 0.50 (`not_supported`) is shown with a plain warning in the analysis view and the report, and the verdict never enters a model prompt. The check runs concurrently with Judgement and the views. Verifier unavailability is logged and marks the Claims not assessed without failing the analysis; an analysis abstains without downstream model calls only when no Claim passes the structural checks. Raw follow-up questions/answers are excluded from Judgement; QA IDs, gap keys and answered flags remain. One batched structured LLM call extracts Parties, Timeline and Impacts from exactly the Claims Judgement receives, for display and reports. The two calls run independently in parallel; extractor failure records a warning and empty views without failing Judgement. Judgement receives claims, follow-up history and optional external technical context; extracted views never enter Judgement or chat as factual input. No projection-specific NLI checks run; historical saved views remain readable. Every summary sentence ends with supporting claim IDs. All structured model stages use a complete JSON contract in the system prompt, with strict local Pydantic validation before DTO normalization and at most one generation retry for invalid or truncated output; no provider schema grammar is sent. There is no run row or queue. The existing agentic RAG pipeline supplies conditional external interpretation and never Case evidence. Reports are deterministic snapshots of stored analysis. [The production verifier contract](research/attribution_benchmark/B1_INTEGRATION.md) records schemas, examples, state semantics and validation.
+**CyberCase Intelligence Framework** provides whole-Case summarization and analysis, with conditional MITRE ATT&CK augmentation. The case owns multiple documents and narratives, the analysis, its conversation and reports. A cheap gap assessment can pause before expensive work. Otherwise Reading writes canonical claims only, selecting source-unit IDs; the backend derives source lists and resolves those IDs to original source spans. After binding, frozen B1-LR selects resolved Source units with MPNet cosine >=0.20 (first maximum retained if none pass), concatenates retained original text with a single newline, runs pinned mDeBERTa with longest-first truncation at512 tokens, and applies the WiCE TRAIN-fitted LR to ordered E/N/C probabilities. The verdict is a warning label, not a filter: every Claim that passes the structural checks reaches Judgement and the batched Parties/Timeline/Impacts extractor, a Claim scored below 0.50 (`not_supported`) is shown with a plain warning in the analysis view and the report, and the verdict never enters a model prompt. The check runs concurrently with Judgement and the views. Verifier unavailability is logged and marks the Claims not assessed without failing the analysis; an analysis abstains without downstream model calls only when no Claim passes the structural checks. Raw follow-up questions/answers are excluded from Judgement; QA IDs, gap keys and answered flags remain. One batched structured LLM call extracts Parties, Timeline and Impacts from exactly the Claims Judgement receives, for display and reports. The two calls run independently in parallel; extractor failure records a warning and empty views without failing Judgement. Judgement receives claims and follow-up history only, never the technical context, and names no ATT&CK technique. The ATT&CK associations come from the RAG service instead: a table row it tied to a sentence of the case (its re-read evidence) is listed as an association with that sentence, shown as the service sent it, with no further check and no Claim attached (`trace/associations.py`). Extracted views never enter Judgement or chat as factual input. No projection-specific NLI checks run; historical saved views remain readable. Every summary sentence ends with supporting claim IDs. All structured model stages use a complete JSON contract in the system prompt, with strict local Pydantic validation before DTO normalization and at most one generation retry for invalid or truncated output; no provider schema grammar is sent. There is no run row or queue. The existing agentic RAG pipeline supplies conditional external interpretation and never Case evidence. Reports are deterministic snapshots of stored analysis. [The production verifier contract](research/attribution_benchmark/B1_INTEGRATION.md) records schemas, examples, state semantics and validation.
 
 ## Service Layout
 
@@ -236,6 +236,10 @@ trace/                  what the analysis, chat and reports share
   bind.py               stable orchestration: resolve claim source references
                         before Judgement; check final references and
                         derive summary units afterwards
+  associations.py       mapped_associations: the RAG service's table rows with
+                        a re-read span become ATT&CK associations, each showing
+                        that sentence as the service sent it: no check, no
+                        Claim attached
   evidence_binding.py   validate selected IDs, materialize original source spans
                         and page locators, reject duplicate references
   grounding.py          legacy counters and deterministic Evidence ID metrics
@@ -260,13 +264,14 @@ sources/                routes (sources and documents), schemas, service, and
                         bundle.py: the one bundle an analysis reads from
   evidence.py           analysis-time exact-offset units, with source-scoped and
                         text-fingerprinted IDs; no evidence table or migration
-  ingestion/            upload to text: service, files (detect, render pages,
-                        turn a photo upright by its EXIF orientation),
-                        parsers (PDF text, DOCX), text (strip_unstorable, the
-                        one strip of NUL and lone surrogates that every
+  ingestion/            upload to text: service, files (detect, count and
+                        render PDF pages, turn a photo upright by its EXIF
+                        orientation), parsers (DOCX), text (strip_unstorable,
+                        the one strip of NUL and lone surrogates that every
                         extracted text and the filename pass through),
-                        recognition (Typhoon OCR), contracts (types and
-                        errors), provenance
+                        recognition (Typhoon OCR: every PDF page is rendered to
+                        an image and read, never taken from the PDF's text
+                        layer), contracts (types and errors), provenance
 analysis/               producing an analysis of a case; routes, schemas
   run.py                one step of the bounded loop: read, think, write
   store.py              what a step writes: an assessment that asks, or a
@@ -280,12 +285,12 @@ analysis/               producing an analysis of a case; routes, schemas
                         unit IDs; prompt JSON, no grammar), deterministic source
                         binding (bound_claims), the Claim/Source warning check,
                         independent batched LLM views for display, concurrent
-                        with a judgement call (summary, gaps, ATT&CK
-                        associations) over the checked claims alone: no case
-                        sources and no sentence around each quotation
+                        with a judgement call (summary and gaps) over the
+                        checked claims alone: no case sources, no technical
+                        context and no sentence around each quotation
   claim_gate.py         worker-thread verification (a warning label), the
-                        structural filter and final summary/gap/ATT&CK
-                        claim-ID checks
+                        structural filter and final summary/gap claim-ID
+                        checks
   language.py           which language to write in: Thai when any source has
                         a Thai character; a chat question in its own language
   progress.py           announce(step): the steps write, retrieve and the
@@ -418,9 +423,9 @@ all. `MITRE_GATE_MODE` picks between three gates, which live together in
   analysis carries on.
 - **Where it is on.**
   - Nowhere by default: the code default is `off`, and Compose, Railway and the tests leave it off.
-  - The default Compose setup uses the LLM gate without an encoder mount. To run the encoder or its shadow,
-    use an explicit Compose override that mounts `backend/xlmr_ladder_best` read-only at `/app/xlmr_ladder_best`
-    and supplies the appropriate `MITRE_GATE_MODE` or `MITRE_GATE_SHADOW`. CPU torch and transformers remain
+  - The default Compose setup uses the LLM gate. The encoder's weights are already in the mounted
+    `backend/models/xlmr_ladder_best`; to run the encoder or its shadow, use an explicit Compose override
+    that supplies the appropriate `MITRE_GATE_MODE` or `MITRE_GATE_SHADOW`. CPU torch and transformers remain
     installed for the active legacy NLI recovery path.
   - `tests/conftest.py` keeps it off whatever the local `.env` says.
 
@@ -496,7 +501,11 @@ remain accepted in stored traces and reports. There is no active meaning-pointer
 recovery or quote matcher in new analysis binding. `nli_model.py` serves the
 Claim support check; unavailable weights leave Claims unassessed rather than
 failing the analysis. `CLAIM_NLI_PATH` and `CLAIM_SELECTOR_PATH` name the two local model
-folders. Compose mounts them read-only; provisioning is explicit and no model
+folders, `models/nli_mdeberta` and `models/source_selector_mpnet`. Every local model lives in
+`backend/models/`, which Compose mounts at `/app/models`: those two, the encoder
+`models/xlmr_ladder_best`, and the caches `models/hf` (`HF_HOME`: the SaT segmenter and the XLM-R
+tokenizer it uses) and `models/tiktoken` (`TIKTOKEN_CACHE_DIR`), so nothing is downloaded again
+when a container is recreated. Provisioning is explicit and no model
 is downloaded by an analysis request. Test fixtures replace the verifier to
 avoid accidental real model/provider calls.
 

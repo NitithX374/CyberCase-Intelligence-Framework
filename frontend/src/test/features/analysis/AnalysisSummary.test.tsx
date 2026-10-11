@@ -151,7 +151,7 @@ describe("AnalysisSummary", () => {
     expect(row("Report")).toHaveTextContent("No report yet.");
     expect(within(row("Report")).getByRole("link", { name: "Generate a report" })).toHaveAttribute(
       "href",
-      `${base}/report`,
+      `/case/${caseId}/report`,
     );
     unmount();
 

@@ -48,7 +48,7 @@ def replay_input(case: dict, plan: dict, grounded: dict, provider=None) -> dict:
         receipt = {
             "validation": "Reused identical production verdicts for the exact same premise/hypothesis; no additional verifier invocation."
         }
-    proposed = judgement_request(checked, case["language"], (), None)
+    proposed = judgement_request(checked, case["language"], ())
     baseline = deepcopy(proposed)
     for kind in KINDS:
         baseline["reading"][kind] = [
@@ -60,7 +60,7 @@ def replay_input(case: dict, plan: dict, grounded: dict, provider=None) -> dict:
     )
     assert all(
         baseline[key] == proposed[key]
-        for key in ("response_language", "followup_history", "technical_context")
+        for key in ("response_language", "followup_history")
     )
     target = getattr(checked, plan["type"])[0]
     if plan["error_scope"] == "claim_level":

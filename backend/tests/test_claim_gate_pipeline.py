@@ -443,39 +443,22 @@ async def test_long_input_is_scored_with_research_truncation_and_a_negative_verd
     assert [call["stage"] for call in calls] == ["case_reading", "case_judgement"]
 
 
-@pytest.mark.parametrize(
-    "fields",
-    [
-        {
-            "gaps": [
-                {
-                    "gap_id": "G-01",
-                    "gap_key": "who",
-                    "topic": "Actor identity",
-                    "status": "AMBIGUOUS",
-                    "description": "Review the actor role.",
-                    "affected_claim_ids": ["A-02"],
-                    "reason": "Role is unclear.",
-                    "priority": "high",
-                    "askable": False,
-                }
-            ]
-        },
-        {
-            "mitre_associations": [
-                {
-                    "association_id": "MA-01",
-                    "technique_id": "T1566",
-                    "claim_ids": ["A-02"],
-                    "reason": "An email was sent.",
-                    "status": "candidate_only",
-                    "support_role": "external_technical_context",
-                }
-            ]
-        },
-    ],
-)
-def test_withheld_claim_ids_cannot_return_through_gaps_or_technical_associations(fields):
+def test_withheld_claim_ids_cannot_return_through_gaps():
+    fields = {
+        "gaps": [
+            {
+                "gap_id": "G-01",
+                "gap_key": "who",
+                "topic": "Actor identity",
+                "status": "AMBIGUOUS",
+                "description": "Review the actor role.",
+                "affected_claim_ids": ["A-02"],
+                "reason": "Role is unclear.",
+                "priority": "high",
+                "askable": False,
+            }
+        ]
+    }
     given = CaseProviderReading(
         version="case_analysis_trace_v1",
         claims=[

@@ -184,7 +184,6 @@ function responseFor(body) {
     impacts: [],
     claims,
     gaps,
-    mitre_associations: [],
   };
   const asked = body?.output_config
     ? Object.keys(body.output_config.format?.schema?.properties ?? trace)

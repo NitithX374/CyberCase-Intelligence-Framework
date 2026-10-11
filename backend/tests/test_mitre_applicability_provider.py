@@ -14,7 +14,6 @@ from app.analysis.technical_context.gate_llm import (
 )
 from app.llm import request as provider
 from app.llm.openrouter import CoreLlmTarget
-from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceItem
 from app.sources.ingestion.contracts import DocumentPage, ExtractionMethod, IngestedDocument
 from app.sources.service import document_provenance
@@ -72,7 +71,8 @@ def test_gate_uses_fixed_prompt_strict_schema_and_deterministic_options(
     assert captured["model"] == "vendor/custom-model"
     assert captured["system"].startswith(MITRE_APPLICABILITY_SYSTEM_PROMPT + "\n")
     assert captured["temperature"] == 0.0
-    assert captured["max_tokens"] == 1024 + AnalysisPipelineConfig().thinking_tokens
+    assert captured["max_tokens"] == 1024
+    assert captured["thinking"] == {"type": "disabled"}
     assert captured["messages"][0]["content"] == build_mitre_applicability_prompt([source])
     assert "output_config" not in captured
     schema = json.loads(

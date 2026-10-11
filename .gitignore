@@ -202,6 +202,7 @@ experiments/representation_analysis/outputs/
 .codex-remote-attachments/
 
 # Model weights: ~1.1 GB, distributed separately and copied into the backend image.
+backend/models/
 backend/xlmr_ladder_best/
 backend/nli_mdeberta/
 backend/source_selector_mpnet/

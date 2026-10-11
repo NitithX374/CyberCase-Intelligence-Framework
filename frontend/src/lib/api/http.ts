@@ -10,7 +10,25 @@ http.interceptors.request.use((config) => {
   return config;
 });
 
-export function apiBaseUrl(): string {
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+function currentHost(): string | null {
+  return typeof window === "undefined" ? null : window.location.hostname;
+}
+
+function onPageLoopbackHost(url: string, pageHost: string | null): string {
+  if (!pageHost || !LOOPBACK_HOSTS.has(pageHost)) return url;
+  try {
+    const api = new URL(url);
+    if (!LOOPBACK_HOSTS.has(api.hostname)) return url;
+    api.hostname = pageHost;
+    return api.href;
+  } catch {
+    return url;
+  }
+}
+
+export function apiBaseUrl(pageHost: string | null = currentHost()): string {
   let url = process.env.NEXT_PUBLIC_API_URL;
   if (!url) {
     if (typeof window !== "undefined") {
@@ -27,7 +45,7 @@ export function apiBaseUrl(): string {
     url = url.endsWith("/") ? `${url}api/v1` : `${url}/api/v1`;
   }
 
-  return url;
+  return onPageLoopbackHost(url, pageHost);
 }
 
 export function caseUrl(caseId: string, ...parts: string[]): string {

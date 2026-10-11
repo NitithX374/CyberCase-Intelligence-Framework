@@ -17,6 +17,9 @@ export function AnalysisDetails() {
   if (!analysisResult || !overview.hasAnalysis) return null;
   const hasSavedDetails =
     overview.parties.length + overview.timeline.length + overview.impacts.length > 0;
+  const extraction = analysisResult.trace_json?.view_extraction;
+  const detailsFailed = extraction?.status === "failed";
+  const detailsOmitted = (extraction?.items_dropped ?? 0) > 0;
 
   const handleSelectSource = (
     sourceRef: SourceMessageRef,
@@ -28,6 +31,18 @@ export function AnalysisDetails() {
   return (
     <>
       <div className="mx-auto w-full max-w-[52rem] px-5 pt-8 sm:px-8">
+        {(detailsFailed || detailsOmitted) && (
+          <div className="mb-6 space-y-1 text-[13px] leading-6 text-ink-secondary">
+            {detailsFailed && (
+              <p>People, timeline and impacts could not be prepared. The summary is available.</p>
+            )}
+            {detailsOmitted && (
+              <p>
+                Some case details were omitted because they could not be linked to this analysis.
+              </p>
+            )}
+          </div>
+        )}
         {hasSavedDetails ? (
           <CaseDetails
             caseId={caseId}

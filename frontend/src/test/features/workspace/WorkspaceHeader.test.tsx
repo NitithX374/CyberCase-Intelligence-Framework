@@ -40,7 +40,12 @@ describe("WorkspaceHeader", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Payment Review" })).toBeInTheDocument();
-    expect(screen.getAllByRole("tab")).toHaveLength(3);
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Sources",
+      "Analysis",
+      "Legal",
+      "Report",
+    ]);
     expect(screen.getByRole("tab", { name: "Analysis" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("button", { name: "Open Ask" })).toBeInTheDocument();
 
@@ -48,6 +53,8 @@ describe("WorkspaceHeader", () => {
     expect(onViewChange).toHaveBeenCalledWith("sources");
     fireEvent.click(screen.getByRole("tab", { name: "Legal" }));
     expect(onViewChange).toHaveBeenCalledWith("legal");
+    fireEvent.click(screen.getByRole("tab", { name: "Report" }));
+    expect(onViewChange).toHaveBeenCalledWith("report");
 
     expect(screen.queryByRole("button", { name: /Analyze/ })).not.toBeInTheDocument();
   });

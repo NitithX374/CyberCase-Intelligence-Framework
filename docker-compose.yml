@@ -32,26 +32,30 @@ services:
       context: ./backend
     container_name: cybercase-backend
     restart: always
-    # Secrets, the database login it shares with `db`, and the model switch.
-    # Everything else is the default in backend/app/config.py.
+    # Secrets, the database login it shares with `db`, the model switch, and where the
+    # local models and their caches live (backend/models). Everything else is the default
+    # in backend/app/config.py.
     environment:
       CASE_ANALYSIS_MODEL: ${CASE_ANALYSIS_MODEL:-google/gemma-4-26b-a4b-it}
       CASE_ANALYSIS_PROVIDERS: ${CASE_ANALYSIS_PROVIDERS:-nextbit/bf16,coreweave/bf16}
       CASE_READING_THINKING_TOKENS: ${CASE_READING_THINKING_TOKENS:-8192}
+      CASE_ASSESS_THINKING_TOKENS: ${CASE_ASSESS_THINKING_TOKENS:-8192}
+      CASE_JUDGEMENT_THINKING_TOKENS: ${CASE_JUDGEMENT_THINKING_TOKENS:-8192}
       OPENROUTER_CYBERCASE: ${OPENROUTER_CYBERCASE:-}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-cybercase_framework}
       TYPHOON_API_KEY: ${TYPHOON_API_KEY:-}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
+      HF_HOME: /app/models/hf
+      TIKTOKEN_CACHE_DIR: /app/models/tiktoken
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
       - ./backend/app:/app/app
       - ./backend/alembic:/app/alembic
       - ./backend/alembic.ini:/app/alembic.ini
-      - ./backend/nli_mdeberta:/app/nli_mdeberta:ro
-      - ./backend/source_selector_mpnet:/app/source_selector_mpnet:ro
+      - ./backend/models:/app/models
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     depends_on:
       db:

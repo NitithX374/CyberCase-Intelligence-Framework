@@ -8,7 +8,11 @@ from zipfile import BadZipFile, ZipFile
 import pypdfium2 as pdfium
 from PIL import Image, ImageOps
 
-from app.sources.ingestion.contracts import InvalidDocumentError, UnsupportedDocumentError
+from app.sources.ingestion.contracts import (
+    DocumentLimitError,
+    InvalidDocumentError,
+    UnsupportedDocumentError,
+)
 
 PDFIUM_LOCK = threading.Lock()
 
@@ -53,6 +57,27 @@ def encode_png(image: Image.Image) -> bytes:
     output = BytesIO()
     image.convert("RGB").save(output, format="PNG")
     return output.getvalue()
+
+
+def pdf_page_count(content: bytes, max_pages: int) -> int:
+    with PDFIUM_LOCK:
+        document = None
+        try:
+            document = pdfium.PdfDocument(content)
+            page_count = len(document)
+        except Exception as error:
+            raise InvalidDocumentError("The PDF file could not be parsed.") from error
+        finally:
+            if document is not None:
+                document.close()
+    if page_count == 0:
+        raise InvalidDocumentError("The PDF file contains no pages.")
+    if page_count > max_pages:
+        raise DocumentLimitError(
+            "document_page_limit_exceeded",
+            f"The document exceeds the {max_pages}-page ingestion limit.",
+        )
+    return page_count
 
 
 def render_pdf_page(content: bytes, page_number: int, longest_edge: int) -> bytes:

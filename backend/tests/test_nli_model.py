@@ -21,7 +21,7 @@ from app.trace.nli_model import (
     NliUnavailable,
 )
 
-WEIGHTS = Path(__file__).resolve().parents[1] / "nli_mdeberta"
+WEIGHTS = Path(__file__).resolve().parents[1] / "models" / "nli_mdeberta"
 HAS_WEIGHTS = (WEIGHTS / "model.safetensors").is_file()
 
 

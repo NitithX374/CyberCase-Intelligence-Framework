@@ -5,6 +5,7 @@ import json
 from contextlib import asynccontextmanager
 from functools import partial
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
 from case_chat_support import TRACE, seeded_case
@@ -14,6 +15,7 @@ from sqlalchemy import func, select
 
 import app.analysis.routes as analysis_router
 import app.chat.routes as chat_router
+import app.sources.routes as source_routes
 import app.sources.service as source_service
 from app.analysis.pipeline import AnalysisArtifacts
 from app.analysis.run import run_case_analysis
@@ -50,6 +52,34 @@ def document(text: str) -> IngestedDocument:
         ],
         full_text=text,
     )
+
+
+def recognized(text: str) -> IngestedDocument:
+    return IngestedDocument(
+        filename="case.pdf",
+        media_type="application/pdf",
+        extraction_method=ExtractionMethod.DOCUMENT_RECOGNITION,
+        pages=[
+            DocumentPage(
+                page_number=1, text=text, text_method="ocr", verification_status="machine_read"
+            )
+        ],
+        full_text=text,
+    )
+
+
+class ReadAgain:
+    def __init__(self, text: str) -> None:
+        self.text = text
+        self.read: list[tuple[bytes, str]] = []
+        self.closed = False
+
+    async def ingest(self, content: bytes, filename: str) -> IngestedDocument:
+        self.read.append((content, filename))
+        return recognized(self.text)
+
+    async def aclose(self) -> None:
+        self.closed = True
 
 
 async def stored(factory, case_id) -> tuple[int, int, int]:
@@ -315,3 +345,56 @@ async def test_a_streamed_second_analysis_gets_the_refusal_as_an_error_event(mon
         assert "event: error" in second.text
         assert '"status": 409' in second.text
         assert "analysis_in_progress" in second.text
+
+
+async def test_a_document_is_read_again_and_its_source_takes_the_new_text(monkeypatch):
+    reader = ReadAgain("Text read again from the page images.")
+    monkeypatch.setattr(source_routes, "build_document_ingestion_service", lambda: reader)
+    async with isolated_database() as factory:
+        case_id, user_id, _ = await seeded_case(factory, trace=None, with_source=False)
+        stored_document = await add_document(factory, case_id, user_id, SENTENCE)
+        async with signed_in(factory, user_id) as client:
+            reply = await client.post(f"/cases/{case_id}/documents/{stored_document.id}/reingest")
+
+        assert reply.status_code == 200
+        body = reply.json()
+        assert body["exact_text"] == "Text read again from the page images."
+        assert body["filename"] == "case.pdf"
+        assert body["mime_type"] == "application/pdf"
+        assert body["provenance_json"]["extraction_method"] == "document_recognition"
+        assert reader.read == [(b"bytes", "case.pdf")]
+        assert reader.closed
+        assert await stored(factory, case_id) == (1, 1, 3)
+
+
+async def test_reading_a_document_again_does_not_count_its_old_text_as_well(monkeypatch):
+    text = (SENTENCE * 5).strip()
+    monkeypatch.setattr(source_service, "SOURCE_TOKEN_BUDGET", weight_in_payload(text))
+    monkeypatch.setattr(source_routes, "build_document_ingestion_service", lambda: ReadAgain(text))
+    async with isolated_database() as factory:
+        case_id, user_id, _ = await seeded_case(factory, trace=None, with_source=False)
+        stored_document = await add_document(factory, case_id, user_id, text)
+        async with signed_in(factory, user_id) as client:
+            reply = await client.post(f"/cases/{case_id}/documents/{stored_document.id}/reingest")
+
+        assert reply.status_code == 200
+        assert await stored(factory, case_id) == (1, 1, 3)
+
+
+async def test_a_document_that_is_not_in_the_case_is_not_read_again(monkeypatch):
+    built: list[ReadAgain] = []
+
+    def build() -> ReadAgain:
+        built.append(ReadAgain(SENTENCE))
+        return built[-1]
+
+    monkeypatch.setattr(source_routes, "build_document_ingestion_service", build)
+    async with isolated_database() as factory:
+        case_id, user_id, _ = await seeded_case(factory, trace=None, with_source=False)
+        async with signed_in(factory, user_id) as client:
+            reply = await client.post(f"/cases/{case_id}/documents/{uuid4()}/reingest")
+
+        assert reply.status_code == 404
+        assert reply.json()["detail"]["code"] == "document_not_found"
+        assert built == []
+        assert await stored(factory, case_id) == (0, 0, 1)

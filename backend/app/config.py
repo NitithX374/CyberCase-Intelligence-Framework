@@ -74,11 +74,13 @@ class LLMProviderConfig(BaseModel):
 
 class CaseAnalysisConfig(BaseModel):
     case_reading_thinking_tokens: int | None = Field(default=None, ge=0)
+    case_assess_thinking_tokens: int | None = Field(default=None, ge=0)
+    case_judgement_thinking_tokens: int | None = Field(default=None, ge=0)
     mitre_gate_mode: Literal["llm", "encoder", "never"] = "llm"
     mitre_gate_shadow: Literal["off", "encoder"] = "off"
-    mitre_gate_model_path: str = "xlmr_ladder_best/xlmr_ladder_best"
-    claim_nli_path: str = "nli_mdeberta"
-    claim_selector_path: str = "source_selector_mpnet"
+    mitre_gate_model_path: str = "models/xlmr_ladder_best/xlmr_ladder_best"
+    claim_nli_path: str = "models/nli_mdeberta"
+    claim_selector_path: str = "models/source_selector_mpnet"
     warmup_models: bool = True
     chat_followup_max_rounds: int = Field(default=3, ge=0)
     chat_followup_gaps_per_round: int = Field(default=3, ge=1)

@@ -1,10 +1,11 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { CaseSourcesView } from "@/features/sources/CaseSourcesView";
 import { MeaningfulErrorModal } from "@/components/MeaningfulErrorModal";
 import { EmptyState } from "@/components/EmptyState";
 import { toUserFacingError } from "@/lib/userFacingError";
+import { casePath } from "@/lib/casePaths";
 import { useCase } from "@/features/cases/queries";
 import { useAnalysisAvailability } from "@/features/analysis/queries";
 import { useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
@@ -12,6 +13,7 @@ import { useCaseSourceActions } from "@/features/sources/useCaseSourceActions";
 import { useCaseSourceRows } from "@/features/sources/useCaseSourceRows";
 
 export function SourcesPage() {
+  const router = useRouter();
   const { caseId } = useParams<{ caseId: string }>();
 
   const caseQuery = useCase(caseId);
@@ -20,6 +22,11 @@ export function SourcesPage() {
 
   const sourceRows = useCaseSourceRows(caseId);
   const actions = useCaseSourceActions({ caseId });
+
+  const analyze = () => {
+    runAnalysis();
+    router.push(casePath(caseId, "analysis"));
+  };
 
   if (sourceRows.isError) {
     return (
@@ -55,7 +62,7 @@ export function SourcesPage() {
                 isRunning: isUpdating,
                 isWaitingForFollowup,
                 canAnalyze,
-                onAnalyze: runAnalysis,
+                onAnalyze: analyze,
               }
             : undefined
         }

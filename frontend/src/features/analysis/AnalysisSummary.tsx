@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCaseReports } from "@/features/reports/queries";
 import { Markdown } from "@/components/Markdown";
-import { analysisPath } from "@/lib/casePaths";
+import { analysisPath, casePath } from "@/lib/casePaths";
 import { hasThai } from "@/lib/language";
 import {
   buildTechnicalContext,
@@ -186,7 +186,7 @@ export function AnalysisSummary() {
                   }`
                 : "No report yet."}
             </p>
-            <TabLink href={analysisPath(caseId, "report")}>
+            <TabLink href={casePath(caseId, "report")}>
               {latestReport ? "Open the report" : "Generate a report"}
             </TabLink>
           </GlanceRow>

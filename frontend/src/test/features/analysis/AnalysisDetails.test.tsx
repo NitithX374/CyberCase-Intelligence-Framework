@@ -50,19 +50,44 @@ const analysis = analysisResult({
   },
 });
 
-const sourcesState = vi.hoisted(() => ({ failed: false, claimsOnly: false }));
+const sourcesState = vi.hoisted(() => ({
+  failed: false,
+  claimsOnly: false,
+  extraction: undefined as { status: "completed" | "failed"; items_dropped: number } | undefined,
+}));
+
+function viewExtraction(status: "completed" | "failed", itemsDropped: number) {
+  return {
+    method: "llm",
+    model: "internal/model",
+    input_claim_ids: ["A-01"],
+    excluded_claim_ids: [],
+    duration_ms: 230,
+    status,
+    warning: status === "failed" ? "case_views_invalid" : null,
+    items_dropped: itemsDropped,
+  };
+}
+
+function shownAnalysis() {
+  if (sourcesState.claimsOnly) {
+    return {
+      ...analysis,
+      trace_json: { ...analysis.trace_json, involved_parties: [], timeline: [], impacts: [] },
+    };
+  }
+  if (sourcesState.extraction) {
+    return {
+      ...analysis,
+      trace_json: { ...analysis.trace_json, view_extraction: sourcesState.extraction },
+    };
+  }
+  return analysis;
+}
 
 vi.mock("next/navigation", () => ({ useParams: () => ({ caseId }) }));
 vi.mock("@/features/analysis/queries", () => ({
-  useCaseAnalysis: () => ({
-    data: sourcesState.claimsOnly
-      ? {
-          ...analysis,
-          trace_json: { ...analysis.trace_json, involved_parties: [], timeline: [], impacts: [] },
-        }
-      : analysis,
-    isLoading: false,
-  }),
+  useCaseAnalysis: () => ({ data: shownAnalysis(), isLoading: false }),
 }));
 vi.mock("@/features/sources/queries", () => ({
   useCaseSources: () =>
@@ -79,6 +104,7 @@ vi.mock("@/features/chat/useCaseChat", () => ({
 beforeEach(() => {
   sourcesState.failed = false;
   sourcesState.claimsOnly = false;
+  sourcesState.extraction = undefined;
 });
 
 describe("AnalysisDetails", () => {
@@ -116,6 +142,32 @@ describe("AnalysisDetails", () => {
     ).toBeInTheDocument();
     expect(attack.getByText(`“${answer}”`)).toBeInTheDocument();
     expect(attack.getByText("Follow-up answer QA-01")).toBeInTheDocument();
+  });
+
+  it("says when people, timeline and impacts could not be prepared, without model details", () => {
+    sourcesState.extraction = viewExtraction("failed", 0);
+    const { container } = render(<AnalysisDetails />);
+
+    expect(
+      screen.getByText(/People, timeline and impacts could not be prepared/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Some case details were omitted/)).not.toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/internal\/model|case_views_invalid/);
+  });
+
+  it("says when some case details were left out", () => {
+    sourcesState.extraction = viewExtraction("completed", 2);
+    render(<AnalysisDetails />);
+
+    expect(screen.getByText(/Some case details were omitted/)).toBeInTheDocument();
+    expect(screen.queryByText(/could not be prepared/)).not.toBeInTheDocument();
+  });
+
+  it("prints no notice when every case detail was prepared", () => {
+    sourcesState.extraction = viewExtraction("completed", 0);
+    render(<AnalysisDetails />);
+
+    expect(screen.queryByText(/could not be prepared|were omitted/)).not.toBeInTheDocument();
   });
 
   it("shows nothing of the analysis while the case sources cannot be loaded", () => {

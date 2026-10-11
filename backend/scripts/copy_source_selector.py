@@ -22,7 +22,7 @@ def main():
     for filename, expected in artifact["selector_hashes"].items():
         if digest(source / filename) != expected:
             raise ValueError(f"Frozen selector asset differs: {filename}")
-    target = backend / "source_selector_mpnet"
+    target = backend / "models" / "source_selector_mpnet"
     if target.exists():
         for filename, expected in artifact["selector_hashes"].items():
             if digest(target / filename) != expected:

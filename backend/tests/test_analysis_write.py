@@ -24,13 +24,21 @@ from app.sources.evidence import evidence_units
 from app.trace.bind import bound_claims, bound_references, resolve_case_trace
 from app.trace.claims import CaseAnalysisClaim, CaseAnalysisGap, CaseSourceCitation
 from app.trace.trace import (
-    CaseMitreAssociation,
     CaseProviderJudgement,
     CaseProviderReading,
     CaseProviderReadingReply,
 )
 
 SOURCE_TEXT = "The finance share was encrypted overnight."
+
+
+def reread_row(technique_id: str, text: str = SOURCE_TEXT) -> dict:
+    return {
+        "technique_id": technique_id,
+        "name": technique_id,
+        "description": "Adversaries may encrypt data. They do it to interrupt availability.",
+        "evidence": [{"text": text, "start": 0, "end": len(text), "basis": "reread"}],
+    }
 
 
 def case_with_one_narrative() -> CaseSourceBundle:
@@ -69,7 +77,6 @@ def judgement(**overrides) -> CaseProviderJudgement:
         version="case_analysis_trace_v1",
         summary=overrides.pop("summary", "A file share was encrypted overnight."),
         gaps=overrides.pop("gaps", []),
-        mitre_associations=overrides.pop("mitre_associations", []),
     )
 
 
@@ -173,19 +180,17 @@ def test_a_stored_legacy_quote_remains_locatable_without_the_new_reader_contract
     assert citation.page_numbers == []
 
 
-def test_the_reading_call_is_never_shown_the_technical_context():
+def test_neither_call_is_shown_the_technical_context():
     _, _, bundle, _, context = _fixtures()
     trace, (reading_call, judgement_call) = written(
         bundle, reading_of(bundle), language="thai", technical_context=context
     )
 
     assert "technical_context" not in reading_call["content"]
-    assert judgement_call["content"]["technical_context"] == {
-        "context": context.context,
-        "mitre_table": list(context.mitre_table),
-    }
+    assert "technical_context" not in judgement_call["content"]
     assert judgement_call["content"]["response_language"] == "thai"
     assert trace.retrieval_context_id == context.retrieval_context_id
+    assert trace.mitre_associations == []
 
 
 def test_the_judgement_call_receives_claims_after_their_unit_references_are_checked():
@@ -278,21 +283,8 @@ def test_checking_the_claims_before_the_judgement_binds_them_as_checking_after_i
                 clarification_question="Was any ransom paid?",
             )
         ],
-        mitre_associations=[
-            CaseMitreAssociation(
-                association_id=f"MA-0{n}",
-                technique_id=technique,
-                claim_ids=claim_ids,
-                reason="The share was encrypted.",
-                status="candidate_only",
-                support_role="external_technical_context",
-            )
-            for n, (technique, claim_ids) in enumerate(
-                (("T1486", ["A-01"]), ("T1059.001", ["A-77"]), ("T9999", ["A-01"])), 1
-            )
-        ],
     )
-    mitre_table = [{"technique_id": "T1486"}, {"technique_id": "T1059.001"}]
+    mitre_table = [reread_row("T1486"), {"technique_id": "T1059.001"}]
 
     after = resolve_case_trace(
         joined_trace(reading, verdict, context), bundle, mitre_table=mitre_table
@@ -303,8 +295,7 @@ def test_checking_the_claims_before_the_judgement_binds_them_as_checking_after_i
     assert before == after
     assert [claim.epistemic_status for claim in before.claims] == ["reported", "not_confirmed"]
     assert before.grounding.claims_duplicated == 1
-    assert before.grounding.associations_outside_context == 1
-    assert before.grounding.associations_without_claim == 1
+    assert [a.technique_id for a in before.mitre_associations] == ["T1486"]
 
 
 def test_the_reading_is_given_the_case_sources_and_the_judgement_is_not():
@@ -363,24 +354,14 @@ def test_a_joined_trace_is_bound_to_the_case_like_any_other():
                     clarification_question="Was any ransom paid?",
                 )
             ],
-            mitre_associations=[
-                CaseMitreAssociation(
-                    association_id="MA-01",
-                    technique_id="T1486",
-                    claim_ids=["A-01"],
-                    reason="The share was encrypted.",
-                    status="candidate_only",
-                    support_role="external_technical_context",
-                )
-            ],
         ),
     )
 
-    bound = resolve_case_trace(trace, bundle, mitre_table=[{"technique_id": "T1486"}])
+    bound = resolve_case_trace(trace, bundle, mitre_table=[reread_row("T1486")])
 
     assert bound.gaps[0].affected_claim_ids == ["A-01"]
-    assert bound.mitre_associations == []
-    assert bound.grounding.associations_outside_context == 1
+    assert [item.technique_id for item in bound.mitre_associations] == ["T1486"]
+    assert bound.grounding.associations_outside_context == 0
     assert bound.grounding.citations_verified == 1
 
 

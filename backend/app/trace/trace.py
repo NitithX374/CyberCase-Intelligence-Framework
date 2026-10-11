@@ -288,7 +288,6 @@ class CaseProviderJudgement(BaseModel):
     version: Literal["case_analysis_trace_v1"]
     summary: str = Field(min_length=1, max_length=24_000)
     gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
-    mitre_associations: list[CaseMitreAssociation] = Field(default_factory=list, max_length=64)
 
 
 __all__ = [

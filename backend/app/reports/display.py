@@ -178,14 +178,14 @@ def gap_topic(gap: CaseAnalysisGap) -> str:
 
 def recommendation_items(trace: CaseAnalysisTrace) -> list[str]:
     items = [
-        f"ตรวจสอบเพิ่มเติมในประเด็น {gap_topic(gap)}: ดำเนินการสืบสวน/สอบสวนเพื่อคลี่คลายข้อเท็จจริง ({PRIORITY_LABELS[gap.priority]})"
+        f"ตรวจสอบเพิ่มเติมในประเด็น {gap_topic(gap)}: หาข้อมูลเพิ่มเพื่อให้ข้อเท็จจริงชัดเจนขึ้น ({PRIORITY_LABELS[gap.priority]})"
         for gap in trace.gaps
     ]
     items.extend(
         [
             "ตรวจสอบเอกสารต้นฉบับและความสอดคล้องของข้อมูลก่อนใช้เป็นข้อเท็จจริง",
             "เปรียบเทียบข้อมูลจากหลายแหล่งและบันทึกผลที่ยืนยันได้แยกจากข้อสันนิษฐาน",
-            "รักษาข้อมูลต้นฉบับและบันทึก Chain of Custody ไว้เพื่อให้ตรวจสอบย้อนกลับได้",
+            "เก็บเอกสารและข้อมูลต้นฉบับไว้ครบถ้วนเพื่อให้ตรวจสอบย้อนกลับได้",
         ]
     )
     return list(dict.fromkeys(items))

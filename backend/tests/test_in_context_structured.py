@@ -25,7 +25,6 @@ STAGES = [
             "version": "case_analysis_trace_v1",
             "summary": "No claims.",
             "gaps": [],
-            "mitre_associations": [],
         },
     ),
     ("case_views", DerivedCaseViewsReply, {"parties": [], "timeline": [], "impacts": []}),

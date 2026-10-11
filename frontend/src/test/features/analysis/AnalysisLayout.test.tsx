@@ -182,7 +182,6 @@ describe("AnalysisLayout", () => {
       ["Findings1", `${base}/findings`],
       ["Details", `${base}/details`],
       ["Open questions1", `${base}/questions`],
-      ["Report", `${base}/report`],
     ]);
     expect(screen.getByText("Section content")).toBeInTheDocument();
   });

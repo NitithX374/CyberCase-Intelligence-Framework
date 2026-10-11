@@ -69,13 +69,13 @@ function Findings({
 
 describe("Finding traceability", () => {
   it.each([
-    ["supported", "entailed", "NLI: Source passages support this finding"],
+    ["supported", "entailed", "Source check: the cited Source passages support this finding"],
     [
       "not_supported",
       "lr_not_supported",
       "Source check: the cited Source did not clearly support this finding. Check it before relying on it.",
     ],
-    ["unassessed", "input_too_long", "Support could not be assessed — withheld from Judgement"],
+    ["unassessed", "input_too_long", "Support could not be assessed — not used in the summary"],
     ["unassessed", "verifier_unavailable", "Source check unavailable — not assessed"],
   ] as const)(
     "shows the saved semantic verdict %s independently of Source binding",
@@ -187,7 +187,7 @@ describe("Finding traceability", () => {
     render(<Findings result={result} rows={[thaiSource]} />);
     expect(screen.queryByText(/เชื่อม Source โดยตรง/)).not.toBeInTheDocument();
     expect(screen.queryByText(/ค้นคืนตำแหน่งใน Source/)).not.toBeInTheDocument();
-    expect(screen.getByText("ยังไม่ได้ตรวจการรองรับทางความหมาย")).toBeVisible();
+    expect(screen.getByText("ยังไม่ได้ตรวจว่า Source รองรับข้อค้นพบนี้หรือไม่")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: /statement\.pdf/ }));
     const passages = within(screen.getByRole("region", { name: "Cited Source passages" }));
     expect(passages.getByText(firstThai)).toBeVisible();

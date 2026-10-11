@@ -21,14 +21,10 @@ from app.sources.ingestion.files import (
     DocumentKind,
     detect_document,
     normalize_image,
+    pdf_page_count,
     render_pdf_page,
 )
-from app.sources.ingestion.parsers import (
-    NativeTextPolicy,
-    PdfPageInspection,
-    inspect_pdf,
-    parse_docx,
-)
+from app.sources.ingestion.parsers import parse_docx
 from app.sources.ingestion.recognition import DocumentRecognizer, RenderedPage
 
 
@@ -42,15 +38,9 @@ class DocumentIngestionLimits:
 
 
 class DocumentIngestionService:
-    def __init__(
-        self,
-        recognizer: DocumentRecognizer,
-        limits: DocumentIngestionLimits,
-        native_text_policy: NativeTextPolicy | None = None,
-    ) -> None:
+    def __init__(self, recognizer: DocumentRecognizer, limits: DocumentIngestionLimits) -> None:
         self._recognizer = recognizer
         self._limits = limits
-        self._native_text_policy = native_text_policy or NativeTextPolicy()
 
     async def aclose(self) -> None:
         if hasattr(self._recognizer, "aclose"):
@@ -66,14 +56,14 @@ class DocumentIngestionService:
         safe_filename = self.safe_filename(filename)
 
         failures: list[DocumentRecognitionError] = []
+        method = ExtractionMethod.DOCUMENT_RECOGNITION
         if detected.kind == DocumentKind.DOCX:
             pages, warnings = await asyncio.to_thread(parse_docx, content)
             method = ExtractionMethod.NATIVE_DOCX
         elif detected.kind == DocumentKind.PDF:
-            pages, warnings, method, failures = await self.ingest_pdf(content)
+            pages, warnings, failures = await self.ingest_pdf(content)
         else:
             pages, warnings, failures = await self.ingest_image(content)
-            method = ExtractionMethod.DOCUMENT_RECOGNITION
 
         full_text = "\n\n".join(page.text for page in pages if page.text)
         if not full_text and failures:
@@ -99,64 +89,30 @@ class DocumentIngestionService:
     async def ingest_pdf(
         self,
         content: bytes,
-    ) -> tuple[list[DocumentPage], list[str], ExtractionMethod, list[DocumentRecognitionError]]:
-        inspection = await asyncio.to_thread(
-            inspect_pdf,
-            content,
-            self._native_text_policy,
-            self._limits.max_pages,
-        )
+    ) -> tuple[list[DocumentPage], list[str], list[DocumentRecognitionError]]:
+        page_count = await asyncio.to_thread(pdf_page_count, content, self._limits.max_pages)
         semaphore = asyncio.Semaphore(self._limits.max_concurrent_ocr)
 
         async def process_page(
-            inspected_page: PdfPageInspection,
+            page_number: int,
         ) -> tuple[DocumentPage, list[str], DocumentRecognitionError | None]:
-            if inspected_page.usable_native_text:
-                page = DocumentPage(
-                    page_number=inspected_page.page_number,
-                    text=inspected_page.text,
-                    text_method="native",
-                    verification_status="native",
-                )
-                warnings = [inspected_page.warning] if inspected_page.warning else []
-                return page, warnings, None
-
-            page_warnings: list[str] = [
-                f"Page {inspected_page.page_number}: native text was not usable; document recognition was requested."
-            ]
-            if inspected_page.warning:
-                page_warnings.insert(0, inspected_page.warning)
-
             async with semaphore:
                 image_bytes = await asyncio.to_thread(
                     render_pdf_page,
                     content,
-                    inspected_page.page_number,
+                    page_number,
                     self._limits.render_longest_edge,
                 )
-                rendered = RenderedPage(
-                    page_number=inspected_page.page_number,
-                    image_bytes=image_bytes,
-                )
-                doc_page, ocr_warnings, failure = await self.process_rendered_page(rendered)
-                page_warnings.extend(ocr_warnings)
-                return doc_page, page_warnings, failure
+                return await self.process_rendered_page(RenderedPage(page_number, image_bytes))
 
-        results = await asyncio.gather(*(process_page(page) for page in inspection.pages))
+        results = await asyncio.gather(
+            *(process_page(number) for number in range(1, page_count + 1))
+        )
 
         pages = [page for page, _, _ in results]
         warnings = [warning for _, page_warnings, _ in results for warning in page_warnings]
         failures = [failure for _, _, failure in results if failure is not None]
-
-        native_page_count = sum(1 for page in pages if page.text_method == "native")
-        if native_page_count == inspection.page_count:
-            method = ExtractionMethod.NATIVE_PDF
-        elif native_page_count:
-            method = ExtractionMethod.HYBRID
-        else:
-            method = ExtractionMethod.DOCUMENT_RECOGNITION
-
-        return pages, warnings, method, failures
+        return pages, warnings, failures
 
     async def ingest_image(
         self,

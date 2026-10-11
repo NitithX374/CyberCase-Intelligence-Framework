@@ -10,7 +10,7 @@ from docx import Document
 from PIL import Image
 from reportlab.pdfgen import canvas
 
-from app.sources.ingestion import files, parsers
+from app.sources.ingestion import files
 from app.sources.ingestion import service as service_module
 from app.sources.ingestion.contracts import (
     DocumentIngestionError,
@@ -60,17 +60,22 @@ class ConcurrencyTrackingRecognizer:
                 self.current_concurrency -= 1
 
 
-class FailingRecognizer:
-    async def recognize_page(self, page: RenderedPage) -> RecognizedPage:
-        raise RecognitionProviderError("provider unavailable")
-
-
 class RaisingRecognizer:
     def __init__(self, failure: DocumentRecognitionError) -> None:
         self.failure = failure
 
     async def recognize_page(self, page: RenderedPage) -> RecognizedPage:
         raise self.failure
+
+
+class PageFailingRecognizer:
+    def __init__(self, failing_pages: set[int]) -> None:
+        self.failing_pages = failing_pages
+
+    async def recognize_page(self, page: RenderedPage) -> RecognizedPage:
+        if page.page_number in self.failing_pages:
+            raise RecognitionProviderError("provider unavailable")
+        return RecognizedPage(text=f"page {page.page_number}")
 
 
 def _service(recognizer, max_concurrent_ocr: int = 4) -> DocumentIngestionService:
@@ -143,18 +148,6 @@ def test_docx_uses_native_extraction() -> None:
     assert recognizer.pages == []
 
 
-def test_text_pdf_does_not_trigger_recognition() -> None:
-    recognizer = RecordingRecognizer()
-    native_text = "This is reliable native investigation dossier text 1234567890. " * 6
-    result = asyncio.run(_service(recognizer).ingest(_pdf_bytes([native_text]), "native.pdf"))
-
-    assert result.extraction_method == ExtractionMethod.NATIVE_PDF
-    assert result.pages[0].text_method == "native"
-    assert result.pages[0].verification_status == "native"
-    assert result.pages[0].text.strip() == native_text.strip()
-    assert recognizer.pages == []
-
-
 def test_scanned_pdf_page_is_routed_to_recognizer() -> None:
     recognizer = RecordingRecognizer("ข้อความจากภาพสแกน")
     result = asyncio.run(_service(recognizer).ingest(_pdf_bytes([None]), "scan.pdf"))
@@ -167,33 +160,49 @@ def test_scanned_pdf_page_is_routed_to_recognizer() -> None:
     assert result.verification_status == "machine_read"
 
 
-def test_pdf_with_tiny_text_layer_is_still_routed_to_recognizer() -> None:
-    recognizer = RecordingRecognizer("complete recognized page")
-    result = asyncio.run(_service(recognizer).ingest(_pdf_bytes(["x1"]), "scan-with-layer.pdf"))
+def test_a_pdf_with_a_text_layer_is_still_read_by_the_recognizer() -> None:
+    recognizer = RecordingRecognizer("text read from the page image")
+    text_layer = "This is reliable native investigation dossier text 1234567890. " * 6
+    result = asyncio.run(_service(recognizer).ingest(_pdf_bytes([text_layer]), "native.pdf"))
 
+    assert result.extraction_method == ExtractionMethod.DOCUMENT_RECOGNITION
     assert recognizer.pages == [1]
-    assert result.pages[0].text == "complete recognized page"
+    assert result.pages[0].text == "text read from the page image"
     assert result.pages[0].text_method == "ocr"
+    assert result.pages[0].verification_status == "machine_read"
+    assert text_layer.strip() not in result.full_text
 
 
-def test_mixed_pdf_routes_pages_independently_and_preserves_page_numbers() -> None:
-    recognizer = RecordingRecognizer("recognized page two")
-    native_text = "Native page one contains a complete criminal investigation narrative. " * 5
+def test_every_pdf_page_goes_to_the_recognizer_and_keeps_its_page_number() -> None:
+    recognizer = RecordingRecognizer("recognized page")
+    text_layer = "Native page contains a complete criminal investigation narrative. " * 5
     result = asyncio.run(
-        _service(recognizer).ingest(
-            _pdf_bytes([native_text, None, native_text]),
-            "mixed.pdf",
-        )
+        _service(recognizer).ingest(_pdf_bytes([text_layer, None, text_layer]), "mixed.pdf")
     )
 
-    assert result.extraction_method == ExtractionMethod.HYBRID
+    assert result.extraction_method == ExtractionMethod.DOCUMENT_RECOGNITION
     assert [page.page_number for page in result.pages] == [1, 2, 3]
-    assert result.pages[0].text_method == "native"
-    assert result.pages[1].text_method == "ocr"
-    assert result.pages[1].text == "recognized page two"
-    assert result.pages[2].text_method == "native"
-    assert result.verification_status == "machine_read", "one machine-read page marks the document"
-    assert recognizer.pages == [2]
+    assert {page.text_method for page in result.pages} == {"ocr"}
+    assert sorted(recognizer.pages) == [1, 2, 3]
+
+
+def test_a_pdf_over_the_page_limit_is_refused_before_any_page_is_read() -> None:
+    recognizer = RecordingRecognizer()
+    with pytest.raises(DocumentIngestionError) as raised:
+        asyncio.run(_service(recognizer).ingest(_pdf_bytes([None] * 11), "long.pdf"))
+
+    assert raised.value.code == "document_page_limit_exceeded"
+    assert raised.value.status_code == 413
+    assert recognizer.pages == []
+
+
+def test_a_pdf_that_cannot_be_opened_fails_cleanly() -> None:
+    recognizer = RecordingRecognizer()
+    with pytest.raises(DocumentIngestionError) as raised:
+        asyncio.run(_service(recognizer).ingest(b"%PDF-1.4 not a document", "broken.pdf"))
+
+    assert raised.value.code == "invalid_document"
+    assert recognizer.pages == []
 
 
 def test_concurrent_ocr_is_bounded_by_semaphore() -> None:
@@ -284,31 +293,6 @@ def test_a_photo_with_no_orientation_keeps_its_shape() -> None:
     assert kept.size == (200, 100)
 
 
-def test_a_lone_surrogate_in_a_pdf_text_layer_is_dropped_before_it_can_be_stored(
-    monkeypatch,
-) -> None:
-    narrative = "Native page narrative describing a complete investigation. " * 4
-    unstorable = chr(0xD800) + " and" + chr(0xDFFF) + chr(0) + " more"
-
-    class MalformedMapPage:
-        mediabox = SimpleNamespace(width=612, height=792)
-
-        def extract_text(self) -> str:
-            return narrative + unstorable
-
-    monkeypatch.setattr(
-        parsers, "PdfReader", lambda *_args, **_kwargs: SimpleNamespace(pages=[MalformedMapPage()])
-    )
-    recognizer = RecordingRecognizer()
-
-    result = asyncio.run(_service(recognizer).ingest(b"%PDF-1.4 stand-in", "malformed.pdf"))
-
-    assert result.extraction_method == ExtractionMethod.NATIVE_PDF
-    assert result.full_text.endswith("and more")
-    assert result.full_text.encode("utf-8")
-    assert recognizer.pages == []
-
-
 def test_a_lone_surrogate_in_an_uploaded_filename_is_dropped() -> None:
     result = asyncio.run(
         _service(RecordingRecognizer()).ingest(
@@ -320,11 +304,11 @@ def test_a_lone_surrogate_in_an_uploaded_filename_is_dropped() -> None:
 
 
 def test_a_page_that_could_not_be_read_is_a_warning_when_others_were() -> None:
-    native_text = "Native page one contains a complete criminal investigation narrative. " * 5
     result = asyncio.run(
-        _service(FailingRecognizer()).ingest(_pdf_bytes([native_text, None]), "mixed.pdf")
+        _service(PageFailingRecognizer({2})).ingest(_pdf_bytes([None, None]), "two.pdf")
     )
 
+    assert result.pages[0].text == "page 1"
     assert result.pages[1].text == ""
     assert result.pages[1].verification_status == "needs_review"
     assert result.verification_status == "needs_review"
@@ -370,7 +354,7 @@ def test_a_document_nothing_could_be_read_from_names_the_recognition_failure(
     ("target", "content", "filename"),
     [
         ("parse_docx", lambda: _docx_bytes("source only"), "case.docx"),
-        ("inspect_pdf", lambda: _pdf_bytes(["Native text. " * 20]), "case.pdf"),
+        ("pdf_page_count", lambda: _pdf_bytes([None]), "case.pdf"),
         ("normalize_image", _png_bytes, "scan.png"),
     ],
 )

@@ -30,7 +30,7 @@ A feature may import another feature's hooks or types (Analysis reads sources); 
 
 In Sources, `SourceViewport.tsx` owns selection and representation tabs; `SourcePreviews.tsx` renders original files and extracted text, and `sourcePresentation.ts` reads page metadata. Analysis and follow-up pending indicators use TanStack Query's `useIsMutating` with exact case mutation keys, so they survive unmounting.
 
-Every manual Analyze action uses `useAnalysisAvailability`: Chat must be loaded, no follow-up question may be awaiting an answer, and no analysis or follow-up answer mutation may be running. The analysis mutation remains pending until the Chat refresh finishes. Completing the follow-up answers continues analysis automatically through the existing Chat request.
+Every manual Analyze action uses `useAnalysisAvailability`: Chat must be loaded, no follow-up question may be awaiting an answer, and no analysis or follow-up answer mutation may be running. The analysis mutation remains pending until the Chat refresh finishes. Completing the follow-up answers continues analysis automatically through the existing Chat request. Pressing Analyze on the Sources page also opens the Analysis page, which shows the run's progress; the Analyze buttons on the Analysis page stay where they are.
 
 Tests live only in `src/test/`, at the path of the file they test: `src/features/chat/useCaseChat.ts` is tested by `src/test/features/chat/useCaseChat.test.tsx`. A test imports through `@/`, never by a relative path, so moving it breaks nothing. `npm run lint` fails on a test file anywhere else.
 

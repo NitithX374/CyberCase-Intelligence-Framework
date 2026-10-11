@@ -52,11 +52,6 @@ def check_judgement_references(
         claim_id for _, claim_ids in summary_pieces(judgement.summary) for claim_id in claim_ids
     }
     references.update(claim_id for gap in judgement.gaps for claim_id in gap.affected_claim_ids)
-    references.update(
-        claim_id
-        for association in judgement.mitre_associations
-        for claim_id in association.claim_ids
-    )
     if references - allowed:
         raise CaseAnalysisFailure(
             "case_judgement_invalid_claim",

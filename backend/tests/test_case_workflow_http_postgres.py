@@ -39,7 +39,6 @@ JUDGED = {
     "version": "case_analysis_trace_v1",
     "summary": "Files on the shared drive were encrypted.",
     "gaps": [],
-    "mitre_associations": [],
 }
 
 

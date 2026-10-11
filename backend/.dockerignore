@@ -1,5 +1,6 @@
 nli_mdeberta/
 source_selector_mpnet/
 xlmr_ladder_best/
+models/
 __pycache__/
 *.pyc

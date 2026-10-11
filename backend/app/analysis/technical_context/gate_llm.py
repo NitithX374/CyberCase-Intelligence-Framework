@@ -209,7 +209,9 @@ async def ask_mitre_applicability(
     case_sources: Sequence[CaseSourceItem],
 ) -> MitreApplicabilityRecord:
     provider_result = await request_stage(
-        config=AnalysisPipelineConfig(output_tokens=MITRE_APPLICABILITY_OUTPUT_TOKENS),
+        config=AnalysisPipelineConfig(
+            output_tokens=MITRE_APPLICABILITY_OUTPUT_TOKENS, thinking_tokens=0
+        ),
         stage="mitre_applicability",
         system=MITRE_APPLICABILITY_SYSTEM_PROMPT,
         content=build_mitre_applicability_prompt(case_sources),

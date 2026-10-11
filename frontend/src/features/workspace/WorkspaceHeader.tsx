@@ -23,14 +23,16 @@ interface WorkspaceHeaderProps {
 
 const workspaceViewDescriptions: Record<WorkspaceView, string> = {
   sources: "What the case knows: narratives, documents and clarification answers",
-  analysis: "Findings, the ATT&CK context behind them, and the report",
+  analysis: "Summary, findings, the ATT&CK context behind them, and open questions",
   legal: "Thai provisions that may bear on the case, from an external legal service",
+  report: "Report versions made from the analysis, to preview and download as PDF",
 };
 
 const workspaceTabs: Array<{ view: WorkspaceView; label: string }> = [
   { view: "sources", label: "Sources" },
   { view: "analysis", label: "Analysis" },
   { view: "legal", label: "Legal" },
+  { view: "report", label: "Report" },
 ];
 
 export function WorkspaceHeader({

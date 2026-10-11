@@ -9,7 +9,6 @@ const sections: Array<{ section?: AnalysisSection; label: string }> = [
   { section: "findings", label: "Findings" },
   { section: "details", label: "Details" },
   { section: "questions", label: "Open questions" },
-  { section: "report", label: "Report" },
 ];
 
 export function AnalysisNav({

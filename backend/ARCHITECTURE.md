@@ -76,8 +76,9 @@ without its assessment.
 `write_analysis` calls `write_trace` in `analysis/write.py`, which writes the
 trace with a claims-only `case_reading` call selecting source-unit IDs,
 then deterministic binding and NLI Claim/Source validation, followed by independent `case_views` and
-`case_judgement` calls in parallel. The latter writes summary, gaps and ATT&CK
-associations over the Claims; the former writes presentation views only.
+`case_judgement` calls in parallel. The latter writes summary and gaps over the
+Claims; the former writes presentation views only. Neither is shown the technical
+context: the ATT&CK associations are built afterwards by `bind_to_case`.
 
 `analysis/reading_sources.py` captures each source's revision before Reading and
 sends exact unit text with source-local IDs (`U001`, etc.), unchanged Source IDs
@@ -143,18 +144,27 @@ separate context around each quotation. Attached Source spans can contain conten
 beyond the Claim text; valid Claim references do not verify every generated fact.
 Follow-up input is limited to QA IDs, gap keys and answered flags; raw
 questions/answers remain Reader Sources and stored provenance, preventing that
-route from bypassing the structural checks. Technical context remains external. Judgement
-references to withheld/unknown Claim IDs fail before joining the trace. Every
+route from bypassing the structural checks. Technical context remains external and
+is not sent to Judgement. Judgement references to withheld/unknown Claim IDs fail
+before joining the trace. Every
 summary sentence ends with the IDs of the claims it rests on. Older saved Claims
 without `semantic_grounding` remain unassessed; reads/reports do not run NLI.
 
 `bind_to_case` then checks the judgement's references with `bound_references`:
 - the `affected_claim_ids` of a gap;
-- the claim IDs of each ATT&CK association, and its technique against the
-  retrieved context;
 - the claim IDs at the end of each summary sentence: `summary_units` is derived
   from the summary, each unit with its known claim IDs and a `support`, and the
   IDs that name no claim are counted in `grounding.summary_ids_unknown`.
+
+`bound_references` also lists the ATT&CK associations, with no model call
+(`trace/associations.py::mapped_associations`). A row of the RAG service's table
+becomes an association when the service's re-read tied a sentence of the case to it
+(an evidence span with basis `reread`; a span with basis `retrieval` says only why
+the row was looked up). The association shows what the service sent: its `reason` is
+that sentence and its `plain_meaning` is the first sentence of the ATT&CK
+description. Nothing is checked against the Sources or the Claims and no Claim is
+attached, so `claim_ids` is empty; the service already located the sentence in the
+case file. A row without a re-read span still shows as retrieved context.
 
 A trace written without the middle step, as the one-call writer in
 `experiments/analysis_arms.py` writes it, is bound in full there. The `verify` arm in
@@ -256,7 +266,7 @@ Five stages in four files, and all of them go through `request_stage` in
 |---|---|---|
 | The gap-only assessment | `analysis/assess.py` | `assess` |
 | The reading: canonical claims with selected Source units | `analysis/write.py` | `case_reading` |
-| The judgement: summary, gaps, ATT&CK associations | `analysis/write.py` | `case_judgement` |
+| The judgement: summary and gaps | `analysis/write.py` | `case_judgement` |
 | A chat answer, before or after an analysis | `chat/compose.py` | `chat_answer` |
 | The MITRE applicability gate, when `MITRE_GATE_MODE=llm` | `analysis/technical_context/gate_llm.py` | `mitre_applicability` |
 

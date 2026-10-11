@@ -67,7 +67,7 @@ def prepare_payload(cluster: ResponseCluster, accepted: set[str]) -> dict:
             if claim_id in accepted
         ],
     )
-    return judgement_request(reading, "en", (), None)
+    return judgement_request(reading, "en", ())
 
 
 async def judge(

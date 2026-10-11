@@ -2,27 +2,51 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { refusal } from "@/test/httpErrors";
+import type { CaseSourceRead } from "@/lib/api/types";
 import { SourcesPage } from "@/features/sources/SourcesPage";
 
 const caseId = "22222222-2222-4222-8222-222222222222";
 
+const narrative: CaseSourceRead = {
+  id: "source-1",
+  case_id: caseId,
+  source_kind: "narrative",
+  document_id: null,
+  exact_text: "Files on the shared drive were reported encrypted.",
+  provenance_json: {},
+  source_metadata_json: {},
+  created_at: "2026-09-11T00:00:00Z",
+};
+
 const state = vi.hoisted(() => ({
   sourcesFailed: false,
+  sources: [] as CaseSourceRead[],
+  freshness: undefined as "missing" | "current" | "stale" | undefined,
+  canAnalyze: true,
   refetchSources: vi.fn(),
   upload: vi.fn(),
+  push: vi.fn(),
+  runAnalysis: vi.fn(),
 }));
 
-vi.mock("next/navigation", () => ({ useParams: () => ({ caseId }) }));
-vi.mock("@/features/cases/queries", () => ({ useCase: () => ({ data: undefined }) }));
+vi.mock("next/navigation", () => ({
+  useParams: () => ({ caseId }),
+  useRouter: () => ({ push: state.push }),
+}));
+vi.mock("@/features/cases/queries", () => ({
+  useCase: () => ({
+    data: state.freshness ? { analysis_freshness: state.freshness } : undefined,
+  }),
+}));
 vi.mock("@/features/analysis/queries", () => ({
   useAnalysisAvailability: () => ({
     isUpdating: false,
-    isWaitingForFollowup: false,
-    canAnalyze: true,
+    isWaitingForFollowup: !state.canAnalyze,
+    canAnalyze: state.canAnalyze,
   }),
 }));
 vi.mock("@/features/analysis/useRunCaseAnalysis", () => ({
-  useRunCaseAnalysis: () => vi.fn(),
+  useRunCaseAnalysis: () => state.runAnalysis,
 }));
 vi.mock("@/features/chat/useCaseChat", () => ({
   useCaseChatQuery: () => ({ data: { case_id: caseId, messages: [] }, isLoading: false }),
@@ -31,7 +55,7 @@ vi.mock("@/features/sources/queries", () => ({
   useCaseSources: () =>
     state.sourcesFailed
       ? { data: undefined, isLoading: false, isLoadingError: true, refetch: state.refetchSources }
-      : { data: [], isLoading: false },
+      : { data: state.sources, isLoading: false },
   useUploadCaseDocument: () => ({ isPending: false, mutateAsync: state.upload }),
 }));
 
@@ -45,11 +69,42 @@ function renderPage() {
 
 beforeEach(() => {
   state.sourcesFailed = false;
+  state.sources = [];
+  state.freshness = undefined;
+  state.canAnalyze = true;
   state.refetchSources.mockClear();
   state.upload.mockReset();
+  state.push.mockClear();
+  state.runAnalysis.mockClear();
 });
 
 describe("SourcesPage", () => {
+  it("starts the analysis and opens the analysis page when Analyze is pressed", () => {
+    state.sources = [narrative];
+    state.freshness = "missing";
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
+
+    expect(state.runAnalysis).toHaveBeenCalledOnce();
+    expect(state.push).toHaveBeenCalledOnce();
+    expect(state.push).toHaveBeenCalledWith(`/case/${caseId}/analysis`);
+  });
+
+  it("stays on the sources page while a follow-up question awaits an answer", () => {
+    state.sources = [narrative];
+    state.freshness = "stale";
+    state.canAnalyze = false;
+    renderPage();
+
+    const button = screen.getByRole("button", { name: /^Analyze/ });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+
+    expect(state.runAnalysis).not.toHaveBeenCalled();
+    expect(state.push).not.toHaveBeenCalled();
+  });
+
   it("offers to load failed sources again, never to add them again", () => {
     state.sourcesFailed = true;
     renderPage();

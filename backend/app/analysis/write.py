@@ -84,10 +84,10 @@ async def write_trace(
     announce("judge")
     judge_task = asyncio.create_task(
         request_stage(
-            config=config,
+            config=config.for_judgement(),
             stage="case_judgement",
             system=CASE_JUDGEMENT_SYSTEM_PROMPT,
-            content=judgement_request(judged, language, followup_history, technical_context),
+            content=judgement_request(judged, language, followup_history),
             schema=CaseProviderJudgement,
         )
     )
@@ -190,7 +190,6 @@ def judgement_request(
     reading: CaseProviderReading,
     language: str,
     followup_history: Sequence[CaseFollowupExchange],
-    technical_context: CaseRagContextPayload | None,
 ) -> dict[str, object]:
     return {
         "response_language": language,
@@ -199,7 +198,6 @@ def judgement_request(
             for item in followup_history
             if item.is_answered
         ],
-        "technical_context": technical_context_payload(technical_context),
         "reading": reading_payload(reading),
     }
 
@@ -241,7 +239,6 @@ def joined_trace(
         impacts=views.impacts if views is not None else [],
         view_extraction=views.extraction if views is not None else None,
         gaps=judgement.gaps,
-        mitre_associations=judgement.mitre_associations,
         retrieval_context_id=(
             technical_context.retrieval_context_id if technical_context is not None else None
         ),

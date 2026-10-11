@@ -79,16 +79,20 @@ class SourceService:
         refuse_while_analysing(case.id)
         if not ingested.full_text.strip():
             raise SourceError("extraction_text_empty", "Document extraction text is empty")
-        weight = await asyncio.to_thread(weight_in_payload, ingested.full_text)
-        await self.refuse_beyond_budget(case, weight)
         source = await self.db.scalar(
-            select(CaseSource).where(
+            select(CaseSource)
+            .options(selectinload(CaseSource.document))
+            .where(
                 CaseSource.case_id == case.id,
                 CaseSource.document_id == document_id,
             )
         )
         if source is None:
-            raise SourceError("source_not_found", "Case source not found", status.HTTP_404_NOT_FOUND)
+            raise SourceError(
+                "source_not_found", "Case source not found", status.HTTP_404_NOT_FOUND
+            )
+        weight = await asyncio.to_thread(weight_in_payload, ingested.full_text)
+        await self.refuse_beyond_budget(case, weight, replacing=source.id)
         source.exact_text = ingested.full_text
         source.provenance_json = document_provenance(ingested)
         case.source_revision += 1
@@ -140,10 +144,13 @@ class SourceService:
         await self.db.refresh(source)
         return source
 
-    async def refuse_beyond_budget(self, case: Case, weight: int) -> None:
-        stored = await self.db.scalars(
-            select(CaseSource.exact_text).where(CaseSource.case_id == case.id)
-        )
+    async def refuse_beyond_budget(
+        self, case: Case, weight: int, replacing: UUID | None = None
+    ) -> None:
+        query = select(CaseSource.exact_text).where(CaseSource.case_id == case.id)
+        if replacing is not None:
+            query = query.where(CaseSource.id != replacing)
+        stored = await self.db.scalars(query)
         texts = stored.all()
         kept = await asyncio.to_thread(lambda: sum(weight_in_payload(item) for item in texts))
         if weight + kept > SOURCE_TOKEN_BUDGET:

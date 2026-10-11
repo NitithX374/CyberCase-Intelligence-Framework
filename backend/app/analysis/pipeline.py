@@ -101,7 +101,7 @@ async def assess_case(
     config: AnalysisPipelineConfig,
 ) -> CaseAssessmentTrace:
     return await request_stage(
-        config=config,
+        config=config.for_assess(),
         stage="assess",
         system=case_assessment_prompt(),
         content={

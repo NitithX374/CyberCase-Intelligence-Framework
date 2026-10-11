@@ -1,6 +1,6 @@
-export type WorkspaceView = "sources" | "analysis" | "legal";
+export type WorkspaceView = "sources" | "analysis" | "legal" | "report";
 
-export type AnalysisSection = "findings" | "details" | "questions" | "report";
+export type AnalysisSection = "findings" | "details" | "questions";
 
 export function casePath(caseId: string, view: WorkspaceView): string {
   return `/case/${encodeURIComponent(caseId)}/${view}`;

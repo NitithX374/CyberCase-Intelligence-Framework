@@ -112,7 +112,6 @@ def test_the_judgement_request_has_no_case_sources():
     assert set(judgement_call["content"]) == {
         "response_language",
         "followup_history",
-        "technical_context",
         "reading",
     }
     [claim] = judgement_call["content"]["reading"]["claims"]
@@ -124,14 +123,14 @@ def test_no_citation_sent_to_the_judgement_carries_the_sentence_around_its_quote
     checked, _ = bound_claims(reading, bundle)
     assert checked.claims[0].supporting_citations[0].context is not None
 
-    content = judgement_request(checked, "english", (), None)
+    content = judgement_request(checked, "english", ())
     [claim] = content["reading"]["claims"]
     [citation] = claim["supporting_citations"]
     assert citation == {"exact_quote": QUOTE}
     assert '"context"' not in json.dumps(content)
 
 
-def test_the_judgement_still_receives_the_followup_history_and_the_technical_context():
+def test_the_judgement_receives_the_followup_history_and_no_technical_context():
     _, _, _, _, context = _fixtures()
     bundle, reading = bundle_and_reading()
 
@@ -147,10 +146,7 @@ def test_the_judgement_still_receives_the_followup_history_and_the_technical_con
             "answered": True,
         }
     ]
-    assert content["technical_context"] == {
-        "context": context.context,
-        "mitre_table": list(context.mitre_table),
-    }
+    assert "technical_context" not in content
     assert content["response_language"] == "english"
 
 
@@ -226,10 +222,10 @@ def test_the_judgement_request_builder_takes_the_checked_reading_and_nothing_of_
     bundle, reading = bundle_and_reading()
     checked, _ = bound_claims(reading, bundle)
 
-    request = judgement_request(checked, "thai", history(), None)
+    request = judgement_request(checked, "thai", history())
 
     assert request["response_language"] == "thai"
-    assert request["technical_context"] is None
+    assert "technical_context" not in request
     assert set(request["reading"]) == {"claims"}
 
 
@@ -273,8 +269,23 @@ def test_the_rest_of_the_judgement_prompt_is_unchanged():
     assert "Keep it concise, readable, and complete." in prompt
     assert "Two supplied claims attributing the same event differently" in prompt
     assert "Follow-up metadata identifies answered gaps, without raw questions or answers" in prompt
-    assert "Prefer an empty association list over a weak or speculative mapping." in prompt
     assert "length" not in prompt.lower().replace("claim-based", "")
+
+
+def test_the_judgement_prompt_leaves_the_attack_mapping_to_the_rag_service():
+    prompt = " ".join(CASE_JUDGEMENT_SYSTEM_PROMPT.split())
+
+    assert "The input contains two information classes:" in prompt
+    assert "Mapping the case to MITRE ATT&CK techniques is not your task" in prompt
+    for gone in (
+        "MITRE ATT&CK Associations",
+        "mitre_associations",
+        "technical_context",
+        "Technical context",
+        "plain_meaning",
+        "association",
+    ):
+        assert gone not in prompt
 
 
 def test_the_bound_trace_has_the_units_of_the_judgements_summary():

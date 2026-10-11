@@ -26,9 +26,9 @@ ROOT = Path(__file__).resolve().parents[2]
 
 @pytest.fixture
 def verifier(monkeypatch):
-    monkeypatch.setattr(settings, "claim_nli_path", str(ROOT / "backend/nli_mdeberta"))
+    monkeypatch.setattr(settings, "claim_nli_path", str(ROOT / "backend/models/nli_mdeberta"))
     monkeypatch.setattr(
-        settings, "claim_selector_path", str(ROOT / "backend/source_selector_mpnet")
+        settings, "claim_selector_path", str(ROOT / "backend/models/source_selector_mpnet")
     )
     return load_verifier()
 

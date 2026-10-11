@@ -77,7 +77,7 @@ test.describe("case lifecycle", () => {
     await expect(page.getByRole("region", { name: "Technical Context" })).toBeVisible({
       timeout: 60_000,
     });
-    await sections.getByRole("link", { name: "Report" }).click();
+    await page.locator("#workspace-tab-report").click();
     const report = page.getByRole("region", { name: "Case report" });
     await expect(report.getByRole("heading", { name: "Report", exact: true })).toBeVisible({
       timeout: 60_000,
@@ -86,8 +86,7 @@ test.describe("case lifecycle", () => {
     await page.locator("#workspace-tab-sources").click();
     await expect(page.getByRole("tabpanel", { name: "Case sources" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 3, name: "Case narrative" })).toBeVisible();
-    await page.locator("#workspace-tab-analysis").click();
-    await sections.getByRole("link", { name: "Report" }).click();
+    await page.locator("#workspace-tab-report").click();
     await page.getByRole("button", { name: "Generate report" }).first().click();
     await expect(page.getByRole("article", { name: "Persisted report" })).toBeVisible({
       timeout: 30_000,

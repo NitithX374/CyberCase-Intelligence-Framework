@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from app.analysis.technical_context.contracts import (
     CaseRagContextPayload,
+    CaseSpan,
     LegalReferenceResult,
     MitreApplicabilityRecord,
     MitreTableRow,
@@ -45,6 +46,7 @@ def _fixtures():
                 technique_id="T1059.001",
                 name="PowerShell",
                 description="Command and scripting interpreter.",
+                evidence=[CaseSpan(text=text, start=0, end=len(text), basis="reread")],
             ).model_dump(mode="json"),
             MitreTableRow(
                 technique_id="S0096",

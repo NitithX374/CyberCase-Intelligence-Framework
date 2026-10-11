@@ -1,5 +1,19 @@
-import { AnalysisReport } from "@/features/analysis/AnalysisReport";
+"use client";
 
-export default function CaseAnalysisReportPage() {
-  return <AnalysisReport />;
+import { useParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { casePath } from "@/lib/casePaths";
+
+export default function CaseAnalysisReportRedirectPage() {
+  const params = useParams();
+  const router = useRouter();
+  const caseId = params?.caseId as string;
+
+  useEffect(() => {
+    if (caseId) {
+      router.replace(casePath(caseId, "report"));
+    }
+  }, [caseId, router]);
+
+  return null;
 }

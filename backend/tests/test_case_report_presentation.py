@@ -343,7 +343,7 @@ def test_jinja_report_renders_sections_and_escapes_case_content() -> None:
     html = render_case_report_html(_stored(_input(technical=True)), ISSUE)
 
     assert "1. สรุปข้อเท็จจริงของคดี" in html
-    assert "2. ข้อเท็จจริงและตัวบ่งชี้ที่ตรวจพบ" in html
+    assert "2. ข้อเท็จจริงที่ตรวจพบ" in html
     assert "3. การจำแนกพฤติกรรมตามกรอบ MITRE ATT&amp;CK" in html
     assert "7. ข้อจำกัดและข้อสงวนของรายงาน" in html
     assert "T1059.001" in html
@@ -969,7 +969,7 @@ def test_one_plain_line_says_what_the_raised_numbers_are() -> None:
 
     assert summary_section_of(html).count("ตัวเลขยกคือเลขข้อค้นพบในหัวข้อที่ 2") == 1
     assert html.index("ตัวเลขยกคือเลขข้อค้นพบ") > html.index("summary-paragraph")
-    assert "<h2>2. ข้อเท็จจริงและตัวบ่งชี้ที่ตรวจพบ</h2>" in html
+    assert "<h2>2. ข้อเท็จจริงที่ตรวจพบ</h2>" in html
 
 
 def test_a_summary_with_no_unit_that_names_a_finding_says_nothing_about_numbers() -> None:

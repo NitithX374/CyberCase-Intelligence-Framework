@@ -67,8 +67,7 @@ $$\text{Retained Evidence Units} \xrightarrow{\quad\text{Concatenation}\quad} \t
 | **Supported Recall** | 42.42% | 52.73% | **50.61%** | 52.12% |
 | **Supported-$F_1$** | 0.4255 | 0.4715 | **0.4834** | 0.4900 |
 | **False Support Rate (FSR)** | 25.41% | 31.62% | **26.22%** | 27.03% |
-| **Pipeline Throughput Latency** | ~390 ms / claim | ~227 ms / claim | **~227 ms / claim** | ~449 ms / claim |
-
+| **Pipeline Throughput Latency** | ~390 ms / claim | ~227 ms / claim | **~227 ms / claim** | ~449 ms / claim แป
 *Confusion Matrix for B1-LR on WiCE Test:* $\text{TP} = 167$, $\text{FP} = 194$, $\text{TN} = 546$, $\text{FN} = 163$ ($N = 1,070$, Gold Positive = 330, Gold Negative = 740).
 
 ### 2. Paired Bootstrap Hypothesis Tests ($N_{\text{boot}} = 1,000$, Seed = 42)

@@ -35,7 +35,7 @@ and focused question ↓
                      Validated analysis → Report
 ```
 
-The assessment may stop the request before technical augmentation, the two analysis calls, and binding. When the case proceeds, the analysis makes two structured LLM calls: a reading that writes the claims, parties, timeline and impacts with their quotations, then a judgement that writes the summary, gaps and ATT&CK associations over that reading. Analysis and Case Ask operations are request-scoped; there is no run resource, job queue, or polling workflow.
+The assessment may stop the request before technical augmentation, the two analysis calls, and binding. When the case proceeds, the analysis makes two structured LLM calls: a reading that writes the claims, parties, timeline and impacts with their quotations, then a judgement that writes the summary and gaps over that reading. The ATT&CK associations are not written by a model: the backend lists the techniques the RAG service tied to a sentence of the case, with that sentence. Analysis and Case Ask operations are request-scoped; there is no run resource, job queue, or polling workflow.
 
 Report generation is separate, deterministic, and template-first. It reads a selected validated analysis and what that analysis recorded when it was stored: the sources it read and the follow-up answers it had. Each analysis gets at most one report. The report is stored as a display snapshot, and the HTML and PDF are rendered from that stored copy. No model is called.
 

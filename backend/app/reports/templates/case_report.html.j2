@@ -230,14 +230,14 @@
       </section>
 
       <section id="case_evidence">
-        <h2>2. ข้อเท็จจริงและตัวบ่งชี้ที่ตรวจพบ</h2>
+        <h2>2. ข้อเท็จจริงที่ตรวจพบ</h2>
         {% if report.findings %}
           {% set tables.n = tables.n + 1 %}
-          <p class="body">ตารางต่อไปนี้แสดงข้อเท็จจริงและตัวบ่งชี้ที่ปรากฏในหลักฐาน พร้อมสถานะการยืนยันและรหัสอ้างอิงหลักฐานตามภาคผนวก ก</p>
-          <p class="caption">ตารางที่ {{ tables.n }} ข้อเท็จจริงและตัวบ่งชี้ที่ตรวจพบ</p>
+          <p class="body">ตารางต่อไปนี้แสดงข้อเท็จจริงที่ปรากฏในหลักฐาน พร้อมสถานะการยืนยันและรหัสอ้างอิงหลักฐานตามภาคผนวก ก</p>
+          <p class="caption">ตารางที่ {{ tables.n }} ข้อเท็จจริงที่ตรวจพบ</p>
           <table class="formal">
             <colgroup><col style="width: 7%"><col style="width: 63%"><col style="width: 16%"><col style="width: 14%"></colgroup>
-            <thead><tr><th>ข้อ</th><th>ข้อเท็จจริงหรือตัวบ่งชี้</th><th>สถานะ</th><th>อ้างอิง</th></tr></thead>
+            <thead><tr><th>ข้อ</th><th>ข้อเท็จจริง</th><th>สถานะ</th><th>อ้างอิง</th></tr></thead>
             <tbody>
               {% for finding in report.findings %}
               <tr id="finding-{{ finding.ordinal }}">
@@ -297,7 +297,7 @@
             </tbody>
           </table>
         {% else %}
-          <p class="body">ยังไม่พบตัวบ่งชี้ที่ผ่านการตรวจสอบจากผลการวิเคราะห์</p>
+          <p class="body">ยังไม่พบข้อเท็จจริงที่ผ่านการตรวจสอบจากผลการวิเคราะห์</p>
         {% endif %}
       </section>
 
@@ -310,7 +310,7 @@
             <p class="caption">ตารางที่ {{ tables.n }} เทคนิคที่เชื่อมโยงกับข้อเท็จจริงของคดี</p>
             <table class="formal">
               <colgroup><col style="width: 13%"><col style="width: 27%"><col style="width: 44%"><col style="width: 16%"></colgroup>
-              <thead><tr><th>รหัสเทคนิค</th><th>ชื่อเทคนิค</th><th>ความหมายโดยสังเขป</th><th>ตัวบ่งชี้ที่เกี่ยวข้อง</th></tr></thead>
+              <thead><tr><th>รหัสเทคนิค</th><th>ชื่อเทคนิค</th><th>ความหมายโดยสังเขป</th><th>ข้อเท็จจริงที่เกี่ยวข้อง</th></tr></thead>
               <tbody>
                 {% for technique in report.techniques %}
                 <tr>
@@ -347,7 +347,7 @@
 
       <section id="mapping_rationale">
         <h2>4. เหตุผลประกอบการจำแนกพฤติกรรม</h2>
-        <p class="body">เหตุผลต่อไปนี้อธิบายการเชื่อมโยงเชิงเทคนิคกับตัวบ่งชี้ของคดี ไม่ใช่การยืนยันว่ามีการใช้เทคนิคนั้นจริง</p>
+        <p class="body">เหตุผลต่อไปนี้อธิบายการเชื่อมโยงเชิงเทคนิคกับข้อเท็จจริงของคดี ไม่ใช่การยืนยันว่ามีการใช้เทคนิคนั้นจริง</p>
         {% if report.techniques_matched %}
           <ol class="numbered">
             {% for technique in report.techniques %}
@@ -392,7 +392,7 @@
 
       <section id="preliminary_recommendations">
         <h2>6. ข้อเสนอแนะเบื้องต้น</h2>
-        <p class="body">คำแนะนำมุ่งที่การยืนยันข้อเท็จจริง การรักษาหลักฐาน และการลดความไม่แน่นอนของคดี</p>
+        <p class="body">คำแนะนำมุ่งที่การยืนยันข้อเท็จจริง การเก็บข้อมูลต้นฉบับไว้ และการลดความไม่แน่นอนของคดี</p>
         <ol class="numbered">
           {% for item in report.recommendations %}
           <li><span class="n">6.{{ loop.index }}</span><span>{{ item | clean_report_text }}</span></li>
@@ -407,16 +407,6 @@
           <li><span class="n">7.{{ loop.index }}</span><span>{{ item | clean_report_text }}</span></li>
           {% endfor %}
         </ol>
-      </section>
-
-      <section class="signoff">
-        <p>ผู้จัดทำ: ระบบ CyberCase Intelligence Framework (จัดทำโดยอัตโนมัติ)</p>
-        <div class="signature">
-          <p>ลงชื่อ ........................................ ผู้ตรวจสอบ</p>
-          <p>(........................................)</p>
-          <p>ตำแหน่ง ........................................</p>
-          <p>วันที่ .......... / .......... / ..........</p>
-        </div>
       </section>
 
       <section class="annex" id="evidence_register">

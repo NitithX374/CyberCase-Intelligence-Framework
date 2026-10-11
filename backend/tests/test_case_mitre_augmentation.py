@@ -5,6 +5,7 @@ from case_mitre_test_support import _fixtures, _gate, _response
 from app.analysis.pipeline import (
     AnalysisArtifacts,
     AnalysisInput,
+    bind_to_case,
     retrieve_technical_context,
     write_analysis,
 )
@@ -14,7 +15,6 @@ from app.analysis.technical_context.contracts import LegalReferenceResult, Query
 from app.analysis.technical_context.rag_client import RagCallFailure
 from app.analysis.technical_context.retrieve import run_case_mitre_augmentation
 from app.config import settings
-from app.trace.trace import CaseMitreAssociation
 
 
 def test_the_shadow_gate_is_recorded_but_does_not_decide():
@@ -242,35 +242,25 @@ def test_workflow_scenario_b_cyber_case_gate_retrieve_augments_analysis():
             call_order.append("rag")
             return _response(context)
 
-        valid_assoc = CaseMitreAssociation(
-            association_id="MA-01",
-            technique_id="T1059.001",
-            claim_ids=["A-01"],
-            reason="PowerShell script execution detected in evidence.",
-            status="candidate_only",
-            support_role="external_technical_context",
-        )
-        augmented_trace = trace.model_copy(
-            update={
-                "mitre_associations": [valid_assoc],
-                "retrieval_context_id": "retrieval-case-1",
-            }
-        )
+        retrieved_trace = trace.model_copy(update={"retrieval_context_id": "retrieval-case-1"})
 
         async def fake_analysis(**kwargs):
             call_order.append("analysis")
             assert kwargs["technical_context"] == context
-            return augmented_trace
+            return retrieved_trace
 
         data = AnalysisInput(sources=source_bundle, response_language="english")
         artifacts = await retrieve_technical_context(
             data, AnalysisArtifacts(), gate=fake_gate, rag=fake_rag
         )
         artifacts = await write_analysis(data, artifacts, request=fake_analysis)
+        assert artifacts.trace.mitre_associations == []
+        artifacts = await bind_to_case(data, artifacts)
 
         assert call_order == ["gate", "rag", "analysis"]
-        assert len(artifacts.trace.mitre_associations) == 1
-        assert artifacts.trace.mitre_associations[0].technique_id == "T1059.001"
+        [association] = artifacts.trace.mitre_associations
+        assert association.technique_id == "T1059.001"
+        assert association.reason == f"“{source_bundle.sources[0].text}”"
         stored = external_context(artifacts)["technical_augmentation"]
         assert stored["status"] == "retrieved_with_matches"
         assert stored["association_ids"] == ["MA-01"]

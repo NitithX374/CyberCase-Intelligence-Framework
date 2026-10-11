@@ -11,63 +11,23 @@ from app.analysis.pipeline import (
 from app.analysis.technical_context.rag_client import RagCallFailure
 from app.trace.bind import resolve_case_trace
 from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation
-from app.trace.trace import CaseAnalysisTrace, CaseMitreAssociation
+from app.trace.trace import CaseAnalysisTrace
 
 
-def association(technique_id: str, claim_ids: list[str]) -> CaseMitreAssociation:
-    return CaseMitreAssociation(
-        association_id="MA-01",
-        technique_id=technique_id,
-        claim_ids=claim_ids,
-        reason="PowerShell reached an external address.",
-        status="candidate_only",
-        support_role="external_technical_context",
-    )
-
-
-def bound_with(*associations: CaseMitreAssociation) -> CaseAnalysisTrace:
+def test_only_the_row_the_service_tied_to_a_sentence_becomes_an_association():
     _, trace, source_bundle, _, context = _fixtures()
-    return resolve_case_trace(
-        trace.model_copy(
-            update={
-                "mitre_associations": list(associations),
-                "retrieval_context_id": "retrieval-case-1",
-            }
-        ),
+
+    bound = resolve_case_trace(
+        trace.model_copy(update={"retrieval_context_id": "retrieval-case-1"}),
         source_bundle,
         mitre_table=list(context.mitre_table),
     )
 
-
-def test_a_technique_outside_the_retrieved_table_is_dropped_and_counted():
-    trace = bound_with(association("T9999", ["A-01"]))
-
-    assert trace.mitre_associations == []
-    assert trace.grounding.associations_outside_context == 1
-
-
-def test_a_table_row_that_is_not_a_technique_is_dropped_and_counted():
-    trace = bound_with(association("S0096", ["A-01"]))
-
-    assert trace.mitre_associations == []
-    assert trace.grounding.associations_outside_context == 1
-
-
-def test_an_association_whose_claims_are_all_unknown_is_dropped_and_counted():
-    trace = bound_with(association("T1059.001", ["A-07"]))
-
-    assert trace.mitre_associations == []
-    assert trace.grounding.associations_without_claim == 1
-    assert trace.grounding.associations_outside_context == 0
-    assert CaseAnalysisTrace.model_validate(trace.model_dump()).mitre_associations == []
-
-
-def test_an_association_keeps_only_the_claims_that_exist():
-    trace = bound_with(association("T1059.001", ["A-01", "A-07"]))
-
-    assert [item.claim_ids for item in trace.mitre_associations] == [["A-01"]]
-    assert trace.grounding.associations_without_claim == 0
-    assert CaseAnalysisTrace.model_validate(trace.model_dump()) == trace
+    [association] = bound.mitre_associations
+    assert association.technique_id == "T1059.001"
+    assert association.reason == f"“{source_bundle.sources[0].text}”"
+    assert association.claim_ids == []
+    assert CaseAnalysisTrace.model_validate(bound.model_dump()) == bound
 
 
 def test_rag_failure_falls_back_to_case_sources():

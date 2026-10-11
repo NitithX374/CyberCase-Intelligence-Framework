@@ -201,8 +201,8 @@ def test_gate_preserves_ids_and_never_transmits_gold_or_response(raw_rows, verif
     assert [claim["claim_id"] for claim in claims] == [
         claim_id for claim_id, _ in cluster.assigned_rows if claim_id in accepted
     ]
-    assert set(payload) == {"response_language", "reading", "followup_history", "technical_context"}
-    assert payload["technical_context"] is None and payload["followup_history"] == []
+    assert set(payload) == {"response_language", "reading", "followup_history"}
+    assert payload["followup_history"] == []
     assert all(
         "gold" not in claim and "attribution_label" not in claim and "response" not in claim
         for claim in claims

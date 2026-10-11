@@ -89,8 +89,8 @@ display-only and does not alter the verifier premise.
 
 ## Assets and runtime
 
-The Docker backend uses local read-only mounts for `backend/nli_mdeberta` and
-`backend/source_selector_mpnet`. The latter can be provisioned using
+The Docker backend mounts `backend/models`, which holds `nli_mdeberta` and
+`source_selector_mpnet`. The latter can be provisioned using
 `backend/scripts/copy_source_selector.py` with the exact pinned cached snapshot.
 The paths are controlled by `CLAIM_NLI_PATH` and `CLAIM_SELECTOR_PATH`; the old
 meaning-pointer environment names no longer configure the current verifier.

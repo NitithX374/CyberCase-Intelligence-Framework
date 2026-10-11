@@ -41,7 +41,7 @@ def reading() -> CaseProviderReading:
 
 def test_judgement_keeps_claim_ids_and_source_text_without_source_locators():
     original = reading()
-    payload = judgement_request(original, "en", (), None)
+    payload = judgement_request(original, "en", ())
 
     assert payload["reading"]["claims"] == [
         {
@@ -69,7 +69,7 @@ def test_judgement_serialization_preserves_original_grounding_and_saved_trace():
     )
     before = original.model_dump(mode="json")
 
-    judgement_request(original, "en", (), None)
+    judgement_request(original, "en", ())
 
     assert original.model_dump(mode="json") == before
     trace = CaseAnalysisTrace(

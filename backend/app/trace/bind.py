@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import re
 from collections.abc import Mapping, Sequence
 from typing import TypeVar
 
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import EvidenceIndex
+from app.trace.associations import mapped_associations
 from app.trace.citations import CaseUnverifiedCitation
 from app.trace.claims import (
     CaseAnalysisClaim,
@@ -21,7 +21,6 @@ from app.trace.trace import (
     CaseGroundingReport,
     CaseImpactItem,
     CaseInvolvedParty,
-    CaseMitreAssociation,
     CaseProviderReading,
     CaseSummaryUnit,
     CaseTimelineItem,
@@ -48,8 +47,6 @@ def with_support(item: Projection, claims_by_id: Mapping[str, CaseAnalysisClaim]
     return item.model_copy(
         update={"claim_ids": claim_ids, "support": item_support(claim_ids, claims_by_id)}
     )
-
-ATTACK_TECHNIQUE_ID = re.compile(r"T\d{4}(?:\.\d{3})?")
 
 
 def followup_registry_items(
@@ -104,12 +101,6 @@ def bound_claims(
 def bound_references(trace: CaseAnalysisTrace, mitre_table: object = None) -> CaseAnalysisTrace:
     claims_by_id = {claim.claim_id: claim for claim in trace.claims}
     known_claim_ids = set(claims_by_id)
-    associations, outside_context, without_claim = kept_associations(
-        trace.mitre_associations,
-        known_claim_ids,
-        context_technique_ids(mitre_table),
-        has_retrieval=trace.retrieval_context_id is not None,
-    )
     units, unknown_ids = summary_units(trace.summary, claims_by_id)
     return trace.model_copy(
         update={
@@ -120,14 +111,8 @@ def bound_references(trace: CaseAnalysisTrace, mitre_table: object = None) -> Ca
             "timeline": [with_support(item, claims_by_id) for item in trace.timeline],
             "impacts": [with_support(impact, claims_by_id) for impact in trace.impacts],
             "gaps": [answerable_gap(gap, known_claim_ids) for gap in trace.gaps],
-            "mitre_associations": associations,
-            "grounding": trace.grounding.model_copy(
-                update={
-                    "associations_outside_context": outside_context,
-                    "associations_without_claim": without_claim,
-                    "summary_ids_unknown": unknown_ids,
-                }
-            ),
+            "mitre_associations": mapped_associations(mitre_table),
+            "grounding": trace.grounding.model_copy(update={"summary_ids_unknown": unknown_ids}),
         }
     )
 
@@ -164,33 +149,6 @@ def answerable_gap(gap, known_claim_ids: set[str]):
             "askable": gap.askable and gap.status != "EXPLICITLY_UNKNOWN",
         }
     )
-
-
-def kept_associations(
-    associations: list[CaseMitreAssociation],
-    known_claim_ids: set[str],
-    context_techniques: set[str],
-    *,
-    has_retrieval: bool,
-) -> tuple[list[CaseMitreAssociation], int, int]:
-    kept: list[CaseMitreAssociation] = []
-    outside_context = 0
-    without_claim = 0
-    for association in associations:
-        technique_id = association.technique_id
-        if (
-            not has_retrieval
-            or ATTACK_TECHNIQUE_ID.fullmatch(technique_id) is None
-            or technique_id not in context_techniques
-        ):
-            outside_context += 1
-            continue
-        claim_ids = [cid for cid in association.claim_ids if cid in known_claim_ids]
-        if not claim_ids:
-            without_claim += 1
-            continue
-        kept.append(association.model_copy(update={"claim_ids": claim_ids}))
-    return kept, outside_context, without_claim
 
 
 def resolve_claim(
@@ -250,20 +208,9 @@ def role_source_ids(
     return sorted(source_id for source_id in named if source_id in registry)
 
 
-def context_technique_ids(value: object) -> set[str]:
-    if not isinstance(value, list):
-        return set()
-    return {
-        str(row.get("technique_id")).strip()
-        for row in value
-        if isinstance(row, Mapping) and row.get("technique_id")
-    }
-
-
 __all__ = [
     "bound_claims",
     "bound_references",
-    "context_technique_ids",
     "followup_registry_items",
     "item_support",
     "resolve_case_trace",

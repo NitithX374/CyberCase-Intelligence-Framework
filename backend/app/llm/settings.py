@@ -27,6 +27,8 @@ class AnalysisPipelineConfig(BaseModel):
     output_tokens: int = Field(default=32_608, ge=1)
     thinking_tokens: int = Field(default=8_192, ge=0)
     reading_thinking_tokens: int | None = Field(default=None, ge=0)
+    assess_thinking_tokens: int | None = Field(default=None, ge=0)
+    judgement_thinking_tokens: int | None = Field(default=None, ge=0)
     safety_tokens: int = Field(default=4_000, ge=1)
     timeout_seconds: float = Field(default=120, gt=0)
 
@@ -45,6 +47,28 @@ class AnalysisPipelineConfig(BaseModel):
             }
         )
 
+    def for_judgement(self) -> "AnalysisPipelineConfig":
+        if self.judgement_thinking_tokens is None:
+            return self
+        return type(self).model_validate(
+            {
+                **self.model_dump(),
+                "thinking_tokens": self.judgement_thinking_tokens,
+                "judgement_thinking_tokens": None,
+            }
+        )
+
+    def for_assess(self) -> "AnalysisPipelineConfig":
+        if self.assess_thinking_tokens is None:
+            return self
+        return type(self).model_validate(
+            {
+                **self.model_dump(),
+                "thinking_tokens": self.assess_thinking_tokens,
+                "assess_thinking_tokens": None,
+            }
+        )
+
     def for_views(self) -> "AnalysisPipelineConfig":
         return type(self).model_validate(
             {
@@ -58,7 +82,12 @@ class AnalysisPipelineConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_budget(self) -> "AnalysisPipelineConfig":
-        for thinking in (self.thinking_tokens, self.reading_thinking_tokens):
+        for thinking in (
+            self.thinking_tokens,
+            self.reading_thinking_tokens,
+            self.assess_thinking_tokens,
+            self.judgement_thinking_tokens,
+        ):
             if thinking is None:
                 continue
             if 0 < thinking < MIN_THINKING_TOKENS:
@@ -71,4 +100,8 @@ class AnalysisPipelineConfig(BaseModel):
 
 
 def configured_pipeline() -> AnalysisPipelineConfig:
-    return AnalysisPipelineConfig(reading_thinking_tokens=settings.case_reading_thinking_tokens)
+    return AnalysisPipelineConfig(
+        reading_thinking_tokens=settings.case_reading_thinking_tokens,
+        assess_thinking_tokens=settings.case_assess_thinking_tokens,
+        judgement_thinking_tokens=settings.case_judgement_thinking_tokens,
+    )

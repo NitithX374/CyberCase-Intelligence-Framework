@@ -238,7 +238,7 @@ def test_reading_source_binding_and_judgement_announce_in_turn():
     bundle = case_with_one_narrative()
     reading = reading_of(bundle)
     judgement = CaseProviderJudgement(
-        version="case_analysis_trace_v1", summary="Nothing yet.", gaps=[], mitre_associations=[]
+        version="case_analysis_trace_v1", summary="Nothing yet.", gaps=[]
     )
 
     async def request_stage(**kwargs):
