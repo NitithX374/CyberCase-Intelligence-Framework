@@ -435,6 +435,20 @@ async def test_prompt_structured_two_invalid_replies_fail_the_stage(monkeypatch,
     assert "gave no valid reply" in caplog.text
 
 
+async def test_prompt_structured_custom_attempts_are_honoured(monkeypatch) -> None:
+    handler, sent = scripted(
+        replied("not json at all"),
+        replied("not json either"),
+        replied(json.dumps({"ok": True})),
+    )
+    calls: list[dict[str, object]] = []
+    result = await run_stage(monkeypatch, handler, calls, attempts=3)
+
+    assert result == Probe(ok=True)
+    assert len(sent) == 3
+    assert calls[0]["generation_attempts"] == 3
+
+
 async def test_prompt_structured_a_reply_cut_at_max_tokens_is_asked_once_more(monkeypatch) -> None:
     handler, sent = scripted(
         replied('{"ok": tr', stop_reason="max_tokens", output_tokens=32_608),

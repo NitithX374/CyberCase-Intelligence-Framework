@@ -309,7 +309,7 @@
           {% if report.techniques_matched %}
             <p class="caption">ตารางที่ {{ tables.n }} เทคนิคที่เชื่อมโยงกับข้อเท็จจริงของคดี</p>
             <table class="formal">
-              <colgroup><col style="width: 13%"><col style="width: 27%"><col style="width: 44%"><col style="width: 16%"></colgroup>
+              <colgroup><col style="width: 12%"><col style="width: 23%"><col style="width: 35%"><col style="width: 30%"></colgroup>
               <thead><tr><th>รหัสเทคนิค</th><th>ชื่อเทคนิค</th><th>ความหมายโดยสังเขป</th><th>ข้อเท็จจริงที่เกี่ยวข้อง</th></tr></thead>
               <tbody>
                 {% for technique in report.techniques %}
@@ -317,7 +317,7 @@
                   <td class="n">{{ technique.technique_id }}</td>
                   <td>{{ technique.name or "-" }}{% if technique.tactic %}<span class="minor">กลยุทธ์: {{ technique.tactic }}</span>{% endif %}</td>
                   <td>{{ technique.meaning | clean_report_text or "-" }}</td>
-                  <td class="ref">{% if technique.findings %}ข้อ {{ technique.findings | join(", ") }}{% else %}-{% endif %}</td>
+                  <td>{% if technique.reason %}{{ technique.reason | clean_report_text }}{% elif technique.findings %}ข้อ {{ technique.findings | join(", ") }}{% else %}-{% endif %}</td>
                 </tr>
                 {% endfor %}
               </tbody>

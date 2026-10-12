@@ -84,6 +84,7 @@ class CaseAnalysisConfig(BaseModel):
     warmup_models: bool = True
     chat_followup_max_rounds: int = Field(default=3, ge=0)
     chat_followup_gaps_per_round: int = Field(default=3, ge=1)
+    chat_stage_attempts: int = Field(default=4, ge=1, le=10)
 
 
 class ReportConfig(BaseModel):

@@ -358,6 +358,13 @@ def test_chat_uses_the_configured_model(monkeypatch):
     assert seen["schema"].__name__ == "ChatReply"
 
 
+def test_chat_uses_configured_attempts(monkeypatch):
+    monkeypatch.setattr(settings, "chat_stage_attempts", 4)
+    _, seen = ask(monkeypatch, reply(unit("Hello.", "general")))
+
+    assert seen["attempts"] == 4
+
+
 def test_a_chat_answer_has_an_output_budget_far_below_the_analysis(monkeypatch):
     _, seen = ask(monkeypatch, reply(unit("Hello.", "general")))
 

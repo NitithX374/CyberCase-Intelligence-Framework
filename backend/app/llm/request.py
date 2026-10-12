@@ -94,16 +94,17 @@ async def validated_reply(
     stage: str,
     schema: type[ProviderResult],
     receipt: dict[str, object],
+    attempts: int = RUNAWAY_ATTEMPTS,
 ) -> ProviderResult:
     problems: list[str] = []
-    for attempt in range(1, RUNAWAY_ATTEMPTS + 1):
+    for attempt in range(1, attempts + 1):
         receipt["generation_attempts"] = attempt
         response = await post_stage(target, payload, stage=stage, timeout=config.timeout_seconds)
         decoded = decode_response(response)
         usage = usage_summary(decoded)
         receipt.update(usage)
         if decoded.get("stop_reason") in {"max_tokens", "length"}:
-            if attempt == RUNAWAY_ATTEMPTS:
+            if attempt == attempts:
                 check_response_payload(decoded, stage=stage)
             logger.warning("Analysis stage %s ran to max_tokens; asking once more", stage)
             receipt["runaway_output_tokens"] = usage["output_tokens"]
@@ -136,6 +137,7 @@ async def request_stage(
     schema: type[ProviderResult],
     calls: list[dict[str, object]] | None = None,
     temperature: float | None = None,
+    attempts: int = RUNAWAY_ATTEMPTS,
 ) -> ProviderResult:
     target = resolve_core_llm_target(config.model)
     payload = stage_payload(config, system, content, schema, temperature=temperature)
@@ -155,7 +157,13 @@ async def request_stage(
     started = time.monotonic()
     try:
         return await validated_reply(
-            target, payload, config=config, stage=stage, schema=schema, receipt=receipt
+            target,
+            payload,
+            config=config,
+            stage=stage,
+            schema=schema,
+            receipt=receipt,
+            attempts=attempts,
         )
     except httpx.TimeoutException as error:
         raise CaseAnalysisFailure(

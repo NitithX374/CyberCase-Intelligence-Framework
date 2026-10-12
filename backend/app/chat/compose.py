@@ -8,6 +8,7 @@ from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.analysis.write import write_request
 from app.chat.answer_contract import CaseAnalysisOutput, ChatReply
 from app.chat.grounding import answer_from
+from app.config import settings
 from app.llm.request import request_stage
 from app.llm.settings import configured_pipeline
 from app.models.analysis_result import CaseAnalysisResult
@@ -68,6 +69,8 @@ answer, and an exact_quote copied verbatim from that text in the language it is 
 translate, reword or correct a quote. Never invent a citation: if you cannot cite, give none. An
 interpretation may cite the facts it rests on. Never write citation brackets or tags (such as [A-01],
 [A-02] or [QA-01]) inside the statement text itself; record all citations only in claim_ids or quotes.
+Every unit must always include both fields: if there are no citations, provide empty arrays
+"claim_ids": [] and "quotes": []. Never omit claim_ids or quotes from any unit.
 
 When analysis_status is "stale" and the answer relies on the analysis, say that the sources have
 changed since the analysis. The reader's chat messages are not sources: if the reader states a new
@@ -108,6 +111,7 @@ async def generate_case_answer(
             summary=result.summary if result is not None else None,
         ),
         schema=ChatReply,
+        attempts=settings.chat_stage_attempts,
     )
     return answer_from(reply, trace, sources, followups, language)
 
