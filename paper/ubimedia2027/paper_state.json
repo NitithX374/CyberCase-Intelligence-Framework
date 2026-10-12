@@ -1,0 +1,23 @@
+{
+  "schema_version": "ai-research-writing/paper-state-v1",
+  "mode": "full-paper",
+  "stage": "drafting",
+  "target_venue": "Ubi-Media 2027 (Springer CCIS, LNCS template; short paper < 12 pages; deadline 2026-10-15)",
+  "main_tex": "main.tex",
+  "bibliography": "references.bib",
+  "required_artifacts": ["paper_story.md", "claim_evidence_map.md", "citation_verification.md", "plan/progress.md"],
+  "blockers": [
+    "Author names, affiliations and e-mails are placeholders (main.tex TODO).",
+    "Advisor review and co-author approval not yet obtained.",
+    "No evaluation on native Thai case files; stated as a limitation, not resolved.",
+    "Check the EasyChair deadline time zone and whether the venue is double-blind."
+  ],
+  "build": {
+    "status": "artifact-only",
+    "command": "tectonic main.tex",
+    "pdf": "main.pdf",
+    "external_inputs": ["llncs.cls and splncs04.bst from the Tectonic TeX Live bundle"],
+    "input_sha256": "7546310abbc66c0e492200692e23daefb07d852cbf37ecfa6fb1feac030ec220",
+    "pdf_sha256": "21cf2ae29633c8f967ad6c8f63790746116f964bc5a7847ea51665eba8a7c31e"
+  }
+}

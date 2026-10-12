@@ -1,0 +1,16 @@
+# CyberCase — Ubi-Media 2027 short paper draft
+
+Build (Springer LNCS class comes from the TeX distribution, not vendored here):
+
+```bash
+tectonic main.tex        # or: latexmk -pdf main.tex
+```
+
+- `main.tex`, `references.bib` — the paper.
+- `paper_story.md` — thesis, contributions, claims to make and to avoid.
+- `claim_evidence_map.md` — where every number comes from.
+- `citation_verification.md`, `literature/raw/` — fetched citation metadata.
+- `plan/progress.md`, `paper_state.json` — status and blockers.
+
+`main.pdf` is git-ignored by the repository's `*.pdf` rule; rebuild locally or upload the folder
+to Overleaf.

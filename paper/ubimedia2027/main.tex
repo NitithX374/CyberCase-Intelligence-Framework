@@ -1,0 +1,396 @@
+\documentclass[runningheads]{llncs}
+
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds}
+\usepackage[hidelinks]{hyperref}
+\setlength{\emergencystretch}{1.5em}
+
+\begin{document}
+
+\title{Backend-Enforced Evidence Traceability for LLM-Assisted Thai Cybercrime Case Analysis}
+\titlerunning{Backend-Enforced Evidence Traceability for Case Analysis}
+
+% TODO(authors): replace with real names, affiliations and e-mails before submission.
+\author{Author One\inst{1} \and Author Two\inst{1} \and Advisor Name\inst{1}}
+\authorrunning{A. One et al.}
+\institute{Department, University, City, Thailand\\
+\email{\{author1,author2,advisor\}@example.ac.th}}
+
+\maketitle
+
+\begin{abstract}
+Large language models (LLMs) can summarise cybercrime complaints that span several documents, but an
+investigator cannot act on a summary without knowing which sentence of which document supports
+each statement, and citations written by the model are as fragile as the rest of its output. We
+present CyberCase, a case-analysis system that moves traceability from the prompt into the
+backend. Case documents are partitioned into Source units with exact offsets and stable
+identifiers; a Reader LLM may only \emph{select} identifiers when writing a Claim, and the
+backend reproduces the quoted text. A frozen Claim/Source check (multilingual sentence selection,
+NLI and a logistic decision boundary) then labels each Claim, and every summary sentence must end
+with the identifiers of the Claims it rests on. On WiCE the check improves Macro-F1 over
+thresholded NLI by 0.033 (95\% CI 0.013--0.053). On AttributionBench, machine translation into
+Thai raises its false acceptance by 17.4 points in-domain and 4.4 out-of-domain. In a paired
+replay, using the check as a hard gate cut the share of unsupported benchmark Claims cited in
+summaries from 100\% to 22.2\% ($p=0.016$) but withheld 31\% of supported Claims, so the deployed
+system shows the verdict as a warning instead. Accuracy on native Thai case files remains
+unmeasured.
+
+\keywords{Evidence traceability \and Large language models \and Claim verification \and
+Natural language inference \and Cybercrime investigation \and Thai language}
+\end{abstract}
+
+%======================================================================
+\section{Introduction}
+%======================================================================
+
+Cybercrime complaints rarely arrive as one clean narrative. A typical case holds a victim's
+account, screenshots of chats, bank transfer slips and scanned police forms, much of it in Thai
+and much of it recovered by optical character recognition (OCR). LLMs can condense such a case
+into a readable summary, but they also produce fluent statements that no source supports
+\cite{ji2023hallucination}. In an investigation, an unsupported amount, date or name is not a
+stylistic flaw: it can send an officer after the wrong account.
+
+The common remedy is to make the model cite. Retrieval-augmented generation conditions the
+output on retrieved passages \cite{lewis2020rag}, and attributed-generation methods train or
+prompt models to attach citations or quoted spans to each sentence
+\cite{gao2023alce,slobodkin2024afg}. Domain workflows go further and label every output unit
+with an explicit evidence identifier \cite{yang2026traceable}. In all of these, however, the
+pointer is still text written by the model, so its existence and accuracy must be checked
+afterwards, often by people.
+
+CyberCase takes a different position: \emph{the model chooses evidence; the backend owns it}.
+Our contributions are:
+\begin{enumerate}
+\item An analysis architecture in which a claims-only Reader selects backend-issued Source-unit
+identifiers, the backend resolves them to original spans with document and page locators, and a
+separate Judgement stage writes a summary over Claims alone, ending each sentence with Claim
+identifiers (Sect.~\ref{sec:system}).
+\item A frozen Claim/Source check, B1-LR, built from off-the-shelf multilingual models and a
+three-weight logistic boundary, evaluated on WiCE, on AttributionBench, and on a Thai machine
+translation of AttributionBench (Sect.~\ref{sec:eval}).
+\item A paired downstream replay that quantifies the coverage cost of using such a check as a
+filter, and the resulting design decision to deploy it as a warning label (Sect.~\ref{sec:discussion}).
+\end{enumerate}
+The setting is a public-safety service where trustworthiness has to be inspectable: every
+statement an officer reads should lead back to a document, a page and a character range.
+
+%======================================================================
+\section{Related Work}
+%======================================================================
+
+\paragraph{Attributed generation and its evaluation.}
+Attribution is commonly defined as whether a statement is supported by an identified source
+\cite{rashkin2023ais}. ALCE benchmarks LLMs that generate text with citations
+\cite{gao2023alce}; Attribute First, then Generate selects source spans before planning and
+writing sentences \cite{slobodkin2024afg}; FActScore decomposes long outputs into atomic facts
+and checks each against a knowledge source \cite{min2023factscore}. AttributionBench shows that
+automatic attribution evaluation remains hard even for fine-tuned models
+\cite{li2024attributionbench}, and WiCE provides real-world claim/evidence entailment labels at
+sub-sentence granularity \cite{kamoi2023wice}. We reuse the last two as evaluation data rather
+than proposing a new attribution model.
+
+\paragraph{Traceable workflows in professional domains.}
+Worledge et al.\ decompose default-judgment review into legal sub-requirements, ground each in
+quotes copied from the court file, and measure faster and more accurate human review
+\cite{worledge2026default}. Dehing et al.\ generate structured actor, role and timeline reports
+from chat evidence with trace identifiers for digital forensics \cite{dehing2026forensics}.
+Yang et al.\ register exhibition evidence under stable identifiers and label every generated
+script unit as grounded or creative, auditing coverage manually with two experts
+\cite{yang2026traceable}. CyberCase shares the unit-level identifier idea but enforces it
+mechanically: identifiers are issued and resolved by the backend, invented identifiers are
+rejected, and a model-based check runs on every Claim without human annotation at runtime.
+
+%======================================================================
+\section{System Design}\label{sec:system}
+%======================================================================
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  font=\scriptsize,
+  box/.style={draw, rounded corners=2pt, align=center, minimum height=9mm, inner sep=2pt, text width=21mm},
+  llm/.style={box, fill=gray!18},
+  det/.style={box, fill=white},
+  arr/.style={-{Stealth[length=1.6mm]}, semithick}]
+% row 1: intake and preflight
+\node[det] (src)    at (0,0)     {Case sources\\ text, PDF, DOCX,\\ images (OCR)};
+\node[det] (units)  at (2.95,0)  {Source units\\ exact offsets,\\ stable IDs};
+\node[llm] (assess) at (5.9,0)   {Gap assessment\\ 5W1H checklist};
+\node[det] (ask)    at (8.85,0)  {Ask one\\ follow-up question\\ and stop};
+% row 2: analysis, fan-out after binding, fan-in to the report
+\node[llm] (reader) at (0,-2.6)  {Reader\\ Claims + selected\\ unit IDs only};
+\node[det] (bind)   at (2.95,-2.6) {Backend binding\\ resolve IDs,\\ reproduce spans};
+\node[det] (check)  at (5.9,-1.5)  {Claim/Source check\\ B1-LR, warning};
+\node[llm] (judge)  at (5.9,-2.6)  {Judgement\\ sentence $\to$ [A-$nn$]};
+\node[llm] (views)  at (5.9,-3.7)  {Views: parties,\\ timeline, impacts};
+\node[det] (report) at (8.85,-2.6) {Report snapshot\\ HTML / PDF,\\ no model call};
+\draw[arr] (src) -- (units);
+\draw[arr] (units) -- (assess);
+\draw[arr] (assess) -- node[above]{gap} (ask);
+\draw[arr] (assess.south) -- ++(0,-0.35) -| node[pos=0.22, below]{proceed} (reader.north);
+\draw[arr] (reader) -- (bind);
+\draw[arr] (bind.east) -- ++(0.25,0) |- (check.west);
+\draw[arr] (bind.east) -- (judge.west);
+\draw[arr] (bind.east) -- ++(0.25,0) |- (views.west);
+\draw[arr] (check.east) -- ++(0.25,0) |- (report.west);
+\draw[arr] (judge.east) -- (report.west);
+\draw[arr] (views.east) -- ++(0.25,0) |- (report.west);
+\end{tikzpicture}
+\caption{CyberCase analysis flow. Shaded boxes call an LLM; white boxes are deterministic or
+use frozen local models. The Reader can only select identifiers that the backend issued, and the
+Claim/Source check, Judgement and Views run concurrently after binding.}
+\label{fig:pipeline}
+\end{figure}
+
+Figure~\ref{fig:pipeline} summarises the flow. A \emph{case} owns one or more sources: narratives
+typed by the user and text extracted from uploaded documents, where every PDF page is rendered
+and read by OCR and page locators are kept. The system writes in Thai whenever any source
+contains a Thai character.
+
+\paragraph{Source units.}
+At analysis time each source is partitioned into units that reuse sentence boundaries (Thai
+sentence segmentation with PyThaiNLP's CRF model; table rows become their own units) and preserve
+all separators. Every unit
+satisfies $\mathit{text} = \mathit{source}[\mathit{start}{:}\mathit{end}]$, and the ordered units
+reconstruct the source exactly. A canonical identifier has the form
+\texttt{source\_id:U001-}$h$, where $h$ is 16 hexadecimal characters derived from the
+segmentation version and the full source text, so an identifier issued for one revision of a
+document cannot silently bind to another.
+
+\paragraph{Gap assessment before expensive work.}
+A cheap first LLM call checks the case against a fixed 5W1H checklist (who was affected, who was
+responsible, what, when, where, why, how and how much). A deterministic policy then either asks the
+user one focused question and stops, or proceeds. Rounds and questions per round are bounded,
+and answers are stored as conversation messages with their own identifiers (\texttt{QA-01}),
+not as case sources.
+
+\paragraph{Claims-only Reading.}
+The Reader receives all sources with compact local identifiers (\texttt{U001}, \dots) and returns a
+strict JSON object with a version and a list of Claims. Each Claim has an identifier, a type, its
+text, an epistemic status (\texttt{reported} for attributed assertions, \texttt{unknown} for
+uncertainty stated in a source) and supporting and contradicting unit identifiers. The Reader
+cannot emit quotations, reasoning or metadata. Every model stage is validated locally against a
+strict schema and is retried at most once on invalid or truncated output.
+
+\paragraph{Backend binding.}
+Local identifiers are mapped back to canonical ones, then checked for syntax, source ownership,
+existence, stale hashes and duplicates. Only then does the backend reproduce the original text,
+with offsets, document identity and page locator. An unresolvable identifier is recorded as an
+invalid pointer rather than replaced by model text. Consequently, every quotation that appears
+in the analysis view or the report is a verbatim substring of a stored source. We call a Claim
+\emph{bound} when its supporting citations resolve; bound describes addressability, not truth.
+
+\paragraph{Claim/Source check (B1-LR).}
+For each bound Claim whose epistemic status permits assessment, a frozen multilingual MPNet
+encoder \cite{reimers2020multilingual} scores the cosine similarity between the Claim and each
+resolved supporting unit. Units with similarity $\ge 0.20$ are retained in original order (the
+first maximum if none pass) and joined with single newlines into a premise. A multilingual
+mDeBERTa-v3 NLI model \cite{he2021debertav3,laurer2022mdeberta} scores the premise/Claim pair
+with longest-first truncation at 512 tokens, giving probabilities
+$(p_E, p_N, p_C)$. A logistic regression fitted once on the WiCE training split
+\cite{kamoi2023wice} maps them to a score
+\[
+s = \sigma\!\left(1.411\,p_E - 1.051\,p_N - 0.302\,p_C + 0.058\right),
+\]
+and $s \ge 0.5$ yields \texttt{supported}, otherwise \texttt{not\_supported}. Claims with
+unresolved or missing support, declared conflicts or uncertain status are left
+\texttt{unassessed}. All selection indices, similarities, NLI probabilities, scores and
+truncation flags are stored with the Claim. The score is a task-specific decision value, not a
+calibrated probability that the Claim is true.
+
+\paragraph{Judgement, views and reports.}
+Judgement receives each Claim's identifier, type, text, status and citation text, plus the
+follow-up history, but never the case sources directly, the verifier verdict, or external
+threat-intelligence context. It returns a summary in which every sentence ends with bracketed
+Claim identifiers, and the request states a sentence limit of one per three Claims (between two and
+eight). Unknown identifiers in the summary are rejected. A separate, concurrent LLM call extracts
+parties, timeline and impacts from the same Claims for display only; its failure records a warning
+without failing the analysis. Reports are deterministic snapshots of the stored analysis,
+rendered to HTML and PDF without any further model call. An optional retrieval service supplies
+MITRE ATT\&CK context when an applicability gate requests it; it is never treated as case
+evidence and is outside the scope of this paper's evaluation.
+
+%======================================================================
+\section{Evaluation}\label{sec:eval}
+%======================================================================
+
+We ask three questions. \textbf{RQ1}: does the B1-LR decision rule improve on thresholded NLI?
+\textbf{RQ2}: how does the frozen check behave when inputs are machine-translated into Thai?
+\textbf{RQ3}: what happens downstream when its verdict controls which Claims reach Judgement?
+No model was trained or tuned on test data; all components were frozen before the test runs.
+
+\subsection{RQ1: Verifier Design on WiCE}
+
+WiCE provides claim/evidence pairs from Wikipedia with entailment labels
+\cite{kamoi2023wice}; we evaluate on the held-out test split ($N=1{,}070$; 330 supported,
+740 not). Design choices (selector, threshold, decision head, backbone) were made on the
+development split. We compare: \textbf{B0}, the probability of entailment on the full evidence
+with a development-tuned threshold; \textbf{B1}, the same rule on the selected units;
+\textbf{B1-LR}, the deployed rule; and \textbf{B3}, which adds reverse-direction NLI features to
+the logistic head. Uncertainty uses 1,000 paired bootstrap resamples.
+
+\begin{table}[t]
+\centering
+\caption{Claim/Source check variants on the WiCE test split ($N=1{,}070$). FAR: false
+acceptance rate, the share of gold-unsupported pairs labelled supported. Per-Claim latency on a GTX~1650 is about
+390\,ms for B0, 227\,ms for B1 and B1-LR, and 449\,ms for B3.}
+\label{tab:wice}
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lccccc}
+\toprule
+Variant & Acc. & Macro-F1 & Supp.\ P & Supp.\ R & FAR $\downarrow$ \\
+\midrule
+B0: full evidence, $p_E$ threshold & 64.67 & .585 & 42.68 & 42.42 & 25.41 \\
+B1: selected units, $p_E$ threshold & 63.55 & .597 & 42.65 & 52.73 & 31.62 \\
+\textbf{B1-LR: selected units, LR} & \textbf{66.64} & \textbf{.618} & \textbf{46.26} & \textbf{50.61} & \textbf{26.22} \\
+B3: B1-LR + reverse NLI & 66.54 & .621 & 46.24 & 52.12 & 27.03 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:wice} shows that selection alone raises supported recall but also raises false
+acceptance; adding the logistic boundary recovers precision. B1-LR improves Macro-F1 over B0
+by 0.033 (95\% CI 0.013--0.053) and supported F1 by 0.058 (0.029--0.087), with no significant
+change in false acceptance ($+0.75$ pp, CI $-1.09$ to $+2.70$). B3 is statistically
+indistinguishable from B1-LR (Macro-F1 $-0.002$, CI $-0.011$ to $+0.007$) at roughly twice the
+latency, so B1-LR was kept. The absolute level is modest: about one in four gold-unsupported pairs is
+still accepted.
+
+\subsection{RQ2: Transfer to Machine-Translated Thai}
+
+We use the balanced AttributionBench test sets \cite{li2024attributionbench}: 1,610 in-domain
+(ID) and 1,686 out-of-domain (OOD) claim/reference rows. All 33,583 unique claim and reference
+texts were translated English$\to$Thai with Google Cloud Translation (NMT model), keeping row
+order, unit segmentation and gold labels. Both languages were rescored with identical frozen
+assets. Thai labels are \emph{inherited} from English under a label-invariance assumption; no
+bilingual human adjudication was performed.
+
+\begin{table}[t]
+\centering
+\caption{Frozen B1-LR on AttributionBench test, original English (EN) versus Google
+machine-translated Thai (MT-TH). FRR: false rejection rate. Thai minus English FAR, with 95\% intervals from 2,000
+question/response-cluster bootstrap resamples: ID $+17.39$ pp [$+13.73$, $+21.24$],
+OOD $+4.39$ pp [$+1.10$, $+7.59$].}
+\label{tab:transfer}
+\setlength{\tabcolsep}{4.5pt}
+\begin{tabular}{llcccccc}
+\toprule
+Split & Lang. & $N$ & Prec. & Recall & F1 & FAR $\downarrow$ & FRR $\downarrow$ \\
+\midrule
+ID  & EN    & 1,610 & 64.32 & 62.48 & .634 & 34.66 & 37.52 \\
+ID  & MT-TH & 1,610 & 57.55 & 70.56 & .634 & 52.05 & 29.44 \\
+OOD & EN    & 1,686 & 69.78 & 81.61 & .752 & 35.35 & 18.39 \\
+OOD & MT-TH & 1,686 & 66.02 & 77.22 & .712 & 39.74 & 22.78 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:transfer} shows why a single F1 value is misleading here. In-domain F1 is
+unchanged (.634 in both languages), yet the Thai condition accepts 140 more unsupported rows and
+recovers 65 more supported ones: the operating point shifts toward permissiveness. Out of domain,
+Thai lowers F1 by 0.040 (CI 0.018--0.063) and raises false acceptance by 4.4 points. For a check whose
+purpose is to warn about unsupported Claims, the rise in false acceptance is the result that
+matters. As a diagnostic, multilingual BGE-M3 embeddings place each English text close to its
+translation (mean cosine 0.846), which says nothing about whether names, amounts and negations
+survived translation.
+
+\subsection{RQ3: Downstream Replay with the Check as a Gate}
+
+To see what the check changes downstream, we replayed the Judgement stage on AttributionBench
+rather than on cases, because only there do Claims carry gold labels. Twenty label-blind,
+hash-ordered clusters (10 ID, 10 OOD; 60 rows, 29 attributable and 31 not) were each turned into a
+virtual case whose Claims are the benchmark claims and whose sources are their references. The
+same Claims, identifiers and prompt were sent to Judgement under two conditions: \emph{no gate}
+(every Claim admitted) and \emph{B1-LR gate} (only \texttt{supported} Claims admitted, using the
+frozen decisions). Judgement used Gemma~4~26B with temperature 0 and fixed providers. The outcome is
+whether a non-attributable row's Claim identifier is cited in the generated summary.
+
+\begin{table}[t]
+\centering
+\caption{Paired downstream replay. Admission counts cover all 20 clusters; citation counts cover
+the 15 cluster pairs in which both conditions produced an observable outcome.}
+\label{tab:replay}
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{Admitted to Judgement} & \multicolumn{2}{c}{Cited in summary} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Condition & Unsupp.\ $\downarrow$ & Supp.\ $\uparrow$ & Unsupp.\ $\downarrow$ & Supp.\ $\uparrow$ \\
+\midrule
+No gate     & 31/31 (100\%) & 29/29 (100\%) & 18/18 (100\%) & 24/24 (100\%) \\
+B1-LR gate  & 9/31 (29.0\%) & 20/29 (69.0\%) & 4/18 (22.2\%) & 17/24 (70.8\%) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+As a gate, B1-LR lowered the share of unsupported Claim identifiers cited in summaries from
+100\% to 22.2\% (paired difference $-77.8$ pp, cluster-bootstrap CI $-95.2$ to $-53.3$). Seven
+cluster pairs lost unsupported citations and none gained them (exact McNemar $p=0.016$). The cost is
+visible in the same table: 9 of 29 supported Claims were withheld, and four clusters had no
+admitted Claim at all, so no summary was produced. Of the 36 Judgement calls (four gated clusters needed none), six failed by exhausting
+the output budget during model reasoning; we report those pairs as unknown rather than safe and
+exclude them from the citation counts. Judgement latency was not reduced (mean 114\,s without the gate,
+169\,s with it, including failures).
+
+%======================================================================
+\section{Discussion and Limitations}\label{sec:discussion}
+%======================================================================
+
+\paragraph{Gate or label.}
+The replay shows a real trade-off: a filter that removes about three quarters of unsupported Claims
+from summaries also removes about three in ten supported ones, and the Thai results suggest that the
+filter would be leakier on Thai input. For an investigator, a silently missing true fact can be as
+costly as a flagged dubious one. CyberCase therefore deploys the verdict as a warning label: every
+Claim that passes the structural checks reaches Judgement, a \texttt{not\_supported} Claim is shown
+with a plain warning in the analysis view and the report, the verdict never
+enters a model prompt, and if the verifier models are missing the Claims are marked unassessed instead
+of failing the analysis. The structural guarantees stay strict: invented,
+stale or duplicate identifiers are still rejected, and no generated quotation is ever displayed.
+
+\paragraph{What is and is not established.}
+The structural properties follow from construction and are covered by the system's automated
+tests. The semantic results are benchmark results. We have no native Thai case files with gold
+support labels, and no human annotation of any kind: Thai labels are inherited through machine
+translation, WiCE and AttributionBench are English Wikipedia and web QA data, and the replay uses
+benchmark claims rather than claims written by our Reader. We therefore do not claim accuracy on
+real complaints, factual or legal correctness, reduced hallucination in prose, or any benefit to
+investigators. The replay sample is small and purposive. We also observed one summary that
+introduced a population figure absent from all Claim texts but present in a cited passage, a reminder
+that citation text reaching Judgement is an exposure path that Claim-level checks do not close.
+Finally, mDeBERTa was chosen on WiCE development data before testing; a smaller multilingual MiniLM
+backbone, run afterwards as a sensitivity check, scored higher on WiCE test (Macro-F1 .650 vs .618),
+so we do not claim the deployed backbone is optimal.
+
+\paragraph{Next steps.}
+The most important missing evidence is a Thai benchmark built from real, anonymised complaints.
+Without large-scale annotation, we plan to combine labels known by construction (Claims copied from
+a source versus Claims with altered amounts, dates, roles or negation), metamorphic tests on live
+analyses (removing or swapping a cited unit should lower the score), the human-translated Thai test
+set of XNLI for the NLI component, and a small doubly annotated subset to report inter-annotator
+agreement and to validate any LLM judge used at scale. A claims-text-only Judgement ablation would
+measure how much citation text contributes to unsupported additions.
+
+%======================================================================
+\section{Conclusion}
+%======================================================================
+
+CyberCase shows that evidence traceability for LLM case analysis can be enforced by the system
+rather than requested from the model: Source units with stable identifiers, a Reader that may only
+select them, backend reproduction of every quotation, and summaries whose sentences point to Claims.
+A frozen Claim/Source check adds a semantic signal for about 0.23\,s per Claim on a consumer GPU
+(about 1\,s on CPU), but our
+measurements show both its value as a filter and its cost in coverage and Thai robustness, which led
+us to show it as a warning rather than let it decide. Establishing how well this works on real Thai
+complaints is the next step.
+
+% TODO(authors): add acknowledgements / funding if any.
+
+\bibliographystyle{splncs04}
+\bibliography{references}
+
+\end{document}

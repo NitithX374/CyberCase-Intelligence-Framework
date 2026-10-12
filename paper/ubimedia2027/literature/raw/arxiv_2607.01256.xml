@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/9GuRNf/RAiYM8fInjnYa+eVTxdE</id>
+  <title>arXiv Query: search_query=&amp;id_list=2607.01256&amp;start=0&amp;max_results=10</title>
+  <updated>2026-10-12T10:37:24Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=10&amp;id_list=2607.01256" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>10</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2607.01256v1</id>
+    <title>AI Assistance for Human Review of Default Judgments</title>
+    <updated>2026-06-04T20:01:36Z</updated>
+    <link href="https://arxiv.org/abs/2607.01256v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2607.01256v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Overwhelmed courts in the United States review millions of default judgments each year. Unfortunately, such manual reviews are time-consuming and prone to error. In an audit of 188 debt collection cases granted default judgment by the Superior Court of Los Angeles, we find that 4% contained major defects that should have entirely prevented default judgment, 10% contained inconsistencies requiring reduced judgments, and 32% contained errors requiring amendment prior to judgment. To support courthouses in default judgment review, we collaborated with courthouse attorneys and judges in designing a Default Assistant. The Default Assistant employs large language models to evaluate a case with respect to predetermined legal requirements and provide cited recommendations for an expert user's review. We equip users to verify these recommendations by grounding the assistant's explanations in cited quotes and tables from the original case filings. We conduct a controlled study with 66 law students that conservatively simulates court review, with more time and resources than court staff. We nevertheless find users aided by the Default Assistant were 6.0% more accurate on the average requirement than unaided reviewers (p &lt; 1.0e-4). Simultaneously, users were 25.9% faster in reviewing the average requirement than unaided reviewers (p &lt; 2.5e-10). Statutory requirements demanding extensive document search realized the largest gains, with error reductions and time savings from AI assistance up to 62% and 34%, respectively, relative to unassisted user performance and with differences statistically significant (p &lt; 0.05). Our work provides a proof-of-concept that AI assistants with citations have the potential to help resource-constrained courts conduct default judgment review more accurately and efficiently.</summary>
+    <category term="cs.CY" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-06-04T20:01:36Z</published>
+    <arxiv:comment>Under Review</arxiv:comment>
+    <arxiv:primary_category term="cs.CY"/>
+    <author>
+      <name>Theodora Worledge</name>
+    </author>
+    <author>
+      <name>Othman Bensouda Koraichi</name>
+    </author>
+    <author>
+      <name>Daniel Bernal</name>
+    </author>
+    <author>
+      <name>Aviv Caspi</name>
+    </author>
+    <author>
+      <name>Tatsunori Hashimoto</name>
+    </author>
+    <author>
+      <name>Carlos Guestrin</name>
+    </author>
+    <author>
+      <name>David Freeman Engstrom</name>
+    </author>
+  </entry>
+</feed>
