@@ -45,6 +45,7 @@ function TechnicalItem({
           techniqueId={item.techniqueId}
           techniqueName={item.techniqueName}
           tactic={item.tactic}
+          mitreUrl={item.mitreUrl}
         />
         <RetrievalScore score={item.retrievalScore} retrievedBy={item.retrievedBy} />
       </div>
@@ -111,17 +112,42 @@ function TechniqueTitle({
   techniqueId,
   techniqueName,
   tactic,
+  mitreUrl,
   as: Heading = "h3",
 }: {
   techniqueId: string;
   techniqueName: string;
   tactic: string;
+  mitreUrl: string;
   as?: "h3" | "h4";
 }) {
   return (
     <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-      <span className="text-[13px] font-medium text-ink-secondary">{techniqueId}</span>
-      <Heading className="text-[15px] font-semibold text-ink">{techniqueName}</Heading>
+      <a
+        href={mitreUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Open ${techniqueId} on MITRE ATT&CK`}
+        title={`Open ${techniqueId} on MITRE ATT&CK`}
+        className="group inline-flex items-center gap-1 font-mono text-[13px] font-medium text-ink-secondary transition-colors hover:text-ink hover:underline"
+      >
+        <span>{techniqueId}</span>
+        <Icon
+          name="external"
+          className="h-3 w-3 text-ink-muted transition-colors group-hover:text-ink"
+        />
+      </a>
+      <Heading className="text-[15px] font-semibold text-ink">
+        <a
+          href={mitreUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={`Open ${techniqueName} on MITRE ATT&CK`}
+          className="transition-colors hover:text-ink-secondary hover:underline"
+        >
+          {techniqueName}
+        </a>
+      </Heading>
       {tactic && <span className="text-[13px] text-ink-muted">{tactic}</span>}
     </div>
   );
@@ -158,6 +184,7 @@ function RetrievedOnlyItem({ item }: { item: RetrievedTechnicalContextCard }) {
         techniqueId={item.techniqueId}
         techniqueName={item.techniqueName}
         tactic={item.tactic}
+        mitreUrl={item.mitreUrl}
         as="h4"
       />
       {item.fullTechnicalDefinition && (
@@ -194,12 +221,16 @@ export function TechnicalContextView({ analysisResult, sources }: TechnicalConte
             <h2 className="text-base font-semibold text-ink">MITRE ATT&amp;CK</h2>
             {count > 0 && <span className="text-[13px] font-medium text-ink-muted">{count}</span>}
           </div>
-          <span
-            className="text-[13px] text-ink-muted"
-            title="External technical reference. It is not a case source."
+          <a
+            href="https://attack.mitre.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-[13px] text-ink-muted transition-colors hover:text-ink hover:underline"
+            title="Open MITRE ATT&CK website"
           >
-            External reference
-          </span>
+            <span>External reference</span>
+            <Icon name="external" className="h-3 w-3" />
+          </a>
         </header>
 
         {!contextData.hasContext ? (

@@ -59,6 +59,17 @@ describe("TechnicalContextView", () => {
     const source = screen.getByRole("button", { name: new RegExp(exactQuote.slice(0, 20), "i") });
     fireEvent.click(source);
     expect(screen.getByRole("dialog")).toHaveTextContent(exactQuote);
+
+    const idLink = screen.getByRole("link", { name: "Open T1059.001 on MITRE ATT&CK" });
+    expect(idLink).toHaveAttribute("href", "https://attack.mitre.org/techniques/T1059/001/");
+    expect(idLink).toHaveAttribute("target", "_blank");
+    expect(idLink).toHaveAttribute("rel", "noopener noreferrer");
+
+    const nameLink = screen.getByRole("link", { name: "PowerShell" });
+    expect(nameLink).toHaveAttribute("href", "https://attack.mitre.org/techniques/T1059/001/");
+
+    const headerLink = screen.getByRole("link", { name: "External reference" });
+    expect(headerLink).toHaveAttribute("href", "https://attack.mitre.org/");
   });
 
   it("says in words when a technique rests on no case source", () => {

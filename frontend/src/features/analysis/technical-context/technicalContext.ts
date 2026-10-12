@@ -26,6 +26,7 @@ export interface TechnicalContextCard {
   retrievedBy: "vector" | "graph";
   fullTechnicalDefinition: string;
   whyRelevantHere: string;
+  mitreUrl: string;
   caseBasisSources: SourceMessageRef[];
 }
 
@@ -34,6 +35,7 @@ export interface RetrievedTechnicalContextCard {
   techniqueName: string;
   tactic: string;
   fullTechnicalDefinition: string;
+  mitreUrl: string;
 }
 
 export interface TechnicalContextData {
@@ -62,6 +64,7 @@ interface MitreRow {
   description: string;
   retrievalScore: number | null;
   retrievedBy: "vector" | "graph";
+  mitreUrl: string | null;
 }
 
 export function buildTechnicalContext(
@@ -121,6 +124,7 @@ function mappedCard(
     retrievedBy: row.retrievedBy,
     fullTechnicalDefinition: attackDescription(row.description),
     whyRelevantHere: association.reason,
+    mitreUrl: mitreAttackUrl(row.id, row.mitreUrl),
     caseBasisSources: caseBasis(
       association.claim_ids.flatMap((claimId) => findings.get(claimId)?.supportingSources ?? []),
     ),
@@ -141,6 +145,7 @@ function retrievedOnlyCard(row: MitreRow): RetrievedTechnicalContextCard {
     techniqueName: row.name || row.id,
     tactic: row.tactic,
     fullTechnicalDefinition: attackDescription(row.description),
+    mitreUrl: mitreAttackUrl(row.id, row.mitreUrl),
   };
 }
 
@@ -159,6 +164,7 @@ function mitreRows(value: unknown): MitreRow[] {
       description: asString(row?.description),
       retrievalScore: typeof row?.score === "number" ? row.score : null,
       retrievedBy: row?.source === "graph" ? "graph" : "vector",
+      mitreUrl: asString(row?.mitre_url) || null,
     });
   }
   return rows;
@@ -224,3 +230,32 @@ export function technicalContextMessage(data: TechnicalContextData): string {
   };
   return messages[data.status];
 }
+
+const MITRE_PREFIX_PATHS: Record<string, string> = {
+  TA: "tactics",
+  T: "techniques",
+  G: "groups",
+  S: "software",
+  M: "mitigations",
+  DS: "datasources",
+  C: "campaigns",
+};
+
+export function mitreAttackUrl(techniqueId: string, customUrl?: string | null): string {
+  if (customUrl && /^https?:\/\//i.test(customUrl)) {
+    return customUrl;
+  }
+  const trimmed = techniqueId.trim();
+  if (!trimmed) {
+    return "https://attack.mitre.org/";
+  }
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  const upper = trimmed.toUpperCase();
+  const match = upper.match(/^(TA|T|G|S|M|DS|C)\d+/);
+  const prefix = match ? match[1] : "T";
+  const path = MITRE_PREFIX_PATHS[prefix] ?? "techniques";
+  return `https://attack.mitre.org/${path}/${upper.replace(".", "/")}/`;
+}
+

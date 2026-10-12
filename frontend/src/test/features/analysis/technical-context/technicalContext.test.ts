@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { CaseAnalysisResultRead, CaseAnalysisTrace, CaseSourceRead } from "@/lib/api/types";
 import { analysisResult, association, claim, narrativeSource, trace } from "@/test/fixtures";
-import { buildTechnicalContext } from "@/features/analysis/technical-context/technicalContext";
+import {
+  buildTechnicalContext,
+  mitreAttackUrl,
+} from "@/features/analysis/technical-context/technicalContext";
 
 const exactQuote = "The report records PowerShell network activity.";
 
@@ -277,3 +280,27 @@ describe("a technique several claims rest on", () => {
     expect(context.techniques[0].caseBasisSources[0].exactQuote).toBe(exactQuote);
   });
 });
+
+describe("mitreAttackUrl", () => {
+  it("maps technique and sub-technique IDs to ATT&CK URLs", () => {
+    expect(mitreAttackUrl("T1566")).toBe("https://attack.mitre.org/techniques/T1566/");
+    expect(mitreAttackUrl("T1059.001")).toBe("https://attack.mitre.org/techniques/T1059/001/");
+  });
+
+  it("maps tactics, groups, software and other prefixes", () => {
+    expect(mitreAttackUrl("TA0001")).toBe("https://attack.mitre.org/tactics/TA0001/");
+    expect(mitreAttackUrl("G0001")).toBe("https://attack.mitre.org/groups/G0001/");
+    expect(mitreAttackUrl("S0001")).toBe("https://attack.mitre.org/software/S0001/");
+  });
+
+  it("prioritizes customUrl when provided", () => {
+    expect(
+      mitreAttackUrl("T1059", "https://attack.mitre.org/techniques/T1059/custom/"),
+    ).toBe("https://attack.mitre.org/techniques/T1059/custom/");
+  });
+
+  it("falls back gracefully for empty inputs", () => {
+    expect(mitreAttackUrl("")).toBe("https://attack.mitre.org/");
+  });
+});
+
