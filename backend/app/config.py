@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-DEFAULT_CASE_ANALYSIS_MODEL = "deepseek/deepseek-v4.1-flash"
+DEFAULT_CASE_ANALYSIS_MODEL = "google/gemma-4-26b-a4b-it"
 
 
 class DatabaseConfig(BaseModel):

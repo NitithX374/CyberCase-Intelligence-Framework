@@ -12,7 +12,7 @@ def test_backend_case_analysis_has_one_exact_default_model(monkeypatch):
 
     configured = Settings(_env_file=None)
 
-    assert DEFAULT_CASE_ANALYSIS_MODEL == "deepseek/deepseek-v4.1-flash"
+    assert DEFAULT_CASE_ANALYSIS_MODEL == "google/gemma-4-26b-a4b-it"
     assert DEFAULT_OPENROUTER_MODEL == DEFAULT_CASE_ANALYSIS_MODEL
     assert configured.case_analysis_model == DEFAULT_CASE_ANALYSIS_MODEL
 

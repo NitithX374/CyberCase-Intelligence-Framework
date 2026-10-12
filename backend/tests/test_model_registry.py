@@ -4,7 +4,7 @@ from app.llm.registry import DEFAULT_OPENROUTER_MODEL, resolve_openrouter_model
 
 
 def test_default_model():
-    assert DEFAULT_OPENROUTER_MODEL == "deepseek/deepseek-v4.1-flash"
+    assert DEFAULT_OPENROUTER_MODEL == "google/gemma-4-26b-a4b-it"
     assert resolve_openrouter_model(None) == DEFAULT_OPENROUTER_MODEL
     assert resolve_openrouter_model("") == DEFAULT_OPENROUTER_MODEL
     assert resolve_openrouter_model("default") == DEFAULT_OPENROUTER_MODEL
@@ -33,6 +33,9 @@ def test_default_model():
         ("qwen", "qwen/qwen3.8-27b"),
         ("deepseek", "deepseek/deepseek-v4.1-flash"),
         ("deepseek-v4.1-flash", "deepseek/deepseek-v4.1-flash"),
+        ("gemma", "google/gemma-4-26b-a4b-it"),
+        ("gemma-4-26b", "google/gemma-4-26b-a4b-it"),
+        ("gemma-4-26b-a4b-it", "google/gemma-4-26b-a4b-it"),
         ("gpt-4o", "openai/gpt-4o"),
     ],
 )

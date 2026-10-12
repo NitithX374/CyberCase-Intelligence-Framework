@@ -12,7 +12,13 @@ MODEL_ALIASES: dict[str, tuple[str, ...]] = {
     "anthropic/claude-3.5-haiku": ("haiku", "claude-haiku", "claude-3.5-haiku", "haiku-3.5"),
     "openai/gpt-4o": ("4o", "gpt-4o", "openai-4o"),
     "qwen/qwen3.8-27b": ("qwen3.8-27b", "qwen"),
-    DEFAULT_OPENROUTER_MODEL: ("deepseek-v4.1-flash", "deepseek", "default"),
+    "deepseek/deepseek-v4.1-flash": ("deepseek-v4.1-flash", "deepseek"),
+    DEFAULT_OPENROUTER_MODEL: (
+        "gemma-4-26b-a4b-it",
+        "gemma-4-26b",
+        "gemma",
+        "default",
+    ),
 }
 
 _ALIAS_MAP = {
