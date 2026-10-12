@@ -1,5 +1,8 @@
 # Paper story — Ubi-Media 2027 short paper
 
+## Title
+"Traceable by Construction: Evidence-Grounded LLM Analysis of Thai Cybercrime Cases" (system left unnamed; "backend" kept only in Implementation).
+
 ## Thesis
 LLM case-analysis tools for cybercrime complaints should not be trusted to write their own
 evidence pointers. CyberCase moves traceability out of the prompt and into the backend: the

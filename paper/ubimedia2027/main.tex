@@ -16,8 +16,8 @@
 
 \begin{document}
 
-\title{Backend-Enforced Evidence Traceability for LLM-Assisted Thai Cybercrime Case Analysis}
-\titlerunning{Backend-Enforced Evidence Traceability for Case Analysis}
+\title{Traceable by Construction: Evidence-Grounded LLM Analysis of Thai Cybercrime Cases}
+\titlerunning{Traceable by Construction}
 
 \author{Thattapon Surasak\inst{1} \and Kritsakorn Kahmwiset\inst{1}}
 \authorrunning{T. Surasak and K. Kahmwiset}
@@ -31,10 +31,10 @@ King Mongkut's University of Technology North Bangkok, Bangkok, Thailand\\
 Large language models (LLMs) can summarise cybercrime complaints that span several documents, but an
 investigator cannot act on a summary without knowing which sentence of which document supports
 each statement, and citations written by the model are as fragile as the rest of its output. We
-present CyberCase, a case-analysis system that moves traceability from the prompt into the
-backend. Case documents are partitioned into Source units with exact offsets and stable
+present a case-analysis system that makes traceability a property of the system rather than a
+request in the prompt. Case documents are partitioned into Source units with exact offsets and stable
 identifiers; a Reader LLM may only \emph{select} identifiers when writing a Claim, and the
-backend reproduces the quoted text. A frozen Claim/Source check (multilingual sentence selection,
+system reproduces the quoted text from storage. A frozen Claim/Source check (multilingual sentence selection,
 NLI and a logistic decision boundary) then labels each Claim, and every summary sentence must end
 with the identifiers of the Claims it rests on. On WiCE the check improves Macro-F1 over
 thresholded NLI by 0.033 (95\% CI 0.013--0.053). On AttributionBench, machine translation into
@@ -74,13 +74,13 @@ example, was deliberately trained without Thai NLI data \cite{laurer2022mdeberta
 check a Thai system relies on is therefore a cross-lingual transfer whose behaviour has to be
 measured, not assumed.
 
-CyberCase takes a different position: \emph{the model chooses evidence; the backend owns it}.
+We take a different position: \emph{the model chooses evidence; the system owns it}.
 The model never writes a quotation, an offset or a page number. It may only select identifiers
-that the backend issued for spans it can reproduce byte for byte, and everything the user sees as
+that the system issued for spans it can reproduce byte for byte, and everything the user sees as
 evidence is regenerated from storage. Our contributions are:
 \begin{enumerate}
-\item An analysis architecture in which a claims-only Reader selects backend-issued Source-unit
-identifiers, the backend resolves them to original spans with document and page locators, and a
+\item An analysis architecture in which a claims-only Reader selects system-issued Source-unit
+identifiers, deterministic binding resolves them to original spans with document and page locators, and a
 separate Judgement stage writes a summary over Claims alone, ending each sentence with Claim
 identifiers (Sects.~\ref{sec:problem}--\ref{sec:impl}).
 \item A frozen Claim/Source check, B1-LR, built from off-the-shelf multilingual models and a
@@ -105,8 +105,8 @@ passages and scores citation quality automatically \cite{gao2023alce}. Attribute
 Generate selects source spans before planning and writing sentences, and checks that the selected
 spans occur in the source \cite{slobodkin2024afg}. These methods improve how often a citation
 exists and how often it supports its sentence, but the citation remains part of the generated
-text. CyberCase adopts the select-first idea and pushes it one step further: what the model selects
-is an opaque identifier, and the span behind it is materialised by the backend.
+text. We adopt the select-first idea and push it one step further: what the model selects
+is an opaque identifier, and the span behind it is materialised by deterministic code.
 
 \paragraph{Claim verification and factuality checking.}
 A second line of work checks generated text after the fact. FActScore decomposes long outputs into
@@ -154,7 +154,7 @@ AfG \cite{slobodkin2024afg} & Summaries, long-form QA & Model selects source spa
 Worledge et al.\ \cite{worledge2026default} & Court review & Model selects quotes & Fuzzy match, replaced by source text & Randomised user study \\
 Dehing et al.\ \cite{dehing2026forensics} & Chat forensics & Trace identifiers & Per-field evaluation & Entity, role, timeline \\
 Yang et al.\ \cite{yang2026traceable} & Exhibit design & Model writes evidence IDs & Manual unit audit & Two experts \\
-\textbf{CyberCase} & Thai cyber-crime cases & Model selects backend-issued unit IDs & Backend resolution; B1-LR per Claim at runtime & WiCE, AttributionBench EN/MT-TH, replay \\
+\textbf{Ours} & Thai cyber-crime cases & Model selects system-issued unit IDs & Deterministic resolution; B1-LR per Claim at runtime & WiCE, AttributionBench EN/MT-TH, replay \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -171,7 +171,7 @@ $\Sigma = (\sigma_1,\dots,\sigma_k)$ whose sentences each reference a non-empty 
 A \emph{citation} is a triple $(S_i, a, b)$ denoting the substring $S_i[a{:}b]$.
 
 From the task itself (an investigator must be able to justify each statement in a case file) and
-from earlier versions of CyberCase in which the model wrote its own quotations, which then had to be
+from earlier versions of our system in which the model wrote its own quotations, which then had to be
 matched back to the sources approximately, we derived five requirements:
 \begin{description}
 \item[R1 Verbatim evidence.] Every quotation shown to a user is a substring of a stored source,
@@ -208,7 +208,7 @@ rule answers, which is what the Claim/Source check in Sect.~\ref{sec:check} addr
 \node[det] (ask)    at (8.85,0)  {Ask one\\ follow-up question\\ and stop};
 % row 2: analysis, fan-out after binding, fan-in to the report
 \node[llm] (reader) at (0,-2.6)  {Reader\\ Claims + selected\\ unit IDs only};
-\node[det] (bind)   at (2.95,-2.6) {Backend binding\\ resolve IDs,\\ reproduce spans};
+\node[det] (bind)   at (2.95,-2.6) {Binding\\ resolve IDs,\\ reproduce spans};
 \node[det] (check)  at (5.9,-1.5)  {Claim/Source check\\ B1-LR, warning};
 \node[llm] (judge)  at (5.9,-2.6)  {Judgement\\ sentence $\to$ [A-$nn$]};
 \node[llm] (views)  at (5.9,-3.7)  {Views: parties,\\ timeline, impacts};
@@ -225,8 +225,8 @@ rule answers, which is what the Claim/Source check in Sect.~\ref{sec:check} addr
 \draw[arr] (judge.east) -- (report.west);
 \draw[arr] (views.east) -- ++(0.25,0) |- (report.west);
 \end{tikzpicture}
-\caption{CyberCase analysis flow. Shaded boxes call an LLM; white boxes are deterministic or
-use frozen local models. The Reader can only select identifiers that the backend issued, and the
+\caption{Analysis flow. Shaded boxes call an LLM; white boxes are deterministic or
+use frozen local models. The Reader can only select identifiers that the system issued, and the
 Claim/Source check, Judgement and Views run concurrently after binding.}
 \label{fig:pipeline}
 \end{figure}
@@ -301,10 +301,9 @@ not system output; production cases are Thai and identifiers are longer.}
 \label{fig:example}
 \end{figure}
 
-\paragraph{Backend binding (R1--R3).}
+\paragraph{Deterministic binding (R1--R3).}
 Local identifiers are mapped back to canonical ones through a mapping captured before the Reader
-call, then checked as listed in Table~\ref{tab:binding}. Only then does the backend reproduce the
-original text, with offsets, document identity and page locator. Consequently every quotation that
+call, then checked as listed in Table~\ref{tab:binding}. Only then is the original text reproduced, with offsets, document identity and page locator. Consequently every quotation that
 appears in the analysis view or the report is a verbatim substring of a stored source. A summary sentence or view item is \emph{bound} when the Claims it links
 have resolved supporting citations, \emph{mixed} when only some do, \emph{unbound} when none do,
 and \emph{no\_claim} when it links none. These states describe addressability, not truth.
@@ -368,7 +367,7 @@ evidence and is outside the scope of this paper's evaluation.
 \section{Implementation}\label{sec:impl}
 %======================================================================
 
-CyberCase consists of a Next.js client, a FastAPI backend with PostgreSQL, and a separate
+The system consists of a Next.js client, a FastAPI backend with PostgreSQL, and a separate
 retrieval service for ATT\&CK context; every case route is authenticated and ownership-scoped. There
 is no job queue: an analysis runs in the request that asked for it, and when the client asks for a
 progress stream (Server-Sent Events with a heartbeat every 15 seconds) the analysis runs in a task
@@ -383,7 +382,7 @@ Input size is bounded so that a whole case fits one Reader call: the sources of 
 refused with an explicit error rather than truncated. A retrieval is reused when neither the sources
 nor the follow-up answers have changed, because the retrieval pipeline is not deterministic and
 repeated calls with identical input returned different technique tables. At the time of the
-verifier integration, 266 backend boundary, report and pipeline tests and 76 front-end tests
+verifier integration, 266 server-side boundary, report and pipeline tests and 76 front-end tests
 passed, together with two tests that run the pinned real models end to end.
 
 %======================================================================
@@ -627,7 +626,7 @@ and a five-Claim production run on CPU averaged 1,026\,ms per Claim.
 The replay shows a real trade-off: a filter that removes about three quarters of unsupported Claims
 from summaries also removes about three in ten supported ones, and the Thai results suggest that the
 filter would be leakier on Thai input. For an investigator, a silently missing true fact can be as
-costly as a flagged dubious one, and a filter hides its errors in a way a label does not. CyberCase
+costly as a flagged dubious one, and a filter hides its errors in a way a label does not. The system
 therefore deploys the verdict as a warning label: every Claim that passes the structural checks
 reaches Judgement, a \texttt{not\_supported} Claim is shown with a plain warning in the analysis view
 and the report, the verdict never enters a model prompt, and if the verifier models are missing the
@@ -637,7 +636,7 @@ displayed.
 
 \paragraph{Lessons for system builders.}
 Three design habits carried most of the weight. (1) \emph{Give the model identifiers, not text to
-copy}: a pointer the backend issued can be validated exhaustively, while a quotation can only be
+copy}: a pointer the system issued can be validated exhaustively, while a quotation can only be
 matched approximately. (2) \emph{Separate what is enforced from what is estimated}: structural
 states (bound, mixed, unbound) are exact and can be shown with confidence, semantic verdicts are
 estimates and are shown as warnings. (3) \emph{Evaluate the operating point}: an unchanged F1 hid a 17-point rise in false acceptance.
@@ -677,9 +676,9 @@ prepared but not yet run.
 \section{Conclusion}
 %======================================================================
 
-CyberCase shows that evidence traceability for LLM case analysis can be enforced by the system
+This work shows that evidence traceability for LLM case analysis can be enforced by the system
 rather than requested from the model: Source units with stable identifiers, a Reader that may only
-select them, backend reproduction of every quotation, and summaries whose sentences point to Claims.
+select them, deterministic reproduction of every quotation, and summaries whose sentences point to Claims.
 A frozen Claim/Source check adds a semantic signal for about 0.23\,s per Claim on a consumer GPU
 (about 1\,s on CPU). Our measurements show both its value as a filter and its cost in coverage and
 Thai robustness, which led us to show it as a warning rather than let it decide. Establishing how well
