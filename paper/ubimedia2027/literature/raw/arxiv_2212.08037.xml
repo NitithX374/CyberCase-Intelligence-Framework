@@ -1,0 +1,87 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/WwhylmPvDB6KOrH+1v50TgZ0CZU</id>
+  <title>arXiv Query: search_query=&amp;id_list=2212.08037&amp;start=0&amp;max_results=10</title>
+  <updated>2026-10-12T11:43:15Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=10&amp;id_list=2212.08037" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>10</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2212.08037v2</id>
+    <title>Attributed Question Answering: Evaluation and Modeling for Attributed Large Language Models</title>
+    <updated>2023-02-10T20:04:05Z</updated>
+    <link href="https://arxiv.org/abs/2212.08037v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2212.08037v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language models (LLMs) have shown impressive results while requiring little or no direct supervision. Further, there is mounting evidence that LLMs may have potential in information-seeking scenarios. We believe the ability of an LLM to attribute the text that it generates is likely to be crucial in this setting. We formulate and study Attributed QA as a key first step in the development of attributed LLMs. We propose a reproducible evaluation framework for the task and benchmark a broad set of architectures. We take human annotations as a gold standard and show that a correlated automatic metric is suitable for development. Our experimental work gives concrete answers to two key questions (How to measure attribution?, and How well do current state-of-the-art methods perform on attribution?), and give some hints as to how to address a third (How to build LLMs with attribution?).</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2022-12-15T18:45:29Z</published>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Bernd Bohnet</name>
+    </author>
+    <author>
+      <name>Vinh Q. Tran</name>
+    </author>
+    <author>
+      <name>Pat Verga</name>
+    </author>
+    <author>
+      <name>Roee Aharoni</name>
+    </author>
+    <author>
+      <name>Daniel Andor</name>
+    </author>
+    <author>
+      <name>Livio Baldini Soares</name>
+    </author>
+    <author>
+      <name>Massimiliano Ciaramita</name>
+    </author>
+    <author>
+      <name>Jacob Eisenstein</name>
+    </author>
+    <author>
+      <name>Kuzman Ganchev</name>
+    </author>
+    <author>
+      <name>Jonathan Herzig</name>
+    </author>
+    <author>
+      <name>Kai Hui</name>
+    </author>
+    <author>
+      <name>Tom Kwiatkowski</name>
+    </author>
+    <author>
+      <name>Ji Ma</name>
+    </author>
+    <author>
+      <name>Jianmo Ni</name>
+    </author>
+    <author>
+      <name>Lierni Sestorain Saralegui</name>
+    </author>
+    <author>
+      <name>Tal Schuster</name>
+    </author>
+    <author>
+      <name>William W. Cohen</name>
+    </author>
+    <author>
+      <name>Michael Collins</name>
+    </author>
+    <author>
+      <name>Dipanjan Das</name>
+    </author>
+    <author>
+      <name>Donald Metzler</name>
+    </author>
+    <author>
+      <name>Slav Petrov</name>
+    </author>
+    <author>
+      <name>Kellie Webster</name>
+    </author>
+  </entry>
+</feed>

@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/N0O3H/4iUOjI4BTWy3j/ZQIoyXw</id>
+  <title>arXiv Query: search_query=&amp;id_list=2411.17375&amp;start=0&amp;max_results=10</title>
+  <updated>2026-10-12T11:43:14Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=10&amp;id_list=2411.17375" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>10</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2411.17375v1</id>
+    <title>The Extractive-Abstractive Spectrum: Uncovering Verifiability Trade-offs in LLM Generations</title>
+    <updated>2024-11-26T12:34:52Z</updated>
+    <link href="https://arxiv.org/abs/2411.17375v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2411.17375v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Across all fields of academic study, experts cite their sources when sharing information. While large language models (LLMs) excel at synthesizing information, they do not provide reliable citation to sources, making it difficult to trace and verify the origins of the information they present. In contrast, search engines make sources readily accessible to users and place the burden of synthesizing information on the user. Through a survey, we find that users prefer search engines over LLMs for high-stakes queries, where concerns regarding information provenance outweigh the perceived utility of LLM responses. To examine the interplay between verifiability and utility of information-sharing tools, we introduce the extractive-abstractive spectrum, in which search engines and LLMs are extreme endpoints encapsulating multiple unexplored intermediate operating points. Search engines are extractive because they respond to queries with snippets of sources with links (citations) to the original webpages. LLMs are abstractive because they address queries with answers that synthesize and logically transform relevant information from training and in-context sources without reliable citation. We define five operating points that span the extractive-abstractive spectrum and conduct human evaluations on seven systems across four diverse query distributions that reflect real-world QA settings: web search, language simplification, multi-step reasoning, and medical advice. As outputs become more abstractive, we find that perceived utility improves by as much as 200%, while the proportion of properly cited sentences decreases by as much as 50% and users take up to 3 times as long to verify cited information. Our findings recommend distinct operating points for domain-specific LLM systems and our failure analysis informs approaches to high-utility LLM systems that empower users to verify information.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-11-26T12:34:52Z</published>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Theodora Worledge</name>
+    </author>
+    <author>
+      <name>Tatsunori Hashimoto</name>
+    </author>
+    <author>
+      <name>Carlos Guestrin</name>
+    </author>
+  </entry>
+</feed>

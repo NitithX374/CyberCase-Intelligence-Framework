@@ -25,3 +25,20 @@ reading the abstract/known content; the uploaded PDF of Yang et al. was read in 
 | laban2022summac | ACL Anthology 2022.tacl-1.10 | NLI-based inconsistency detection at sentence granularity | verified |
 | phatthiyaphaibun2023pythainlp | ACL Anthology 2023.nlposs-1.4 | Thai sentence segmentation (crfcut) | verified |
 | chen2024bgem3 | ACL Anthology 2024.findings-acl.137 | BGE-M3 embeddings (translation similarity diagnostic; RAG retrieval) | verified |
+| gotel1994traceability | Crossref 10.1109/ICRE.1994.292398 (author initials per the paper: O.C.Z. Gotel, A.C.W. Finkelstein) | definition of traceability; problems from missing origin/production information | verified |
+| buneman2001provenance | Crossref 10.1007/3-540-44503-X_20 (Crossref swapped Tan's name order; corrected) | why- vs where-provenance | verified |
+| lebo2013provo | w3.org/TR/prov-o (title and editors read from page) | PROV ontology | verified |
+| liu2023verifiability | ACL Anthology 2023.findings-emnlp.467; abstract read: 51.5% / 74.5% | motivation numbers | verified |
+| bohnet2022attributedqa | arXiv API 2212.08037 | attribution as a task | verified |
+| gao2023rarr | ACL Anthology 2023.acl-long.910; abstract read | post-hoc research and revision | verified |
+| huang2024front | ACL Anthology 2024.findings-acl.838 | quote extraction before grounded citation (per repo survey matrix) | verified |
+| wan2025generationprograms | arXiv API 2506.14580 | executable programs over source sentences (per repo survey) | verified |
+| worledge2024spectrum | arXiv API 2411.17375 | extractive–abstractive verifiability trade-off (per repo survey) | verified |
+| shen2025citelab | ACL Anthology 2025.acl-demo.47 | citation workflow tooling incl. AfG baseline (per repo survey) | verified |
+| cattan2026localizing | Crossref 10.1162/tacl.a.598 | QA-proposition localisation of inconsistencies (per repo survey) | verified |
+| wu2025medgraphrag | ACL Anthology 2025.acl-long.1381 | uses AfG as baseline (per repo survey) | verified |
+| zhao2025finragbenchv | ACL Anthology 2025.emnlp-main.211 | page-image / bounding-box evidence units (per repo survey) | verified |
+| schimanski2024specialists | ACL Anthology 2024.acl-long.105 | training data filtered for source quality/attributability (per repo survey) | verified |
+
+AfG verification-time / AIS trade-off sentence follows the repo survey's reading of Slobodkin et al. Tables 3–4
+(MDS 47→22 s, AIS 89.3→79.9; LFQA 59→35 s, AIS 87.6→94.4).

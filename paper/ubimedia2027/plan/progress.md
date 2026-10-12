@@ -31,3 +31,12 @@
   en 0.871), now cited as context for RQ3.
 - Build: 15 pages, no overfull boxes; citation check passes; TODO check flags only the author
   placeholder.
+
+## 2026-10-12 — related work rebuilt around traceability and attribute-first generation
+- Section 2 now has three subsections: Traceability and Provenance (requirements traceability, why/where
+  provenance, W3C PROV, generative-search verifiability audit, domain systems), Attribute First, then
+  Generate (post-hoc vs attribute-first, AfG and its descendants, domain uses), Claim Verification.
+- 14 new verified references (34 in .bib, 33 cited).
+- Removed for space and to reduce system detail: Implementation section (now a 4-line paragraph),
+  Fig. 2 constructed example, binding-check table (now one sentence), cost paragraph, long lessons.
+- Still 15 pages, no overfull boxes.

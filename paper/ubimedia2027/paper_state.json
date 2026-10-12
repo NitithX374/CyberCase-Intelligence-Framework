@@ -23,7 +23,7 @@
     "external_inputs": [
       "llncs.cls and splncs04.bst from the Tectonic TeX Live bundle"
     ],
-    "input_sha256": "20c1bc2dd09b6a0b099a5c767b767a5825a8d3f350378f26a2385a1d961cd0fa",
-    "pdf_sha256": "c58e51798fced062161af3ce051046264a9b3ad0c96ea37a53806bc9e51b6dbd"
+    "input_sha256": "a532848791b7dda40a72308c96280cddc67f99e947e193bcd6d562dbd0ac5d0f",
+    "pdf_sha256": "300aac03a10ca52221e661895b982c50a91cee7303218a01fe61643ee9348bd9"
   }
 }

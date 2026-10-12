@@ -11,6 +11,10 @@
 \usetikzlibrary{positioning,arrows.meta,fit,backgrounds}
 \usepackage[hidelinks]{hyperref}
 \setlength{\emergencystretch}{1.5em}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\textfraction}{0.1}
+\renewcommand{\floatpagefraction}{0.8}
+\setcounter{topnumber}{3}
 
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
 
@@ -82,7 +86,7 @@ evidence is regenerated from storage. Our contributions are:
 \item An analysis architecture in which a claims-only Reader selects system-issued Source-unit
 identifiers, deterministic binding resolves them to original spans with document and page locators, and a
 separate Judgement stage writes a summary over Claims alone, ending each sentence with Claim
-identifiers (Sects.~\ref{sec:problem}--\ref{sec:impl}).
+identifiers (Sects.~\ref{sec:problem}--\ref{sec:system}).
 \item A frozen Claim/Source check, B1-LR, built from off-the-shelf multilingual models and a
 three-weight logistic boundary, with its design decisions and an English checkpoint comparison,
 evaluated on WiCE, on AttributionBench, and on a Thai machine translation of AttributionBench
@@ -98,45 +102,75 @@ statement an officer reads should lead back to a document, a page and a characte
 \section{Related Work}
 %======================================================================
 
-\paragraph{Attributed generation.}
-Attribution is commonly defined as whether a statement is supported by an identified source
-\cite{rashkin2023ais}. ALCE benchmarks LLMs that generate text with citations to retrieved
-passages and scores citation quality automatically \cite{gao2023alce}. Attribute First, then
-Generate selects source spans before planning and writing sentences, and checks that the selected
-spans occur in the source \cite{slobodkin2024afg}. These methods improve how often a citation
-exists and how often it supports its sentence, but the citation remains part of the generated
-text. We adopt the select-first idea and push it one step further: what the model selects
-is an opaque identifier, and the span behind it is materialised by deterministic code.
+Two lines of work meet in this paper: traceability, which asks whether an output can be followed
+back to what produced it, and attribute-first generation, which makes evidence selection an explicit
+step before writing. We also draw on claim verification for the semantic check.
 
-\paragraph{Claim verification and factuality checking.}
-A second line of work checks generated text after the fact. FActScore decomposes long outputs into
-atomic facts and checks each against a knowledge source \cite{min2023factscore}; SummaC applies NLI
-at sentence granularity to detect inconsistencies in summaries \cite{laban2022summac}; MiniCheck
-trains small models to check claims against grounding documents at a fraction of the cost of LLM
-judges \cite{tang2024minicheck}; AttrScore uses LLMs and fine-tuned models to judge attribution
-\cite{yue2023attrscore}. Benchmarks for these checkers include WiCE, which labels real Wikipedia
-claims against their cited evidence at sub-sentence granularity \cite{kamoi2023wice}, and
-AttributionBench, which unifies several attribution datasets and shows that the task remains hard
-even for fine-tuned models \cite{li2024attributionbench}. We do not propose a new checker. We
-assemble a cheap, frozen one from existing multilingual components, place it at a specific point in a
-pipeline, and measure what it does there.
+\subsection{Traceability and Provenance}
 
-\paragraph{Multilingual and Thai resources.}
-XNLI provides professionally translated NLI test sets in fifteen languages including Thai
-\cite{conneau2018xnli}; multilingual encoders can be distilled from English ones
-\cite{reimers2020multilingual} or trained for multilingual retrieval \cite{chen2024bgem3}; PyThaiNLP
-provides Thai segmentation \cite{phatthiyaphaibun2023pythainlp}. To our knowledge no attribution benchmark exists for Thai
-case documents, which is why our Thai evaluation is a translation study.
+Traceability has a long history outside NLP. In requirements engineering it is the ability to
+follow the life of a requirement both forwards and backwards; Gotel and Finkelstein argued that many
+problems stem from missing information about where an artifact came from and how it was produced
+\cite{gotel1994traceability}. Database research distinguishes \emph{why}-provenance, the
+source records that justify an output, from \emph{where}-provenance, the exact location a value was
+copied from \cite{buneman2001provenance}; W3C PROV standardises the entities, activities and agents
+needed to record such histories \cite{lebo2013provo}. Our design maps directly onto this vocabulary:
+a citation is where-provenance (a source and a character range), the Claim identifiers on a summary
+sentence are why-provenance, and both are recorded when the output is produced rather than
+reconstructed afterwards.
 
-\paragraph{Traceable workflows in professional domains.}
-Worledge et al.\ decompose default-judgment review into legal sub-requirements, ground each in
-quotes copied from the court file, and measure faster and more accurate human review
-\cite{worledge2026default}. Dehing et al.\ generate structured actor, role and timeline reports
-from chat evidence with trace identifiers for digital forensics \cite{dehing2026forensics}.
-Yang et al.\ register exhibition evidence under stable identifiers and label every generated
-script unit as grounded or creative, auditing coverage manually with two experts
-\cite{yang2026traceable}. Table~\ref{tab:related} positions these systems by who produces the
-evidence pointer and how it is checked.
+For LLM output, the need is well documented. An audit of four generative search engines found that
+only 51.5\% of generated sentences were fully supported by their citations and only 74.5\% of
+citations supported the sentence they were attached to \cite{liu2023verifiability}. Domain
+systems respond with explicit evidence records. Yang et al.\ register exhibition evidence under
+stable identifiers and label each generated unit as grounded or creative, auditing the links
+manually \cite{yang2026traceable}; Dehing et al.\ carry message trace identifiers into structured
+forensic reports \cite{dehing2026forensics}; Worledge et al.\ locate every quote on its court-file
+page \cite{worledge2026default}. In each case the identifier or quote is written by the model and
+checked afterwards; in ours it is issued and resolved by the system.
+
+\subsection{Attribute First, then Generate}
+
+Attributed question answering frames attribution as a task in its own right
+\cite{bohnet2022attributedqa}, and attribution is commonly judged by whether a statement is
+supported by an identified source \cite{rashkin2023ais}. Two families of methods followed.
+\emph{Post-hoc} methods generate first and attach or repair evidence later: RARR searches for
+evidence for an existing output and revises unsupported content \cite{gao2023rarr}, and ALCE
+benchmarks models that cite retrieved passages while writing \cite{gao2023alce}. \emph{Attribute-first}
+methods invert the order. Slobodkin et al.\ select concise source spans, cluster them into a
+sentence-level plan, and only then generate, discarding selected spans that cannot be found in the
+source \cite{slobodkin2024afg}; this shortened human verification time in both of their tasks,
+while human-judged attribution rose in one task and fell in the other.
+
+Later work refines the selected unit and what is done with it. FRONT trains models to extract
+fine-grained quotes before writing grounded citations \cite{huang2024front}; GenerationPrograms
+expresses the answer as an executable program of operations over source sentences, so that each
+output sentence carries its derivation \cite{wan2025generationprograms}; Worledge et al.\ show
+that moving from quotation toward abstraction makes answers more fluent and useful but harder and
+slower to verify \cite{worledge2024spectrum}; CiteLab provides tooling to compare citation workflows,
+attribute-first among them \cite{shen2025citelab}; and QA-based propositions can localise exactly
+which part of an attributed sentence is inconsistent with its source \cite{cattan2026localizing}.
+In domains, Worledge et al.\ apply attribute-first generation to legal default-judgment review with
+a randomised study of law students \cite{worledge2026default}, MedGraphRAG uses it as a baseline for
+evidence-based medical answers \cite{wu2025medgraphrag}, FinRAGBench-V moves the evidence unit to
+page images and bounding boxes \cite{zhao2025finragbenchv}, and evidence-based QA specialists are
+trained on data filtered for source quality and attributability \cite{schimanski2024specialists}.
+
+We keep the attribute-first order but change what is selected. The Reader selects opaque identifiers
+issued by the system instead of copying spans, so the existence check that attribute-first methods
+perform by string matching becomes an exact lookup, and a quotation can never drift from its source.
+
+\subsection{Claim Verification}
+
+A third line checks generated text against evidence. FActScore checks atomic facts
+\cite{min2023factscore}, SummaC applies sentence-level NLI to summaries \cite{laban2022summac},
+MiniCheck trains small grounding checkers \cite{tang2024minicheck}, and AttrScore judges attribution
+with LLMs and fine-tuned models \cite{yue2023attrscore}; WiCE \cite{kamoi2023wice} and
+AttributionBench \cite{li2024attributionbench} supply labelled claim/evidence pairs. For Thai, XNLI
+provides professionally translated NLI test data \cite{conneau2018xnli}, and PyThaiNLP provides
+sentence segmentation \cite{phatthiyaphaibun2023pythainlp}. We do not propose a new checker: we
+assemble a cheap, frozen one from multilingual components \cite{reimers2020multilingual} and measure
+what it does at one point in the pipeline. Table~\ref{tab:related} summarises the positioning.
 
 \begin{table}[t]
 \centering
@@ -173,18 +207,13 @@ A \emph{citation} is a triple $(S_i, a, b)$ denoting the substring $S_i[a{:}b]$.
 From the task itself (an investigator must be able to justify each statement in a case file) and
 from earlier versions of our system in which the model wrote its own quotations, which then had to be
 matched back to the sources approximately, we derived five requirements:
-\begin{description}
-\item[R1 Verbatim evidence.] Every quotation shown to a user is a substring of a stored source,
-reproduced by the system, never by a model.
-\item[R2 Fail visibly.] A pointer that cannot be resolved is shown as invalid, not silently
-dropped or repaired.
-\item[R3 Revision safety.] A pointer issued for one version of a document must not bind to
-another version.
-\item[R4 Sentence-level provenance.] Every summary sentence names the Claims it rests on, and
-only Claims that the analysis actually produced.
-\item[R5 Bounded cost.] Expensive stages run only when the case is complete enough to analyse,
-and any semantic check is cheap enough to run on every Claim.
-\end{description}
+\textbf{R1 Verbatim evidence}: every quotation shown is a substring of a stored source, reproduced
+by the system, never by a model. \textbf{R2 Fail visibly}: an unresolvable pointer is shown as
+invalid, not dropped or repaired. \textbf{R3 Revision safety}: a pointer issued for one version of a
+document never binds to another. \textbf{R4 Sentence-level provenance}: every summary sentence names
+the Claims it rests on, and only Claims the analysis produced. \textbf{R5 Bounded cost}: expensive
+stages run only when the case is complete enough, and any semantic check is cheap enough for every
+Claim.
 R1--R4 are structural and can be enforced by construction; R5 shapes the pipeline. Whether a
 Claim is \emph{true}, or even entailed by its citations, is a separate question that no structural
 rule answers, which is what the Claim/Source check in Sect.~\ref{sec:check} addresses, imperfectly.
@@ -231,8 +260,7 @@ Claim/Source check, Judgement and Views run concurrently after binding.}
 \label{fig:pipeline}
 \end{figure}
 
-Figure~\ref{fig:pipeline} summarises the flow, and Fig.~\ref{fig:example} follows one Claim
-through it. Every PDF page is rendered and read by OCR rather than taken from the PDF's text layer,
+Figure~\ref{fig:pipeline} summarises the flow. Every PDF page is rendered and read by OCR rather than taken from the PDF's text layer,
 and page locators are kept. The system writes in Thai whenever any source contains
 a Thai character, and a chat question is answered in its own language.
 
@@ -249,11 +277,8 @@ document cannot silently bind to another. Units are computed on demand, not stor
 \paragraph{Gap assessment before expensive work (R5).}
 A cheap first LLM call checks the case against a fixed 5W1H checklist (who was affected, who was
 responsible, what, when, where, why, how and how much). A deterministic policy then either asks the
-user and stops, or proceeds. By default at most three rounds of at most three questions are asked,
-one question is outstanding at a time, and a gap keeps its checklist key across rounds so that it
-is never asked twice. Answers are stored as conversation messages with their own identifiers
-(\texttt{QA-01}), not as case sources, and the case is analysed again only when a round's questions
-are all answered, so a round of three questions costs one analysis rather than three.
+user and stops, or proceeds. Rounds and questions are bounded, and answers are stored with their own
+identifiers (\texttt{QA-01}) rather than as case sources.
 
 \paragraph{Claims-only Reading.}
 The Reader receives all sources with compact local identifiers (\texttt{U001}, \dots) together with
@@ -262,71 +287,18 @@ of Claims. Each Claim has an identifier, a type, its text, an epistemic status (
 attributed assertions, \texttt{unknown} for uncertainty stated in a source) and supporting and
 contradicting unit identifiers. Higher-level inference is reserved for Judgement. The Reader cannot
 emit quotations, reasoning, metadata, or separate lists of parties and events. Every model stage
-is described by a complete JSON contract in its system prompt, validated locally against a strict
-schema, and retried at most once on invalid or truncated output; no provider-side schema grammar
-is used, so the same contract works with any model the router serves.
+is validated locally against a strict schema and retried at most once on invalid output.
 
-\begin{figure}[t]
-\centering
-\footnotesize
-\fbox{\begin{minipage}{0.96\linewidth}
-\textbf{(a) Sources and units.} \texttt{S1} (typed narrative): \texttt{U001} ``On 3 March I received
-a chat message from an account calling itself a courier's support desk.'' \texttt{U002} ``They said
-my parcel was held and asked me to pay a customs fee.'' \texttt{U003} ``I transferred 4,500 baht
-to an account ending 1234.'' \quad \texttt{S2} (bank slip, OCR, page 1): \texttt{U001} ``Amount
-4,500.00 THB'' \texttt{U002} ``To account ending 1234''.
-
-\smallskip
-\textbf{(b) Reader output} (abridged):\\
-\texttt{\{"claim\_id":"A-01", "type":"event", "status":"reported",}\\
-\texttt{\ "text":"The victim transferred 4,500 baht to an account ending 1234.",}\\
-\texttt{\ "supporting":["S1/U003","S2/U001","S2/U002"]\}}\\
-\texttt{\{"claim\_id":"A-02", "type":"actor", "status":"reported",}\\
-\texttt{\ "text":"The sender worked for the courier company.", "supporting":["S1/U001"]\}}
-
-\smallskip
-\textbf{(c) Binding.} Local IDs are expanded to canonical ones, checked, and each citation is
-materialised as \emph{(source, offsets, page, original text)}. A reference to \texttt{S1/U009},
-which was never issued, would be stored as an invalid pointer.
-
-\smallskip
-\textbf{(d) Check and display.} A-01's premise contains all three units; A-02's premise
-(``\dots an account calling itself a courier's support desk'') does not establish employment, which is the
-kind of Claim the check is meant to flag with a warning. The summary might read: \emph{``The victim
-paid 4,500 baht after a message from an account presenting itself as a courier [A-01].''} Each
-bracket links to the Claim, and each Claim to its verbatim quotations.
-\end{minipage}}
-\caption{One Claim through the pipeline. This is a constructed English example for illustration,
-not system output; production cases are Thai and identifiers are longer.}
-\label{fig:example}
-\end{figure}
 
 \paragraph{Deterministic binding (R1--R3).}
 Local identifiers are mapped back to canonical ones through a mapping captured before the Reader
-call, then checked as listed in Table~\ref{tab:binding}. Only then is the original text reproduced, with offsets, document identity and page locator. Consequently every quotation that
+call, then checked for syntax, existence, ownership by the case, stale revision hashes and
+duplicates; any failure is stored and shown as an invalid pointer, never repaired. Only then is the
+original text reproduced, with offsets, document identity and page locator. Consequently every quotation that
 appears in the analysis view or the report is a verbatim substring of a stored source. A summary sentence or view item is \emph{bound} when the Claims it links
 have resolved supporting citations, \emph{mixed} when only some do, \emph{unbound} when none do,
 and \emph{no\_claim} when it links none. These states describe addressability, not truth.
 
-\begin{table}[t]
-\centering
-\caption{Structural checks applied to every identifier the Reader or Judgement returns.}
-\label{tab:binding}
-\footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{L{2.2cm}L{4.3cm}L{4.6cm}}
-\toprule
-Check & Failure it catches & Outcome \\
-\midrule
-Syntax & Malformed identifier & Invalid pointer, shown as such \\
-Existence & Unit never issued (e.g.\ \texttt{U009}) & Invalid pointer, shown as such \\
-Ownership & Unit of a source outside this case & Invalid pointer, shown as such \\
-Stale hash & Unit from an earlier text revision & Invalid pointer; never rebound \\
-Duplicate & Same unit cited twice by one Claim & Duplicate reference rejected \\
-Summary references & Sentence or gap cites an unknown Claim & Analysis fails and is not stored \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 \paragraph{Claim/Source check, B1-LR.}\label{sec:check}
 For each bound Claim whose epistemic status permits assessment, a frozen multilingual MPNet
@@ -342,8 +314,7 @@ s = \sigma\!\left(1.411\,p_E - 1.051\,p_N - 0.302\,p_C + 0.058\right),
 \]
 and $s \ge 0.5$ yields \texttt{supported}, otherwise \texttt{not\_supported}. Claims with
 unresolved or missing support, declared conflicts or uncertain status are left
-\texttt{unassessed}. All selection indices, similarities, NLI probabilities, scores, the
-artifact hash and truncation flags are stored with the Claim. The score is a task-specific decision
+\texttt{unassessed}. All intermediate scores are stored with the Claim. The score is a task-specific decision
 value, not a calibrated probability that the Claim is true. The check runs in a worker thread,
 concurrently with Judgement and the views; if its model files are missing, the Claims are marked
 unassessed and the analysis continues.
@@ -354,36 +325,17 @@ follow-up history, but never the case sources directly, the verifier verdict, or
 threat-intelligence context. It returns a summary in which every sentence ends with bracketed
 Claim identifiers, and the request states a sentence limit of one per three Claims (between two and
 eight). An analysis whose summary or gaps reference a Claim it was not given fails rather than
-being stored. A separate, concurrent LLM call (at most 4,096 output tokens, 60-second deadline)
-extracts parties, timeline and impacts from the same Claims for display only; an item citing an
-unknown Claim is dropped, and a failed extraction records a warning without failing the analysis.
-Reports are deterministic snapshots of the stored analysis, including the list of sources it read
-and the follow-up answers it used, rendered to HTML and PDF without any further model call. Each
-analysis gets at most one report, which is never rewritten. An optional retrieval service supplies
+being stored. A separate, concurrent LLM call
+extracts parties, timeline and impacts from the same Claims for display only. Reports are
+deterministic snapshots of the stored analysis, rendered without any further model call. An optional retrieval service supplies
 MITRE ATT\&CK context when an applicability gate requests it; it is never treated as case
 evidence and is outside the scope of this paper's evaluation.
 
-%======================================================================
-\section{Implementation}\label{sec:impl}
-%======================================================================
-
-The system consists of a Next.js client, a FastAPI backend with PostgreSQL, and a separate
-retrieval service for ATT\&CK context; every case route is authenticated and ownership-scoped. There
-is no job queue: an analysis runs in the request that asked for it, and when the client asks for a
-progress stream (Server-Sent Events with a heartbeat every 15 seconds) the analysis runs in a task
-of its own, so it finishes and is stored even if the browser leaves. All model calls go through
-one transport to an OpenRouter-compatible endpoint; a dropped connection, an HTTP 429 or a
-server error (500, 502, 503, 504) is retried once after two seconds. The default analysis model is Gemma~4~26B; the verifier models
-(278M-parameter mDeBERTa and the MPNet selector) run locally on CPU or GPU and are pinned by
-revision and file hash.
-
-Input size is bounded so that a whole case fits one Reader call: the sources of a case may not exceed
-40,000 tokens as they are serialised for a model stage, and a source that would exceed the budget is
-refused with an explicit error rather than truncated. A retrieval is reused when neither the sources
-nor the follow-up answers have changed, because the retrieval pipeline is not deterministic and
-repeated calls with identical input returned different technique tables. At the time of the
-verifier integration, 266 server-side boundary, report and pipeline tests and 76 front-end tests
-passed, together with two tests that run the pinned real models end to end.
+\paragraph{Implementation.}
+The system is a Next.js client and a FastAPI service with PostgreSQL; the default analysis model is
+Gemma~4~26B, and the verifier models run locally, pinned by revision and file hash. At the time of
+the verifier integration, 266 server-side and 76 front-end tests passed, including two that run the
+pinned models end to end.
 
 %======================================================================
 \section{Evaluation}\label{sec:eval}
@@ -613,11 +565,6 @@ Claim texts but in the cited passages of the two Claims it cited. Its correctnes
 shows that citation text reaching Judgement is a path no Claim-level check examines; a paired ablation
 without citation text would measure how often this happens.
 
-\paragraph{Cost.}
-One selector call and one NLI pass per eligible Claim: on a 4\,GiB GTX~1650 the transfer study measured
-287--414\,ms per pair on average (p95 up to 1,099\,ms) with about 1.9\,GiB of peak allocated memory,
-and a five-Claim production run on CPU averaged 1,026\,ms per Claim.
-
 %======================================================================
 \section{Discussion}\label{sec:discussion}
 %======================================================================
@@ -634,12 +581,10 @@ Claims are marked unassessed instead of failing the analysis. The structural gua
 invented, stale or duplicate identifiers are still rejected, and no generated quotation is ever
 displayed.
 
-\paragraph{Lessons for system builders.}
-Three design habits carried most of the weight. (1) \emph{Give the model identifiers, not text to
-copy}: a pointer the system issued can be validated exhaustively, while a quotation can only be
-matched approximately. (2) \emph{Separate what is enforced from what is estimated}: structural
-states (bound, mixed, unbound) are exact and can be shown with confidence, semantic verdicts are
-estimates and are shown as warnings. (3) \emph{Evaluate the operating point}: an unchanged F1 hid a 17-point rise in false acceptance.
+\paragraph{Lessons.}
+Give the model identifiers, not text to copy; separate what is enforced (binding states) from what
+is estimated (verdicts); and evaluate the operating point, since an unchanged F1 hid a 17-point rise
+in false acceptance.
 
 \paragraph{Threats to validity.}
 \emph{Construct validity}: the replay measures whether an unsupported row's identifier is cited, not
@@ -656,21 +601,17 @@ sensitivity check, scored higher on WiCE test (Macro-F1 .650 vs.\ .618), so we d
 deployed backbone is optimal.
 
 \paragraph{Ethics and privacy.}
-Complaints contain personal and financial data. In the configuration studied, OCR and LLM stages are
-called through external APIs, so a deployment with real complaints needs a data-processing agreement
-or self-hosted models; the verifier itself runs locally. The system does not decide guilt or replace review of the original documents. No real case data was used in the experiments reported
-here.
+Complaints contain personal and financial data. OCR and LLM stages were called through external
+APIs, so deployment on real complaints needs a data-processing agreement or self-hosted models. The
+system does not decide guilt, and no real case data was used in these experiments.
 
 \paragraph{Next steps.}
 The most important missing evidence is a Thai benchmark built from real, anonymised complaints.
-Without large-scale annotation, we plan to combine labels known by construction (Claims copied from a
-source versus Claims with altered amounts, dates, roles or negation), metamorphic tests on live
-analyses (removing or swapping a cited unit should lower the score), the professionally translated
-Thai test set of XNLI \cite{conneau2018xnli} for the NLI component, which the checkpoint never saw
-during fine-tuning, and a small doubly annotated subset to report inter-annotator agreement and to
-validate any LLM judge used at scale. A usability protocol with five to ten participants, covering
-case entry, tracing a statement back to its source and answering follow-up questions, has been
-prepared but not yet run.
+Without large-scale annotation, we plan to combine labels known by construction (Claims with altered
+amounts, dates, roles or negation), metamorphic tests (removing a cited unit should lower the score),
+the Thai XNLI test set \cite{conneau2018xnli}, which the checkpoint never saw in fine-tuning, and a
+small doubly annotated subset for inter-annotator agreement. A usability protocol has been prepared
+but not yet run.
 
 %======================================================================
 \section{Conclusion}
