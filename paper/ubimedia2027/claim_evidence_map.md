@@ -35,3 +35,25 @@ Every number in `main.tex` and the file it comes from. Paths are repo-relative.
 ## Claims deliberately not made
 Native Thai case accuracy; factual/legal correctness; reduced hallucination in prose; investigator
 benefit; best backbone; population-level effects.
+
+## Added in the 15-page version (2026-10-12)
+
+| Claim in paper | Value | Evidence |
+|---|---|---|
+| Table 4 design decisions (47.2% removed, 93.52% recall, 25.3% shorter; margin recall 56.66–72.05%; SW-NLI −0.0597, >10× calls; XGBoost +0.0035 test, FAR +3.95 [1.91, 5.88]; MLP .6367 vs .6397; B4 admitted 0; XLM-R .6316 vs .6397, space-joined) | | `nli_grounding_experiment/FINAL_VERDICT.md` §C–D; `CHECKPOINT_AUDIT_2026-10-07.md` |
+| B1-LR vs B1 FAR −5.42 [−7.17, −3.70]; 0.76 ms overhead | | `FINAL_VERDICT.md` §B.2, §C |
+| Table 5 checkpoints (ID/OOD macro-F1, paired Δ with CIs, FAR) | | `research/attribution_benchmark/runs/candidates_en_20261006T010418Z/comparison.md` |
+| Params 279M / 435M / 560M / 783M | 278,811,651 etc. | `CHECKPOINT_AUDIT_2026-10-07.md` |
+| mDeBERTa: Thai held out of NLI fine-tuning; XNLI th 0.786, en 0.871 | | model card README at revision b5113eb (`laurer2022mdeberta`) |
+| Truncated pairs ID 288/311, OOD 124/154 | | `B1_RESULTS_2026-10-07.md` cost table |
+| Replay per split (ID 6/20, 8/15, 1/10, 6/12; OOD 3/11, 12/14, 3/8, 11/12; p = .125 / .25; 7 and 8 pairs) | | `results/b1_20261007.json` `downstream.splits` |
+| 6 failures, 3 per arm, ~40,800 output tokens mostly reasoning | | `B1_RESULTS_2026-10-07.md` |
+| Cost paragraph: 287–414 ms mean, p95 ≤1,099 ms, 1.86 GiB, CPU 1,025.79 ms | | `B1_RESULTS_2026-10-07.md` cost table |
+| Follow-up defaults 3 rounds × 3 questions | | `backend/app/config.py` lines 85–86 |
+| 40,000-token source budget; refused not truncated | | root `CLAUDE.md` (sources route, 413 `source_too_large`) |
+| SSE heartbeat 15 s; retry once after 2 s on drop/429/500/502/503/504 | | root `CLAUDE.md` (`analysis/stream.py`, `llm/request.py`) |
+| Views extractor 4,096 tokens, 60 s; unknown-ID items dropped | | root `CLAUDE.md` (Claim views) |
+| Summary/gap with unknown Claim ID → analysis fails | | `backend/app/analysis/claim_gate.py` `check_judgement_references` |
+| 266 backend + 76 frontend tests + 2 real-model tests at integration time | | `B1_RESULTS_2026-10-07.md` validation |
+| Usability protocol 5–10 participants, prepared, not run | | `docs/research/USABILITY_PROTOCOL.md` |
+| Fig. 2 example | constructed | not system output; stated in caption |

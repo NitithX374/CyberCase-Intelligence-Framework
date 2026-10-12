@@ -16,6 +16,12 @@ reading the abstract/known content; the uploaded PDF of Yang et al. was read in 
 | dehing2026forensics | Crossref 10.1145/3785318.3785330 | chat forensics structured reports | verified (method per repo survey) |
 | yang2026traceable | Crossref 10.1145/3829918.3829930 + full PDF | evidence IDs, G/C labels, 2 experts | verified |
 | worledge2026default | arXiv API 2607.01256 (author list corrected: 7 authors) | default-judgment review assistant | verified (numbers per repo survey) |
-| lewis2020rag | arXiv API 2005.11401 | RAG | verified |
+| lewis2020rag | arXiv API 2005.11401 | (not cited in the 15-page draft; kept in .bib) | verified |
 | he2021debertav3 | arXiv API 2111.09543 | DeBERTaV3 backbone | verified |
 | laurer2022mdeberta | Hugging Face API (sha b5113eb…, created 2022-08-22) | deployed NLI checkpoint | verified |
+| conneau2018xnli | ACL Anthology D18-1269 | XNLI human-translated test set (planned Thai NLI check) | verified |
+| tang2024minicheck | ACL Anthology 2024.emnlp-main.499 | efficient grounding fact-checker; checkpoint comparison | verified |
+| yue2023attrscore | ACL Anthology 2023.findings-emnlp.307 | AttrScore attribution evaluator; checkpoint comparison | verified |
+| laban2022summac | ACL Anthology 2022.tacl-1.10 | NLI-based inconsistency detection at sentence granularity | verified |
+| phatthiyaphaibun2023pythainlp | ACL Anthology 2023.nlposs-1.4 | Thai sentence segmentation (crfcut) | verified |
+| chen2024bgem3 | ACL Anthology 2024.findings-acl.137 | BGE-M3 embeddings (translation similarity diagnostic; RAG retrieval) | verified |

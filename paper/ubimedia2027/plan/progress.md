@@ -19,3 +19,15 @@
 - No evaluation on real cybercrime data (benchmarks are English Wikipedia/web QA + MT Thai).
 - Thai gold labels inherited through machine translation.
 - Replay sample small (15 observable pairs); gate evaluated, label deployed.
+
+## 2026-10-12 (later) — expanded to 15 pages (regular paper)
+- Added: Thai-specific motivation; problem setting with requirements R1–R5; positioning table;
+  constructed end-to-end example (Fig. 2, labelled as not system output); binding-check table;
+  Implementation section; design-decision table; English checkpoint comparison (negative result for
+  mDeBERTa vs MiniCheck); per-split replay rows; failure analysis; cost paragraph; threats to
+  validity; ethics and privacy; usability protocol status.
+- New verified references: XNLI, MiniCheck, AttrScore, SummaC, PyThaiNLP, BGE-M3.
+- Found in the mDeBERTa model card: Thai was held out of its NLI fine-tuning (XNLI th 0.786 vs
+  en 0.871), now cited as context for RQ3.
+- Build: 15 pages, no overfull boxes; citation check passes; TODO check flags only the author
+  placeholder.
