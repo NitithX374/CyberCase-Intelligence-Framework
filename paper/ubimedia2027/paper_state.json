@@ -12,7 +12,6 @@
     "plan/progress.md"
   ],
   "blockers": [
-    "Department, university and the advisor's e-mail are placeholders (main.tex TODO); author names are set.",
     "Advisor review and co-author approval not yet obtained.",
     "No evaluation on native Thai case files; stated as a limitation, not resolved.",
     "Check the EasyChair deadline time zone and whether the venue is double-blind."
@@ -24,7 +23,7 @@
     "external_inputs": [
       "llncs.cls and splncs04.bst from the Tectonic TeX Live bundle"
     ],
-    "input_sha256": "f5d9ca1a43ed47684d6bcb1f2ba57d5df6cd8cfb22d0805ec187097920505ad1",
-    "pdf_sha256": "a6399dea5fa46b375f65c65b086421cb4a736f24bc8186ea2d44784114eadd60"
+    "input_sha256": "8ffe136025b53224fca814c457598cf113b59eafcc80429435ea594c6f27749f",
+    "pdf_sha256": "512c8b87e603b7c5752a124d7a2e4e6b678d72953b867f78adc335332a354095"
   }
 }
