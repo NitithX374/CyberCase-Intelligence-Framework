@@ -1,76 +1,101 @@
-% Source-unit construction infographic. Compile separately (XeLaTeX/Tectonic):
+% Source-unit construction figure (three panels), styled after Dense X Retrieval Fig. 2 (panels,
+% numbered cards), LongCite Fig. 1 (chunk-level vs sentence-level comparison) and LumberChunker
+% Fig. 1 (ID cards). Compile separately (XeLaTeX/Tectonic):
 %   tectonic figures/units.tex   ->  figures/units.pdf
-% Every offset and identifier below was computed with the production rules in
-% backend/app/sources/evidence.py and backend/app/trace/sentences.py
-% (evidence_units_v3, 25-character merge, SHA-256 revision). The Thai text is a
-% constructed example, not case data.
-\documentclass[tikz,border=2pt]{standalone}
+% Offsets and identifiers follow the production rules in backend/app/sources/evidence.py and
+% backend/app/trace/sentences.py (evidence_units_v3, 25-character merge, SHA-256 revision).
+%   S1 (157 chars): units [0,73) [73,107) [107,157); h = 80a1d348f2908e99
+%   S1 with 4,500 -> 4,800: h' = 660d3b84ad7f6992
+%   40-character fixed chunks of S1 split at offsets 40, 80, 120 (panel B, illustration only).
+% The Thai text is a constructed example, not case data; the sentence split is illustrative.
+\documentclass[tikz,border=3pt]{standalone}
 \usepackage{fontspec}
-\newfontfamily\thai{Loma}[Scale=0.78]
+\usepackage{fontawesome5}
+\usepackage{amsmath}
+\newfontfamily\thai{Loma}[Scale=0.86]
 \XeTeXlinebreaklocale "th"
 \XeTeXlinebreakskip=0pt
 \usepackage{xcolor}
-\usetikzlibrary{positioning,arrows.meta,calc}
-\definecolor{ua}{HTML}{DCE9F7}
-\definecolor{ub}{HTML}{FBE3C8}
-\definecolor{uc}{HTML}{DDEFD9}
-\definecolor{ink}{HTML}{333333}
-\newcommand{\nextrow}[1]{\path let \p1=(current bounding box.south) in coordinate (#1) at (0,\y1-7pt);}
+\usetikzlibrary{positioning,arrows.meta,calc,fit,backgrounds}
+\definecolor{ink}{HTML}{222222}
+\definecolor{ua}{HTML}{D6E6F7}\definecolor{uaD}{HTML}{2E6DB4}
+\definecolor{ub}{HTML}{FBE1C4}\definecolor{ubD}{HTML}{C76A12}
+\definecolor{uc}{HTML}{D7EED2}\definecolor{ucD}{HTML}{2E8B57}
+\definecolor{bad}{HTML}{C0392B}\definecolor{badbg}{HTML}{FBE3E0}
+\definecolor{good}{HTML}{2E8B57}\definecolor{goodbg}{HTML}{E3F4E0}
+\definecolor{llm}{HTML}{1F4E79}
+\definecolor{panel}{HTML}{BBBBBB}
+\newcommand{\utag}[2]{{\setlength{\fboxsep}{1pt}\colorbox{#1}{\textcolor{white}{\sffamily\bfseries\scriptsize #2}}}}
 \begin{document}
 \begin{tikzpicture}[
-  font=\scriptsize\sffamily, text=ink,
-  stagelbl/.style={font=\scriptsize\bfseries\sffamily, anchor=north west, text width=2.8cm, align=left, inner sep=1pt, execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000}},
-  chip/.style={draw=ink!60, rounded corners=1.5pt, inner sep=2.5pt, align=left, anchor=north west},
-  arr/.style={-{Stealth[length=1.4mm]}, semithick, ink!70},
-  note/.style={font=\tiny\sffamily, text=ink!75, anchor=north west, align=left, inner sep=1pt}]
-\def\X{3.0}
+  font=\sffamily\small, text=ink,
+  every node/.append style={execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000}},
+  card/.style={draw=#1, rounded corners=3pt, line width=0.6pt, inner sep=4pt, align=left, anchor=north west},
+  ptitle/.style={font=\sffamily\normalsize\bfseries, anchor=north west, inner sep=0pt},
+  pill/.style={draw=ink!70, rounded corners=7pt, line width=0.7pt, inner sep=4pt, align=center, fill=white},
+  arr/.style={-{Stealth[length=1.6mm]}, thick, ink!80},
+  note/.style={font=\sffamily\footnotesize\itshape, text=ink!75, align=left, anchor=north west, inner sep=0pt}]
 
-% ---------- source text
-\coordinate (r0) at (0,0);
-\node[stagelbl] at (r0) {Source $S_1$\\{\tiny\mdseries narrative, $|S_1|=157$; Thai marks no sentence ends}};
-\node[chip, fill=gray!8, text width=8.2cm] at ($(r0)+(\X,0)$) {\thai เมื่อวันที่ 3 มีนาคม ดิฉันได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง แจ้งว่าพัสดุติดค้างที่ด่านศุลกากร ตกใจมาก จึงโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234};
+%================ (A) lossless units =================================================
+\node[ptitle] (tA) at (0,0) {\textcircled{\footnotesize A}\ \ Lossless Source units};
+\node[card=ink!40, fill=gray!6, text width=7.9cm] (src) at (0,-0.5) {%
+{\footnotesize\bfseries Source $S_1$} {\footnotesize(typed narrative, $|S_1|=157$; Thai marks no sentence end)}\\[2pt]
+\thai \utag{uaD}{U001}\,เมื่อวันที่ 3 มีนาคม ดิฉันได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง
+\utag{ubD}{U002}\,แจ้งว่าพัสดุติดค้างที่ด่านศุลกากร \utag{ucD}{U003}\,ตกใจมาก จึงโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234};
 
-% ---------- 1 sentence pieces
-\nextrow{r1}
-\node[stagelbl] at (r1) {1\enspace Split lines, then sentences\\{\tiny\mdseries SaT segmenter; PyThaiNLP crfcut as fallback}};
-\node[chip, fill=ua, text width=3.1cm] (p1) at ($(r1)+(\X,0)$) {\thai เมื่อวันที่ 3 มีนาคม ดิฉันได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง};
-\node[chip, fill=ub, text width=1.75cm] (p2) at ($(p1.north east)+(0.1,0)$) {\thai แจ้งว่าพัสดุติดค้างที่ด่านศุลกากร};
-\node[chip, fill=uc!55, text width=0.95cm] (p3) at ($(p2.north east)+(0.1,0)$) {\thai ตกใจมาก};
-\node[chip, fill=uc, text width=1.75cm] (p4) at ($(p3.north east)+(0.1,0)$) {\thai จึงโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234};
-\node[note, anchor=north] (n7) at (p3.south) {7 chars};
+\node[pill, anchor=north west, text width=7.65cm] (seg) at ($(src.south west)+(0,-0.42)$) {\faCut\ \ \textbf{Segmenter}\ \ {\footnotesize lines $\to$ SaT (PyThaiNLP fallback)}\\{\footnotesize $\to$ merge pieces shorter than $\delta{=}25$ characters}};
+\draw[arr] (src.south -| seg.north) -- (seg.north);
 
-% ---------- 2 merge
-\nextrow{r2}
-\node[stagelbl] at (r2) {2\enspace Merge pieces under $\delta=25$ characters into the next};
-\node[chip, fill=ua, text width=3.1cm] (m1) at ($(r2)+(\X,0)$) {\thai เมื่อวันที่ 3 มีนาคม ดิฉันได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง};
-\node[chip, fill=ub, text width=1.75cm] (m2) at ($(m1.north east)+(0.1,0)$) {\thai แจ้งว่าพัสดุติดค้างที่ด่านศุลกากร};
-\node[chip, fill=uc, text width=3.05cm] (m3) at ($(m2.north east)+(0.1,0)$) {\thai ตกใจมาก จึงโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234};
-\draw[arr] (n7.south) -- ($(m3.north west)+(0.45,0)$);
-\draw[arr] (p4.south) -- ($(m3.north)+(0.55,0)$);
+\node[card=uaD, fill=ua, text width=7.9cm] (c1) at ($(seg.south west)+(0,-0.42)$) {%
+\utag{uaD}{U001}\ \ {\ttfamily\footnotesize [0,\,73)}\quad\thai เมื่อวันที่ 3 มีนาคม ดิฉันได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง};
+\node[card=ubD, fill=ub, text width=7.9cm] (c2) at ($(c1.south west)+(0,-0.12)$) {%
+\utag{ubD}{U002}\ \ {\ttfamily\footnotesize [73,\,107)}\quad\thai แจ้งว่าพัสดุติดค้างที่ด่านศุลกากร};
+\node[card=ucD, fill=uc, text width=7.9cm] (c3) at ($(c2.south west)+(0,-0.12)$) {%
+\utag{ucD}{U003}\ \ {\ttfamily\footnotesize [107,\,157)}\quad\thai ตกใจมาก {\sffamily\footnotesize\itshape\textcolor{ucD}{(7 chars, merged)}} จึงโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234};
+\draw[arr] (seg.south) -- (seg.south |- c1.north);
+\node[note, text width=7.9cm] (inv) at ($(c3.south west)+(0,-0.12)$) {Invariant: $u.\mathit{text}=S[u.\mathit{start}{:}u.\mathit{end}]$, units are contiguous, and joining them returns $S$ exactly.};
 
-% ---------- 3 units
-\nextrow{r3}
-\node[stagelbl] at (r3) {3\enspace Cut into contiguous units $U(S)$\\{\tiny\mdseries separators kept; table rows split; at most $L=2{,}000$ characters}};
-\node[chip, fill=ua, text width=3.1cm, font=\scriptsize\ttfamily] (u1) at ($(r3)+(\X,0)$) {U001 [0,73)};
-\node[chip, fill=ub, text width=1.75cm, font=\scriptsize\ttfamily] (u2) at ($(u1.north east)+(0.1,0)$) {U002 [73,107)};
-\node[chip, fill=uc, text width=3.05cm, font=\scriptsize\ttfamily] (u3) at ($(u2.north east)+(0.1,0)$) {U003 [107,157)};
-\node[note, text width=8.2cm] at ($(u1.south west)+(0,-0.06)$) {Invariant: every unit's text equals $\mathit{source}[\mathit{start}{:}\mathit{end}]$, and joining the units in order gives back the source exactly.};
+\begin{scope}[on background layer]
+\node[draw=panel, dashed, rounded corners=8pt, line width=0.8pt, fit=(tA)(src)(seg)(c1)(c2)(c3)(inv), inner sep=6pt] (PA) {};
+\end{scope}
 
-% ---------- 4 identifiers
-\nextrow{r4}
-\node[stagelbl] at (r4) {4\enspace Give each unit a content-addressed ID $\mathit{id}(u)$};
-\node[chip, fill=gray!8, text width=8.2cm, font=\scriptsize\ttfamily] (id) at ($(r4)+(\X,0)$) {%
-h\textsubscript{S1} = SHA-256("evidence\_units\_v3" \textbackslash0 source\_text)[:16]\\
-\phantom{h }= 80a1d348f2908e99\\[2pt]
-S1:U001-80a1d348f2908e99, S1:U002-80a1d348f2908e99, \dots};
-\node[note, text width=8.2cm] at ($(id.south west)+(0,-0.06)$) {Changing one character of S1 changes $h$, so an identifier issued for the old text can never resolve against the new one (\texttt{stale\_id}).};
+%================ (B) why not fixed-size chunks =====================================
+\node[ptitle] (tB) at (9.05,0) {\textcircled{\footnotesize B}\ \ Why not fixed-size chunks?};
 
-% ---------- 5 aliases
-\nextrow{r5}
-\node[stagelbl] at (r5) {5\enspace Show $M_R$ short aliases $\alpha(u)$; keep the map};
-\node[chip, fill=gray!8, text width=8.2cm] at ($(r5)+(\X,0)$) {%
-The reader model $M_R$ sees aliases $\alpha(u)$ = \texttt{U001}--\texttt{U003} with their text only: no offsets, no
-hashes. The request records \texttt{S1}\,$\mapsto$\,$h_{S1}$ = \texttt{80a1d348f2908e99} \emph{before} calling $M_R$ and
-uses it to expand a selected alias back to its canonical ID.};
+\node[font=\sffamily\footnotesize\bfseries, anchor=north west] (bA) at (9.05,-0.5) {(a) 40-character chunks};
+\node[card=bad!60, fill=badbg, text width=3.85cm] (fa) at ($(bA.south west)+(0,-0.08)$) {%
+\thai เมื่อวันที่ 3 มีนาคม ดิฉันได้รับข้อความจ\textcolor{bad}{\textbf{\,|\,}}ากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง แจ้งว่า\textcolor{bad}{\textbf{\,|\,}}พัสดุติดค้างที่ด่านศุลกากร ตกใจมาก จึงโอ\textcolor{bad}{\textbf{\,|\,}}นเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234};
+\node[font=\sffamily\footnotesize\bfseries, anchor=north west] (bB) at (13.2,-0.5) {(b) Source units};
+\node[card=good!60, fill=goodbg, text width=3.85cm] (fb) at ($(bB.south west)+(0,-0.08)$) {%
+\thai เมื่อวันที่ 3 มีนาคม ดิฉันได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง\textcolor{good}{\textbf{\,|\,}}แจ้งว่าพัสดุติดค้างที่ด่านศุลกากร\textcolor{good}{\textbf{\,|\,}}ตกใจมาก จึงโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234};
+\path let \p1=(fa.south), \p2=(fb.south) in coordinate (low) at (0,{min(\y1,\y2)});
+\node[draw=bad, dashed, rounded corners=3pt, text=bad, text width=3.7cm, align=left, anchor=north west, font=\sffamily\footnotesize] (sa) at (fa.west |- low) [yshift=-6pt]
+  {\textcolor{bad}{\Large\faFrown}\ cuts {\thai โอนเงิน} (``transfer'') apart from the amount};
+\node[draw=good, dashed, rounded corners=3pt, text=good, text width=3.7cm, align=left, anchor=north west, font=\sffamily\footnotesize] (sb) at (fb.west |- low) [yshift=-6pt]
+  {\textcolor{good}{\Large\faSmile}\ whole sentences with exact offsets};
+
+\begin{scope}[on background layer]
+\node[draw=panel, dashed, rounded corners=8pt, line width=0.8pt, fit=(tB)(bA)(fa)(fb)(sa)(sb), inner sep=6pt] (PB) {};
+\end{scope}
+
+%================ (C) content-addressed identifiers =================================
+\path let \p1=(PB.south) in coordinate (cTop) at (9.05,{\y1-0.32cm});
+\node[ptitle] (tC) at (cTop) {\textcircled{\footnotesize C}\ \ Content-addressed identifiers};
+\node[anchor=north west, inner sep=1pt, font=\fontsize{18}{18}\selectfont] (fp) at ($(tC.south west)+(0,-0.2)$) {\faFingerprint};
+\node[anchor=west, align=left, font=\sffamily\footnotesize] (hform) at ($(fp.east)+(0.1,0)$) {%
+$h_{S_1}=\mathrm{SHA\text{-}256}(v\,\|\,\texttt{\textbackslash0}\,\|\,S_1)_{[0:16]}$\\
+$\phantom{h_{S_1}}=$ \texttt{80a1d348f2908e99}\\
+$\mathit{id}(u_3)=$ \texttt{S1:U003-80a1d348f2908e99}};
+\node[anchor=north west, inner sep=1pt, font=\fontsize{16}{16}\selectfont, text=llm] (rb) at ($(fp.south west)+(0,-0.42)$) {\faRobot};
+\node[anchor=west, align=left, font=\sffamily\footnotesize] (alias) at ($(rb.east)+(0.12,0)$) {%
+$M_R$ sees only \utag{ucD}{U003}; the request keeps $S_1\mapsto h_{S_1}$};
+\node[anchor=north west, inner sep=1pt, font=\fontsize{15}{15}\selectfont, text=bad] (ed) at ($(rb.south west)+(0,-0.32)$) {\faPen};
+\node[anchor=west, align=left, font=\sffamily\footnotesize] (edit) at ($(ed.east)+(0.14,0)$) {%
+edit 4,500\,$\to$\,4,800: $h'=$ \texttt{660d3b84ad7f6992}\\
+old \texttt{S1:U003-80a1\dots}\ \ \textcolor{bad}{\faTimesCircle\ \texttt{stale\_id}}, never rebound};
+
+\begin{scope}[on background layer]
+\node[draw=panel, dashed, rounded corners=8pt, line width=0.8pt, fit=(tC)(fp)(hform)(rb)(alias)(ed)(edit)(PB.east |- edit.south), inner sep=6pt] (PC) {};
+\end{scope}
 \end{tikzpicture}
 \end{document}

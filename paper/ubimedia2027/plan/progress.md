@@ -63,3 +63,10 @@
 - Added AUTOSUMM (ACL 2025 Industry) to related work.
 - Fixed a missing Thai glyph in the body text (now transliterated, pointing to Fig. 2).
 - 15 pages, no overfull boxes.
+
+## 2026-10-13 (night) — segmentation figure redesigned
+- Fig. 2 rebuilt as three panels after Dense X Retrieval Fig. 2 (panels, numbered cards), LongCite
+  Fig. 1 (chunk vs sentence comparison) and LumberChunker Fig. 1 (ID cards):
+  (A) source -> segmenter -> unit cards with offsets; (B) 40-char fixed chunks split "โอนเงิน" from the
+  amount vs. units; (C) content hash, alias, and the stale ID after editing 4,500 -> 4,800
+  (h' = 660d3b84ad7f6992, computed with the production formula).

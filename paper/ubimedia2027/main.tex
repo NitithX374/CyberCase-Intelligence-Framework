@@ -277,7 +277,7 @@ stops, or proceeds (R5). The four steps below make the evidence traceable.
 
 \subsection{Step 1: Lossless Source Units}\label{sec:units}
 Thai writes no sentence-final punctuation, so the boundaries of a quotable span have to be computed.
-Fig.~\ref{fig:units} shows the procedure on a 157-character narrative. (1) $S$ is split into lines,
+Fig.~\ref{fig:units}A shows the procedure on a 157-character narrative. (1) $S$ is split into lines,
 keeping their offsets, and each non-empty line into sentences with the multilingual SaT segmenter
 \cite{frohmann2024sat}, falling back to PyThaiNLP's CRF segmenter \cite{phatthiyaphaibun2023pythainlp}
 when SaT is unavailable; if the pieces do not concatenate back to the line exactly, the whole line is
@@ -285,14 +285,19 @@ kept as one piece. (2) Pieces shorter than $\delta$ non-space characters are mer
 piece, so that interjections such as \emph{tok jai mak} (``I was shocked'', Fig.~\ref{fig:units}) do not become citable units on
 their own. (3) $S$ is then cut at every piece start, at the start of every table and table row produced
 by OCR, and every $L$ characters within long pieces. Each unit runs from its start to the next unit's
-start, so whitespace and line breaks belong to a unit rather than falling between units.
+start, so whitespace and line breaks belong to a unit rather than falling between units. Unlike
+fixed-size chunks, which can split a Thai word from the number it governs (Fig.~\ref{fig:units}B), units
+follow sentence boundaries.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/units.pdf}
-\caption{Building $U(S)$ and naming its units for a constructed Thai narrative. The sentence split in
-step~1 is illustrative; the offsets in step~3 and the identifiers in step~4 are computed from that
-split with the production rules.}
+\caption{Building Source units for a constructed Thai narrative. (A) Segmentation into contiguous
+units with exact offsets; a 7-character interjection is merged into the next piece. (B) For contrast,
+fixed 40-character chunks of the same text split the word for ``transfer'' from the amount, while units
+keep whole sentences. (C) Identifiers are tied to the exact text, so one edited digit makes the old
+identifier stale. The sentence split is illustrative; offsets and hashes are computed with the
+production rules.}
 \label{fig:units}
 \end{figure}
 
@@ -308,8 +313,8 @@ Each unit is named by its source, its position $k$ and a revision tag computed f
 \mathit{id}(u_k) = S.\mathit{id}\,\texttt{:U}\,k\,\texttt{-}\,h_S, \qquad
 h_S = \mathrm{SHA\text{-}256}\bigl(v \,\|\, \texttt{\textbackslash 0} \,\|\, S\bigr)_{[0:16]},
 \end{equation}
-where $k$ is zero-padded to three digits and $v=\texttt{evidence\_units\_v3}$. In Fig.~\ref{fig:units},
-$h_{S1}=\texttt{80a1d348f2908e99}$. \textbf{(P3) Revision safety (R3)}: editing any character of $S$ or
+where $k$ is zero-padded to three digits and $v=\texttt{evidence\_units\_v3}$. In Fig.~\ref{fig:units}C,
+$h_{S1}=\texttt{80a1d348f2908e99}$, and changing 4,500 to 4,800 gives \texttt{660d3b84ad7f6992}. \textbf{(P3) Revision safety (R3)}: editing any character of $S$ or
 changing $v$ changes $h_S$, so an identifier issued for an earlier text cannot resolve against the
 current one; a different text would need a 64-bit prefix collision of SHA-256 to reuse an identifier.
 
