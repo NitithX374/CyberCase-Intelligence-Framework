@@ -77,3 +77,11 @@
   (c1 -> S2/U002 and S1/U003, c2 -> S1/U001) without crossing.
 - The binding checks moved to one card under the sources, so no arrow crosses text.
 - Caption updated. 15 pages, no overfull boxes.
+
+## 2026-10-14 — provenance figure laid out horizontally
+- Fig. 3 now reads left to right: summary sentence -> claims (why: R(sigma)) -> source units
+  (where: beta(E+(c))), with the binding card and the bound/mixed/unbound note underneath. Colours as before.
+- Claim IDs reassigned so no arrows cross: A-01 = actor claim (S1/U001), A-02 = event claim
+  (S1/U003, S2/U002). Not referenced in the text.
+- Figs. 1-2 kept as they were (a plainer LongCite-style redraw was tried and set aside at the authors' request).
+- 15 pages, no overfull boxes.

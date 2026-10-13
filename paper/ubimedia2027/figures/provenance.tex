@@ -1,4 +1,4 @@
-% Provenance-chain figure, in the style of Fig. 2 (panels, unit cards, colour tags) with
+% Provenance-chain figure (horizontal), in the style of Fig. 2 (panels, unit cards, colour tags) with
 % Attribute-First-style colour linking between claims and the source units they cite.
 % Compile separately (XeLaTeX/Tectonic):  tectonic figures/provenance.tex -> figures/provenance.pdf
 % Offsets and revisions follow the production rules (evidence_units_v3):
@@ -34,63 +34,66 @@
   arrB/.style={-{Stealth[length=1.8mm]}, line width=1pt, cBD},
   arr/.style={-{Stealth[length=1.6mm]}, thick, ink!70}]
 
-%---------------- summary sentence
-\node[anchor=north west, inner sep=1pt, font=\fontsize{18}{18}\selectfont, text=llm] (mj) at (0,0) {\faRobot};
-\node[card=ink!40, fill=gray!6, text width=13.3cm] (sum) at ($(mj.north east)+(0.2,0)$) {%
-{\footnotesize\bfseries Summary sentence $\sigma$} {\footnotesize (written by $M_J$)}\\
+% Horizontal layout, read left to right: summary sentence -> claims (why) -> source units (where).
+% c1 = A-01 (actor) cites S1/U001; c2 = A-02 (event) cites S1/U003 and S2/U002, so no arrows cross.
+
+%---------------- sources (right column): unit rows are top-level nodes so arrows can land on them
+\def\xs{9.93}
+\coordinate (xsP) at (\xs,0);
+\coordinate (xcP) at (4.3,0);
+\node[anchor=north west, inner sep=0pt, font=\sffamily\footnotesize] (s1t) at (\xs+0.14,-0.14)
+  {\textbf{Source $S_1$}\ \ typed narrative};
+\node[unit=5.1cm, fill=cA] (s1u1) at ($(s1t.south west)+(0,-0.12)$) {\utag{cAD}{U001}\ {\ttfamily\footnotesize[0,73)}\ \ \thai เมื่อวันที่ 3 มีนาคม ดิฉันได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง};
+\node[unit=5.1cm, fill=white] (s1u2) at (s1u1.south west) {\utag{ink!45}{U002}\ {\ttfamily\footnotesize[73,107)}\ \ \thai\textcolor{ink!55}{แจ้งว่าพัสดุติดค้างที่ด่านศุลกากร}};
+\node[unit=5.1cm, fill=cB] (s1u3) at (s1u2.south west) {\utag{cBD}{U003}\ {\ttfamily\footnotesize[107,157)}\ \ \thai ตกใจมาก จึงโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234};
+\path (s1u3.south -| xsP) ++(0,-0.14) coordinate (s1b);
+\path (s1b) ++(0,-0.3) coordinate (s2top);
+\node[anchor=north west, inner sep=0pt, font=\sffamily\footnotesize] (s2t) at ($(s2top)+(0.14,-0.14)$)
+  {\textbf{Source $S_2$}\ \ \faReceipt\ bank slip, OCR, page 1};
+\node[unit=5.1cm, fill=white] (s2u1) at ($(s2t.south west)+(0,-0.12)$) {\utag{ink!45}{U001}\ {\ttfamily\footnotesize[0,14)}\ \ \thai\textcolor{ink!55}{โอนเงินสำเร็จ}};
+\node[unit=5.1cm, fill=cB] (s2u2) at (s2u1.south west) {\utag{cBD}{U002}\ {\ttfamily\footnotesize[14,37)}\ \ \thai จำนวนเงิน 4,500.00 บาท};
+\node[unit=5.1cm, fill=white] (s2u3) at (s2u2.south west) {\utag{ink!45}{U003}\ {\ttfamily\footnotesize[37,58)}\ \ \thai\textcolor{ink!55}{ไปยังบัญชีลงท้าย 1234}};
+\path (s2u3.south -| xsP) ++(0,-0.14) coordinate (s2b);
+\path (s1u1.east) ++(0.14,0) coordinate (xr);
+\begin{scope}[on background layer]
+\node[draw=ink!40, rounded corners=3pt, line width=0.6pt, inner sep=0pt, fill=white, fit=(xsP)(s1b -| xr)] (s1) {};
+\node[draw=ink!40, rounded corners=3pt, line width=0.6pt, inner sep=0pt, fill=white, fit=(s2top)(s2b -| xr)] (s2) {};
+\end{scope}
+
+%---------------- claims (middle column), each level with the units it cites
+\node[card=cAD, fill=cA, text width=4.0cm, anchor=west] (c1) at (xcP |- s1u1.west) {%
+\utag{cAD}{A-01}\ \ {\footnotesize\bfseries $c_1$}\ \ {\footnotesize actor, reported}\\
+\thai ผู้ส่งข้อความอ้างว่าเป็นบริษัทขนส่ง\\
+{\footnotesize $E^{+}(c_1)$: \texttt{S1/U001}}};
+\coordinate (c2y) at ($(s1u3.west)!0.5!(s2u2.west)$);
+\node[card=cBD, fill=cB, text width=4.0cm, anchor=west] (c2) at (xcP |- c2y) {%
+\utag{cBD}{A-02}\ \ {\footnotesize\bfseries $c_2$}\ \ {\footnotesize event, reported}\\
+\thai ผู้เสียหายโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234\\
+{\footnotesize $E^{+}(c_2)$: \texttt{S1/U003}, \texttt{S2/U002}}};
+
+%---------------- summary sentence (left column)
+\coordinate (smid) at ($(c1.west)!0.5!(c2.west)$);
+\node[card=ink!40, fill=gray!6, text width=2.9cm, anchor=west] (sum) at (smid -| 0,0) {%
+{\footnotesize\bfseries Summary sentence $\sigma$}\\{\footnotesize (written by $M_J$)}\\[2pt]
 \thai ผู้เสียหายโอนเงิน 4,500 บาท หลังได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง
 \utag{cAD}{A-01}\,\utag{cBD}{A-02}};
 
-%---------------- claims (c1 above S2, c2 above S1)
-\node[card=cAD, fill=cA, text width=6.35cm] (c1) at ($(sum.south west)+(0,-0.75)$) {%
-\utag{cAD}{A-01}\ \ {\footnotesize\bfseries claim $c_1$} {\footnotesize event, reported}\\
-\thai ผู้เสียหายโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234\\
-{\footnotesize $E^{+}(c_1)$: \texttt{S1/U003}, \texttt{S2/U002}}};
-\node[card=cBD, fill=cB, text width=6.85cm] (c2) at ($(c1.north east)+(0.6,0)$) {%
-\utag{cBD}{A-02}\ \ {\footnotesize\bfseries claim $c_2$} {\footnotesize actor, reported}\\
-\thai ผู้ส่งข้อความอ้างว่าเป็นบริษัทขนส่ง\\
-{\footnotesize $E^{+}(c_2)$: \texttt{S1/U001}}};
-\draw[arrA] ($(sum.south)+(-2.6,0)$) -- node[lab, right, text=cAD]{why: $R(\sigma)$} ($(c1.north)+(1.0,0)$);
-\draw[arrB] ($(sum.south)+(2.6,0)$) -- node[lab, right, text=cBD]{why: $R(\sigma)$} ($(c2.north)+(-1.0,0)$);
-
-%---------------- sources: unit rows are top-level nodes so arrows can land on them
-\path let \p1=(c1.south), \p2=(c2.south) in coordinate (sTop) at (0,{min(\y1,\y2)-1.0cm});
-\node[anchor=north west, inner sep=0pt, font=\sffamily\footnotesize] (s2t) at ($(sTop -| c1.west)+(0.14,-0.14)$)
-  {\textbf{Source $S_2$}\ \ \faReceipt\ bank slip, OCR, page 1};
-\node[unit=6.1cm, fill=white] (s2u1) at ($(s2t.south west)+(0,-0.12)$) {\utag{ink!45}{U001}\ {\ttfamily\footnotesize[0,14)}\ \ \thai\textcolor{ink!55}{โอนเงินสำเร็จ}};
-\node[unit=6.1cm, fill=cA] (s2u2) at (s2u1.south west) {\utag{cAD}{U002}\ {\ttfamily\footnotesize[14,37)}\ \ \thai จำนวนเงิน 4,500.00 บาท};
-\node[unit=6.1cm, fill=white] (s2u3) at (s2u2.south west) {\utag{ink!45}{U003}\ {\ttfamily\footnotesize[37,58)}\ \ \thai\textcolor{ink!55}{ไปยังบัญชีลงท้าย 1234}};
-
-\node[anchor=north west, inner sep=0pt, font=\sffamily\footnotesize] (s1t) at ($(sTop -| c2.west)+(0.14,-0.14)$)
-  {\textbf{Source $S_1$}\ \ typed narrative};
-\node[unit=6.6cm, fill=cB] (s1u1) at ($(s1t.south west)+(0,-0.12)$) {\utag{cBD}{U001}\ {\ttfamily\footnotesize[0,73)}\ \ \thai เมื่อวันที่ 3 มีนาคม ดิฉันได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง};
-\node[unit=6.6cm, fill=white] (s1u2) at (s1u1.south west) {\utag{ink!45}{U002}\ {\ttfamily\footnotesize[73,107)}\ \ \thai\textcolor{ink!55}{แจ้งว่าพัสดุติดค้างที่ด่านศุลกากร}};
-\node[unit=6.6cm, fill=cA] (s1u3) at (s1u2.south west) {\utag{cAD}{U003}\ {\ttfamily\footnotesize[107,157)}\ \ \thai ตกใจมาก จึงโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234};
-
-\path let \p1=(s2u3.south), \p2=(s1u3.south) in coordinate (sBot) at (0,{min(\y1,\y2)-0.14cm});
-\begin{scope}[on background layer]
-\node[draw=ink!40, rounded corners=3pt, line width=0.6pt, inner sep=0pt, fill=white, fit=(sTop -| c1.west)(sBot -| c1.east)] (s2) {};
-\node[draw=ink!40, rounded corners=3pt, line width=0.6pt, inner sep=0pt, fill=white, fit=(sTop -| c2.west)(sBot -| c2.east)] (s1) {};
-\end{scope}
-
-%---------------- where-arrows: each claim lands on exactly the units it cites
-\path let \p1=(c1.south), \p2=(c2.south) in coordinate (mid) at (0,{min(\y1,\y2)-0.3cm});
-\coordinate (gapx) at ($(c1.east)!0.5!(c2.west)$);
-% c1 -> S2/U002, down the left margin
-\draw[arrA, rounded corners=5pt] (c1.west) -- ++(-0.38,0) |- (s2u2.west);
-% c1 -> S1/U003, through the gap between the two sources
-\draw[arrA, rounded corners=5pt] ($(c1.south)+(-0.9,0)$) -- ($(c1.south)+(-0.9,0)$ |- mid)
-  -- node[lab, below, text=cAD, pos=0.5]{where: $\beta(E^{+}(c_1))$} (gapx |- mid) -- (gapx |- s1u3.west) -- (s1u3.west);
-% c2 -> S1/U001, straight down
-\coordinate (c2x) at ($(s1u1.north)+(1.6,0)$);
-\draw[arrB] (c2x |- c2.south) -- node[lab, right, text=cBD, pos=0.4]{where: $\beta(E^{+}(c_2))$} (c2x |- s1u1.north);
+%---------------- why-arrows (summary -> claims) and where-arrows (claims -> cited units)
+\draw[arrA] ($(sum.east)+(0,0.12)$) -- (c1.west);
+\draw[arrB] ($(sum.east)+(0,-0.12)$) -- (c2.west);
+\node[font=\sffamily\footnotesize, text=ink!75, align=center, inner sep=0pt] at ($(sum.east)!0.62!(c1.west |- sum.east)$) {\textit{why}\\$R(\sigma)$};
+\draw[arrA] (c1.east) -- (s1u1.west);
+\draw[arrB] (c2.east) to[out=0, in=180] (s1u3.west);
+\draw[arrB] (c2.east) to[out=0, in=180] (s2u2.west);
+\node[font=\sffamily\footnotesize, text=ink!75, anchor=south, inner sep=1pt] at ($(c1.east)!0.5!(s1u1.west)+(0,0.05)$) {\textit{where}};
+\node[font=\sffamily\footnotesize, text=ink!75, anchor=north, inner sep=1pt] at ($(c1.east)!0.5!(s1u1.west)+(0,-0.05)$) {$\beta(E^{+}(c))$};
 
 %---------------- binding (what every where-arrow does) + legend
-\node[card=ink!35, fill=gray!8, text width=14.1cm, font=\sffamily\footnotesize] (bind) at ($(sBot -| c1.west)+(0,-0.22)$) {%
+\node[card=ink!35, fill=gray!8, text width=14.85cm, font=\sffamily\footnotesize] (bind) at ($(s2b -| sum.west)+(0,-0.25)$) {%
 \textbf{\faLink\ Binding $\beta$ on every where-arrow:} expand the alias with the recorded $h_S$ (\texttt{S1/U003} $\to$ \texttt{S1:U003-80a1d348f2908e99}), then check in order
 \texttt{unknown\_source}, \texttt{malformed\_id}, \texttt{cross\_source}, \texttt{stale\_id}, \texttt{unknown\_unit}, \texttt{empty\_unit}; plus \texttt{duplicate\_id}.\\
 \textcolor{cAD}{\faCheckCircle}\ pass: reproduce $S[a{:}b]$ with its page\qquad \textcolor{bad}{\faTimesCircle}\ fail: shown as an invalid pointer, never repaired};
-\node[anchor=north west, font=\sffamily\footnotesize, text=ink!80, text width=14.4cm] (leg) at ($(bind.south west)+(0,-0.1)$) {%
+\node[anchor=north west, font=\sffamily\footnotesize, text=ink!80, text width=15.0cm] (leg) at ($(bind.south west)+(0,-0.1)$) {%
 $\sigma$ is \textbf{bound} when every claim in $R(\sigma)$ has resolved support (otherwise \textbf{mixed}, \textbf{unbound} or \textbf{no\_claim}).};
 \end{tikzpicture}
 \end{document}
