@@ -70,3 +70,10 @@
   (A) source -> segmenter -> unit cards with offsets; (B) 40-char fixed chunks split "โอนเงิน" from the
   amount vs. units; (C) content hash, alias, and the stale ID after editing 4,500 -> 4,800
   (h' = 660d3b84ad7f6992, computed with the production formula).
+
+## 2026-10-13 (late night) — provenance figure redesigned
+- Fig. 3 rebuilt to match Fig. 2: colour per claim (A-01 green, A-02 blue), unit rows coloured by the
+  claim that cites them (grey = uncited), and where-arrows that land on exactly the cited unit rows
+  (c1 -> S2/U002 and S1/U003, c2 -> S1/U001) without crossing.
+- The binding checks moved to one card under the sources, so no arrow crosses text.
+- Caption updated. 15 pages, no overfull boxes.

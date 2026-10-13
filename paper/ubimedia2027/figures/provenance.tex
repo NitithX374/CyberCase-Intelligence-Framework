@@ -1,78 +1,96 @@
-% Provenance-chain infographic. Compile separately (XeLaTeX/Tectonic):
-%   tectonic figures/provenance.tex   ->  figures/provenance.pdf
-% Offsets and revisions computed with the production rules (evidence_units_v3).
-% S1 is the narrative of figures/units.tex; S2 is a constructed three-line OCR bank
-% slip ("โอนเงินสำเร็จ\nจำนวนเงิน 4,500.00 บาท\nไปยังบัญชีลงท้าย 1234",
-% revision 64037a8f547b2daa). Failure reasons are the ones returned by
-% EvidenceIndex.resolve and bind_citations. Constructed example, not case data.
-\documentclass[tikz,border=2pt]{standalone}
+% Provenance-chain figure, in the style of Fig. 2 (panels, unit cards, colour tags) with
+% Attribute-First-style colour linking between claims and the source units they cite.
+% Compile separately (XeLaTeX/Tectonic):  tectonic figures/provenance.tex -> figures/provenance.pdf
+% Offsets and revisions follow the production rules (evidence_units_v3):
+%   S1 (narrative of figures/units.tex): U001 [0,73) U002 [73,107) U003 [107,157); h = 80a1d348f2908e99
+%   S2 (constructed OCR bank slip "โอนเงินสำเร็จ\nจำนวนเงิน 4,500.00 บาท\nไปยังบัญชีลงท้าย 1234"):
+%      U001 [0,14) U002 [14,37) U003 [37,58); h = 64037a8f547b2daa
+% Failure reasons are those returned by EvidenceIndex.resolve and bind_citations.
+% Constructed example, not case data.
+\documentclass[tikz,border=3pt]{standalone}
 \usepackage{fontspec}
-\newfontfamily\thai{Loma}[Scale=0.78]
+\usepackage{fontawesome5}
+\usepackage{amsmath}
+\newfontfamily\thai{Loma}[Scale=0.86]
 \XeTeXlinebreaklocale "th"
 \XeTeXlinebreakskip=0pt
 \usepackage{xcolor}
-\usepackage{amsmath}
-\usepackage{bm}
 \usetikzlibrary{positioning,arrows.meta,calc,fit,backgrounds}
-\definecolor{ua}{HTML}{DCE9F7}
-\definecolor{ub}{HTML}{FBE3C8}
-\definecolor{uc}{HTML}{DDEFD9}
-\definecolor{why}{HTML}{6A4C93}
-\definecolor{where}{HTML}{1F6F8B}
-\definecolor{ink}{HTML}{333333}
+\definecolor{ink}{HTML}{222222}
+\definecolor{cA}{HTML}{D7EED2}\definecolor{cAD}{HTML}{2E8B57}   % claim c1 = A-01
+\definecolor{cB}{HTML}{D6E6F7}\definecolor{cBD}{HTML}{2E6DB4}   % claim c2 = A-02
+\definecolor{bad}{HTML}{C0392B}
+\definecolor{llm}{HTML}{1F4E79}
+\definecolor{panel}{HTML}{BBBBBB}
+\newcommand{\utag}[2]{{\setlength{\fboxsep}{1pt}\colorbox{#1}{\textcolor{white}{\sffamily\bfseries\scriptsize #2}}}}
 \begin{document}
 \begin{tikzpicture}[
-  font=\scriptsize\sffamily, text=ink,
-  card/.style={draw=ink!60, rounded corners=1.5pt, inner sep=3pt, align=left, anchor=north west, fill=white},
-  head/.style={font=\tiny\bfseries\sffamily, text=ink!70},
-  arr/.style={-{Stealth[length=1.4mm]}, semithick},
-  lbl/.style={font=\tiny\sffamily\itshape, fill=white, inner sep=1pt}]
+  font=\sffamily\small, text=ink,
+  every node/.append style={execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000}},
+  card/.style={draw=#1, rounded corners=3pt, line width=0.6pt, inner sep=4pt, align=left, anchor=north west},
+  unit/.style={draw=ink!25, inner sep=3pt, align=left, anchor=north west, text width=#1},
+  lab/.style={font=\sffamily\footnotesize\itshape, inner sep=1pt, fill=white},
+  arrA/.style={-{Stealth[length=1.8mm]}, line width=1pt, cAD},
+  arrB/.style={-{Stealth[length=1.8mm]}, line width=1pt, cBD},
+  arr/.style={-{Stealth[length=1.6mm]}, thick, ink!70}]
 
-% ---- summary sentence
-\node[card, fill=gray!8, text width=11.2cm] (sum) at (0,0) {%
-{\tiny\bfseries\sffamily SUMMARY SENTENCE $\bm{\sigma}$ (written by $M_J$)}\\
-\thai ผู้เสียหายโอนเงิน 4,500 บาท หลังได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง {\sffamily\bfseries [A-01, A-02]}};
+%---------------- summary sentence
+\node[anchor=north west, inner sep=1pt, font=\fontsize{18}{18}\selectfont, text=llm] (mj) at (0,0) {\faRobot};
+\node[card=ink!40, fill=gray!6, text width=13.3cm] (sum) at ($(mj.north east)+(0.2,0)$) {%
+{\footnotesize\bfseries Summary sentence $\sigma$} {\footnotesize (written by $M_J$)}\\
+\thai ผู้เสียหายโอนเงิน 4,500 บาท หลังได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง
+\utag{cAD}{A-01}\,\utag{cBD}{A-02}};
 
-% ---- claims
-\node[card, fill=uc, text width=5.35cm] (a1) at ($(sum.south west)+(0,-0.5)$) {%
-{\tiny\bfseries\sffamily CLAIM $\bm{c_1}$ = A-01}\quad{\tiny event, reported}\\
+%---------------- claims (c1 above S2, c2 above S1)
+\node[card=cAD, fill=cA, text width=6.35cm] (c1) at ($(sum.south west)+(0,-0.75)$) {%
+\utag{cAD}{A-01}\ \ {\footnotesize\bfseries claim $c_1$} {\footnotesize event, reported}\\
 \thai ผู้เสียหายโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234\\
-{\ttfamily\tiny $E^{+}(c_1)$: S1/U003, S2/U002}};
-\node[card, fill=ua, text width=5.35cm] (a2) at ($(a1.north west)+(5.85,0)$) {%
-{\tiny\bfseries\sffamily CLAIM $\bm{c_2}$ = A-02}\quad{\tiny actor, reported}\\
+{\footnotesize $E^{+}(c_1)$: \texttt{S1/U003}, \texttt{S2/U002}}};
+\node[card=cBD, fill=cB, text width=6.85cm] (c2) at ($(c1.north east)+(0.6,0)$) {%
+\utag{cBD}{A-02}\ \ {\footnotesize\bfseries claim $c_2$} {\footnotesize actor, reported}\\
 \thai ผู้ส่งข้อความอ้างว่าเป็นบริษัทขนส่ง\\
-{\ttfamily\tiny $E^{+}(c_2)$: S1/U001}};
-\draw[arr, why] ($(sum.south west)+(2.6,0)$) -- node[lbl, text=why, right]{$R(\sigma)$} (a1.north);
-\draw[arr, why] ($(sum.south east)+(-2.2,0)$) -- node[lbl, text=why, right]{why} (a2.north);
+{\footnotesize $E^{+}(c_2)$: \texttt{S1/U001}}};
+\draw[arrA] ($(sum.south)+(-2.6,0)$) -- node[lab, right, text=cAD]{why: $R(\sigma)$} ($(c1.north)+(1.0,0)$);
+\draw[arrB] ($(sum.south)+(2.6,0)$) -- node[lab, right, text=cBD]{why: $R(\sigma)$} ($(c2.north)+(-1.0,0)$);
 
-% ---- binding strip
-\node[card, fill=gray!5, text width=11.2cm, font=\tiny\sffamily] (bind) at ($(a1.south west)+(0,-0.45)$) {%
-{\tiny\bfseries\sffamily DETERMINISTIC BINDING $\bm{\beta}$}\quad
-expand alias with the revision recorded before calling $M_R$:\enspace
-{\ttfamily S1/U003} $\to$ {\ttfamily S1:U003-80a1d348f2908e99}\\[1pt]
-check, in order:\enspace {\ttfamily unknown\_source $\cdot$ malformed\_id $\cdot$ cross\_source $\cdot$ stale\_id $\cdot$ unknown\_unit $\cdot$ empty\_unit $\cdot$ duplicate\_id}\\[1pt]
-any failure $\Rightarrow$ $\bot_\rho$, stored and shown as an \emph{invalid pointer}, never repaired;\enspace pass $\Rightarrow$ reproduce $\mathit{source}[\mathit{start}{:}\mathit{end}]$};
-\draw[arr, ink!60] (a1.south) -- (a1.south |- bind.north);
-\draw[arr, ink!60] (a2.south) -- (a2.south |- bind.north);
+%---------------- sources: unit rows are top-level nodes so arrows can land on them
+\path let \p1=(c1.south), \p2=(c2.south) in coordinate (sTop) at (0,{min(\y1,\y2)-1.0cm});
+\node[anchor=north west, inner sep=0pt, font=\sffamily\footnotesize] (s2t) at ($(sTop -| c1.west)+(0.14,-0.14)$)
+  {\textbf{Source $S_2$}\ \ \faReceipt\ bank slip, OCR, page 1};
+\node[unit=6.1cm, fill=white] (s2u1) at ($(s2t.south west)+(0,-0.12)$) {\utag{ink!45}{U001}\ {\ttfamily\footnotesize[0,14)}\ \ \thai\textcolor{ink!55}{โอนเงินสำเร็จ}};
+\node[unit=6.1cm, fill=cA] (s2u2) at (s2u1.south west) {\utag{cAD}{U002}\ {\ttfamily\footnotesize[14,37)}\ \ \thai จำนวนเงิน 4,500.00 บาท};
+\node[unit=6.1cm, fill=white] (s2u3) at (s2u2.south west) {\utag{ink!45}{U003}\ {\ttfamily\footnotesize[37,58)}\ \ \thai\textcolor{ink!55}{ไปยังบัญชีลงท้าย 1234}};
 
-% ---- citations (where-provenance)
-\node[card, fill=uc, text width=3.45cm] (c1) at ($(bind.south west)+(0,-0.45)$) {%
-{\tiny\bfseries\sffamily S1 \,[107,157)}\quad{\tiny narrative}\\
-\thai ตกใจมาก จึงโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234};
-\node[card, fill=uc, text width=3.45cm] (c2) at ($(c1.north west)+(3.85,0)$) {%
-{\tiny\bfseries\sffamily S2 \,[14,37)}\quad{\tiny bank slip, OCR, page 1}\\
-\thai จำนวนเงิน 4,500.00 บาท};
-\node[card, fill=ua, text width=3.45cm] (c3) at ($(c1.north west)+(7.7,0)$) {%
-{\tiny\bfseries\sffamily S1 \,[0,73)}\quad{\tiny narrative}\\
-\thai เมื่อวันที่ 3 มีนาคม ดิฉันได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง};
-\foreach \c in {c1,c2,c3} \draw[arr, where] (\c.north |- bind.south) -- (\c.north);
-\node[lbl, text=where, anchor=west] at ($(c1.north east)!0.5!(c2.north west)+(0,0.22)$) {where};
+\node[anchor=north west, inner sep=0pt, font=\sffamily\footnotesize] (s1t) at ($(sTop -| c2.west)+(0.14,-0.14)$)
+  {\textbf{Source $S_1$}\ \ typed narrative};
+\node[unit=6.6cm, fill=cB] (s1u1) at ($(s1t.south west)+(0,-0.12)$) {\utag{cBD}{U001}\ {\ttfamily\footnotesize[0,73)}\ \ \thai เมื่อวันที่ 3 มีนาคม ดิฉันได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง};
+\node[unit=6.6cm, fill=white] (s1u2) at (s1u1.south west) {\utag{ink!45}{U002}\ {\ttfamily\footnotesize[73,107)}\ \ \thai\textcolor{ink!55}{แจ้งว่าพัสดุติดค้างที่ด่านศุลกากร}};
+\node[unit=6.6cm, fill=cA] (s1u3) at (s1u2.south west) {\utag{cAD}{U003}\ {\ttfamily\footnotesize[107,157)}\ \ \thai ตกใจมาก จึงโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234};
 
-% ---- legend / states
-\node[anchor=north west, align=left, text width=11.2cm, font=\tiny\sffamily, text=ink!80] (leg) at ($(c1.south west |- c3.south)+(0,-0.1)$) {%
-\textcolor{why}{\textbf{why}}: $R(\sigma)$, the claims a sentence rests on (identifiers written by $M_J$, checked against $C$).\quad
-\textcolor{where}{\textbf{where}}: $\beta(E^{+}(c))$, the exact source, character range and page, reproduced by the system.\\
-Binding state of a sentence: \textbf{bound} (all linked Claims resolve) $\cdot$ \textbf{mixed} $\cdot$ \textbf{unbound} $\cdot$ \textbf{no\_claim}.\quad
-Optional warning layer (Sect.~4.6): each bound claim may also carry $\mathrm{w}(c)\in$ \texttt{supported} / \texttt{not\_supported} / \texttt{unassessed}; it is displayed, never used to filter, never sent to a model.};
+\path let \p1=(s2u3.south), \p2=(s1u3.south) in coordinate (sBot) at (0,{min(\y1,\y2)-0.14cm});
+\begin{scope}[on background layer]
+\node[draw=ink!40, rounded corners=3pt, line width=0.6pt, inner sep=0pt, fill=white, fit=(sTop -| c1.west)(sBot -| c1.east)] (s2) {};
+\node[draw=ink!40, rounded corners=3pt, line width=0.6pt, inner sep=0pt, fill=white, fit=(sTop -| c2.west)(sBot -| c2.east)] (s1) {};
+\end{scope}
+
+%---------------- where-arrows: each claim lands on exactly the units it cites
+\path let \p1=(c1.south), \p2=(c2.south) in coordinate (mid) at (0,{min(\y1,\y2)-0.3cm});
+\coordinate (gapx) at ($(c1.east)!0.5!(c2.west)$);
+% c1 -> S2/U002, down the left margin
+\draw[arrA, rounded corners=5pt] (c1.west) -- ++(-0.38,0) |- (s2u2.west);
+% c1 -> S1/U003, through the gap between the two sources
+\draw[arrA, rounded corners=5pt] ($(c1.south)+(-0.9,0)$) -- ($(c1.south)+(-0.9,0)$ |- mid)
+  -- node[lab, below, text=cAD, pos=0.5]{where: $\beta(E^{+}(c_1))$} (gapx |- mid) -- (gapx |- s1u3.west) -- (s1u3.west);
+% c2 -> S1/U001, straight down
+\coordinate (c2x) at ($(s1u1.north)+(1.6,0)$);
+\draw[arrB] (c2x |- c2.south) -- node[lab, right, text=cBD, pos=0.4]{where: $\beta(E^{+}(c_2))$} (c2x |- s1u1.north);
+
+%---------------- binding (what every where-arrow does) + legend
+\node[card=ink!35, fill=gray!8, text width=14.1cm, font=\sffamily\footnotesize] (bind) at ($(sBot -| c1.west)+(0,-0.22)$) {%
+\textbf{\faLink\ Binding $\beta$ on every where-arrow:} expand the alias with the recorded $h_S$ (\texttt{S1/U003} $\to$ \texttt{S1:U003-80a1d348f2908e99}), then check in order
+\texttt{unknown\_source}, \texttt{malformed\_id}, \texttt{cross\_source}, \texttt{stale\_id}, \texttt{unknown\_unit}, \texttt{empty\_unit}; plus \texttt{duplicate\_id}.\\
+\textcolor{cAD}{\faCheckCircle}\ pass: reproduce $S[a{:}b]$ with its page\qquad \textcolor{bad}{\faTimesCircle}\ fail: shown as an invalid pointer, never repaired};
+\node[anchor=north west, font=\sffamily\footnotesize, text=ink!80, text width=14.4cm] (leg) at ($(bind.south west)+(0,-0.1)$) {%
+$\sigma$ is \textbf{bound} when every claim in $R(\sigma)$ has resolved support (otherwise \textbf{mixed}, \textbf{unbound} or \textbf{no\_claim}).};
 \end{tikzpicture}
 \end{document}
