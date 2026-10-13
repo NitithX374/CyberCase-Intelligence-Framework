@@ -125,3 +125,6 @@
   papers). Numbers traced in claim_evidence_map.md.
 - Observation: real SaT splits the Fig. 2 example into 2 units ([0,107), [107,157)), not the 3 drawn;
   the caption already says the split is illustrative; the hash 80a1d348f2908e99 matches.
+
+## 2026-10-14 — author name
+- Second author's surname corrected to "Khamwiset" (was "Kahmwiset") in \author and \authorrunning.

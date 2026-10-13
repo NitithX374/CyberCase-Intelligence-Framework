@@ -28,7 +28,7 @@
       "figures/overview.pdf (built from figures/overview.tex; needs fontawesome5)",
       "research/traceability_properties/results/properties.json (Table 3, Sect. 5.1)"
     ],
-    "input_sha256": "c4bd6182a6cd9763c170d2b88d799968ac08de6b3c6308362bcf2a5032174032",
-    "pdf_sha256": "e801b8b617dfdfc486de641968e209f246f0846581c6c4c06c581c89ab9b656f"
+    "input_sha256": "064ccad6288e4e30dd82440d09e807b8d93cb6f1799ab535a453233a04336971",
+    "pdf_sha256": "75c8ddd880d51dd3093432273b695dc6bdddc4a240a7d994dc2a9084332c896f"
   }
 }
