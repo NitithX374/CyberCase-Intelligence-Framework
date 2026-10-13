@@ -26,7 +26,7 @@
 
 \begin{document}
 
-\title{Traceable by Construction: Evidence-Grounded LLM Analysis of Thai Cybercrime Cases}
+\title{Traceable by Construction: Evidence-Grounded LLM Analysis of Case Files}
 \titlerunning{Traceable by Construction}
 
 \author{Thattapon Surasak\inst{1} \and Kritsakorn Kahmwiset\inst{1}}
@@ -54,7 +54,7 @@ unsupported claims cited in summaries from 100\% to 22.2\% while withholding 31\
 which is why it only warns.
 
 \keywords{Evidence traceability \and Provenance \and Large language models \and
-Attributed generation \and Cybercrime investigation \and Thai language}
+Attributed generation \and Cybercrime investigation \and Low-resource languages}
 \end{abstract}
 
 %======================================================================
@@ -76,7 +76,7 @@ with an explicit evidence identifier \cite{yang2026traceable}. In all of these, 
 pointer is still text written by the model, so its existence and accuracy must be checked
 afterwards, often by people. A wrong citation looks exactly like a correct one to a busy reader.
 
-Thai adds two difficulties. Sentence boundaries are not marked by punctuation, so even deciding
+Thai, a low-resource language for this task, adds two difficulties. Sentence boundaries are not marked by punctuation, so even deciding
 what to quote requires a segmenter \cite{phatthiyaphaibun2023pythainlp}; and most claim
 verification resources and checkpoints are English. The multilingual NLI checkpoint we use, for
 example, was deliberately trained without Thai NLI data \cite{laurer2022mdeberta}. Any semantic

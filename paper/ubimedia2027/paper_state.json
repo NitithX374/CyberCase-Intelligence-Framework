@@ -26,7 +26,7 @@
       "figures/results.pdf (built by figures/make_results.py from recorded result files)",
       "figures/overview.pdf (built from figures/overview.tex; needs fontawesome5)"
     ],
-    "input_sha256": "7307804b45533f4404d388a84a7fe751c5a03866c2469607b35d8b32110f83d6",
-    "pdf_sha256": "af661980bc46e176bc5db710d7dffb5ad29506fb529d05af80dd402e06e45144"
+    "input_sha256": "769d81dc3a8a82b69d2bbfe362b8f09de037ed0c8e40a90f6fff4147c398d447",
+    "pdf_sha256": "6c7922a8d781970e34e6b60519b17414228d0cfc185ec6e7d2c0c90543cdf1f2"
   }
 }

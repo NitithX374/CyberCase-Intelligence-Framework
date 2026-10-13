@@ -95,3 +95,9 @@
 - Checked: numeric tokens identical to the previous version once tags are removed; \cite set identical.
 - 15 pages, no overfull boxes. Only remaining TODO: acknowledgements (authors).
 - P1-P5 / R1-R5 remain as internal shorthand in claim_evidence_map.md and paper_story.md only.
+
+## 2026-10-14 — title and keywords
+- Title: "Traceable by Construction: Evidence-Grounded LLM Analysis of Case Files" (Thai and cybercrime
+  dropped from the title; no real Thai cases were evaluated, so the title no longer implies it).
+- Keyword "Thai language" -> "Low-resource languages"; intro: "Thai, a low-resource language for this task, ...".
+- Thai stays in the body (segmentation motivation, Fig. 2 example, MT-Thai evaluation). 15 pages.
