@@ -70,3 +70,10 @@ benefit; best backbone; population-level effects.
 | P5 closed references → analysis fails (502) | `analysis/claim_gate.py::check_judgement_references` |
 | Fig. 2/3 offsets and hashes (S1: 157 chars, [0,73) [73,107) [107,157), h=80a1d348f2908e99; S2: 58 chars, [14,37), h=64037a8f547b2daa) | computed with the production formulas; sentence split in step 1 is illustrative (stated in caption) |
 | Removed from this version | design-decision table, checkpoint table, positioning table (content still in this map above) |
+
+## 2026-10-13 — notation table and results figure
+- Table 1 (Notation) defines K, S, U(S), v, h_S, id(u), alpha(u), delta, L, M_G/M_R/M_J, C, c,
+  E+(c)/E-(c), beta, Sigma/sigma, R(sigma), s(c), w(c); sigmoid written as sig to avoid clashing with sigma.
+- Fig. 4 (`figures/results.pdf`) replaces the three result tables. `figures/make_results.py` reads
+  every value from `nli_grounding_experiment/outputs/canonical/final_metrics.json` and
+  `research/attribution_benchmark/results/b1_20261007.json`; no number is typed in.

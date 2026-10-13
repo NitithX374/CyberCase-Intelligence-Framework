@@ -11,6 +11,8 @@
 \XeTeXlinebreaklocale "th"
 \XeTeXlinebreakskip=0pt
 \usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{bm}
 \usetikzlibrary{positioning,arrows.meta,calc,fit,backgrounds}
 \definecolor{ua}{HTML}{DCE9F7}
 \definecolor{ub}{HTML}{FBE3C8}
@@ -28,28 +30,28 @@
 
 % ---- summary sentence
 \node[card, fill=gray!8, text width=11.2cm] (sum) at (0,0) {%
-{\tiny\bfseries\sffamily SUMMARY SENTENCE (Judgement)}\\
+{\tiny\bfseries\sffamily SUMMARY SENTENCE $\bm{\sigma}$ (written by $M_J$)}\\
 \thai ผู้เสียหายโอนเงิน 4,500 บาท หลังได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง {\sffamily\bfseries [A-01, A-02]}};
 
 % ---- claims
 \node[card, fill=uc, text width=5.35cm] (a1) at ($(sum.south west)+(0,-0.5)$) {%
-{\tiny\bfseries\sffamily CLAIM A-01}\quad{\tiny event, reported}\\
+{\tiny\bfseries\sffamily CLAIM $\bm{c_1}$ = A-01}\quad{\tiny event, reported}\\
 \thai ผู้เสียหายโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234\\
-{\ttfamily\tiny supporting: S1/U003, S2/U002}};
+{\ttfamily\tiny $E^{+}(c_1)$: S1/U003, S2/U002}};
 \node[card, fill=ua, text width=5.35cm] (a2) at ($(a1.north west)+(5.85,0)$) {%
-{\tiny\bfseries\sffamily CLAIM A-02}\quad{\tiny actor, reported}\\
+{\tiny\bfseries\sffamily CLAIM $\bm{c_2}$ = A-02}\quad{\tiny actor, reported}\\
 \thai ผู้ส่งข้อความอ้างว่าเป็นบริษัทขนส่ง\\
-{\ttfamily\tiny supporting: S1/U001}};
-\draw[arr, why] ($(sum.south west)+(2.6,0)$) -- node[lbl, text=why, right]{why} (a1.north);
+{\ttfamily\tiny $E^{+}(c_2)$: S1/U001}};
+\draw[arr, why] ($(sum.south west)+(2.6,0)$) -- node[lbl, text=why, right]{$R(\sigma)$} (a1.north);
 \draw[arr, why] ($(sum.south east)+(-2.2,0)$) -- node[lbl, text=why, right]{why} (a2.north);
 
 % ---- binding strip
 \node[card, fill=gray!5, text width=11.2cm, font=\tiny\sffamily] (bind) at ($(a1.south west)+(0,-0.45)$) {%
-{\tiny\bfseries\sffamily DETERMINISTIC BINDING}\quad
-expand alias with the revision recorded before the Reader call:\enspace
+{\tiny\bfseries\sffamily DETERMINISTIC BINDING $\bm{\beta}$}\quad
+expand alias with the revision recorded before calling $M_R$:\enspace
 {\ttfamily S1/U003} $\to$ {\ttfamily S1:U003-80a1d348f2908e99}\\[1pt]
 check, in order:\enspace {\ttfamily unknown\_source $\cdot$ malformed\_id $\cdot$ cross\_source $\cdot$ stale\_id $\cdot$ unknown\_unit $\cdot$ empty\_unit $\cdot$ duplicate\_id}\\[1pt]
-any failure $\Rightarrow$ stored and shown as an \emph{invalid pointer}, never repaired;\enspace pass $\Rightarrow$ reproduce $\mathit{source}[\mathit{start}{:}\mathit{end}]$};
+any failure $\Rightarrow$ $\bot_\rho$, stored and shown as an \emph{invalid pointer}, never repaired;\enspace pass $\Rightarrow$ reproduce $\mathit{source}[\mathit{start}{:}\mathit{end}]$};
 \draw[arr, ink!60] (a1.south) -- (a1.south |- bind.north);
 \draw[arr, ink!60] (a2.south) -- (a2.south |- bind.north);
 
@@ -68,9 +70,9 @@ any failure $\Rightarrow$ stored and shown as an \emph{invalid pointer}, never r
 
 % ---- legend / states
 \node[anchor=north west, align=left, text width=11.2cm, font=\tiny\sffamily, text=ink!80] (leg) at ($(c1.south west |- c3.south)+(0,-0.1)$) {%
-\textcolor{why}{\textbf{why}}: which Claims a sentence rests on (Claim IDs written by Judgement, checked against the Claims it was given).\quad
-\textcolor{where}{\textbf{where}}: the exact source, character range and page, reproduced by the system.\\
+\textcolor{why}{\textbf{why}}: $R(\sigma)$, the claims a sentence rests on (identifiers written by $M_J$, checked against $C$).\quad
+\textcolor{where}{\textbf{where}}: $\beta(E^{+}(c))$, the exact source, character range and page, reproduced by the system.\\
 Binding state of a sentence: \textbf{bound} (all linked Claims resolve) $\cdot$ \textbf{mixed} $\cdot$ \textbf{unbound} $\cdot$ \textbf{no\_claim}.\quad
-Optional warning layer (Sect.~4.6): each bound Claim may also carry \texttt{supported} / \texttt{not\_supported} / \texttt{unassessed}; it is displayed, never used to filter, never sent to a model.};
+Optional warning layer (Sect.~4.6): each bound claim may also carry $\mathrm{w}(c)\in$ \texttt{supported} / \texttt{not\_supported} / \texttt{unassessed}; it is displayed, never used to filter, never sent to a model.};
 \end{tikzpicture}
 \end{document}

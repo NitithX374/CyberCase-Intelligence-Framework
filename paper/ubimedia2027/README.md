@@ -6,6 +6,17 @@ Build (Springer LNCS class comes from the TeX distribution, not vendored here):
 tectonic main.tex        # or: latexmk -pdf main.tex
 ```
 
+The figures are prebuilt and committed as PDFs. To rebuild them:
+
+```bash
+tectonic figures/units.tex            # XeLaTeX; needs the Thai font Loma (TLWG)
+tectonic figures/provenance.tex
+python figures/make_results.py        # from the repository root; reads the recorded result files
+```
+
+`make_results.py` follows the style of the scientific-figure-making skill in
+https://github.com/ChenLiu-1996/figures4papers (palette, spines, bar encoding).
+
 - `main.tex`, `references.bib` — the paper.
 - `paper_story.md` — thesis, contributions, claims to make and to avoid.
 - `claim_evidence_map.md` — where every number comes from.

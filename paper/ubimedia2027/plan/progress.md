@@ -48,3 +48,10 @@
 - Fixed an accuracy issue: the primary segmenter is SaT (wtpsplit), PyThaiNLP is only the fallback.
 - Evaluation retitled "Evaluating the Warning Layer" (RQ1 WiCE, RQ2 MT-TH, RQ3 filter replay).
 - 15 pages, no overfull boxes.
+
+## 2026-10-13 (later) — notation and comparison figure
+- Added Table 1 (Notation); Section 4 rewritten with symbols (M_R, M_J, C, beta, R(sigma), w(c));
+  infographics relabelled to match. Implementation paragraph reduced to one sentence.
+- Three result tables replaced by one 3-panel comparison figure made with matplotlib in the
+  figures4papers house style (figures/make_results.py).
+- 15 pages, no overfull boxes.

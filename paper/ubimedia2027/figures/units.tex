@@ -27,7 +27,7 @@
 
 % ---------- source text
 \coordinate (r0) at (0,0);
-\node[stagelbl] at (r0) {Source S1\\{\tiny\mdseries narrative, 157 characters; Thai marks no sentence ends}};
+\node[stagelbl] at (r0) {Source $S_1$\\{\tiny\mdseries narrative, $|S_1|=157$; Thai marks no sentence ends}};
 \node[chip, fill=gray!8, text width=8.2cm] at ($(r0)+(\X,0)$) {\thai เมื่อวันที่ 3 มีนาคม ดิฉันได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง แจ้งว่าพัสดุติดค้างที่ด่านศุลกากร ตกใจมาก จึงโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234};
 
 % ---------- 1 sentence pieces
@@ -41,7 +41,7 @@
 
 % ---------- 2 merge
 \nextrow{r2}
-\node[stagelbl] at (r2) {2\enspace Merge pieces under 25 characters into the next};
+\node[stagelbl] at (r2) {2\enspace Merge pieces under $\delta=25$ characters into the next};
 \node[chip, fill=ua, text width=3.1cm] (m1) at ($(r2)+(\X,0)$) {\thai เมื่อวันที่ 3 มีนาคม ดิฉันได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง};
 \node[chip, fill=ub, text width=1.75cm] (m2) at ($(m1.north east)+(0.1,0)$) {\thai แจ้งว่าพัสดุติดค้างที่ด่านศุลกากร};
 \node[chip, fill=uc, text width=3.05cm] (m3) at ($(m2.north east)+(0.1,0)$) {\thai ตกใจมาก จึงโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234};
@@ -50,7 +50,7 @@
 
 % ---------- 3 units
 \nextrow{r3}
-\node[stagelbl] at (r3) {3\enspace Cut into contiguous units\\{\tiny\mdseries separators kept; table rows split; at most 2,000 characters}};
+\node[stagelbl] at (r3) {3\enspace Cut into contiguous units $U(S)$\\{\tiny\mdseries separators kept; table rows split; at most $L=2{,}000$ characters}};
 \node[chip, fill=ua, text width=3.1cm, font=\scriptsize\ttfamily] (u1) at ($(r3)+(\X,0)$) {U001 [0,73)};
 \node[chip, fill=ub, text width=1.75cm, font=\scriptsize\ttfamily] (u2) at ($(u1.north east)+(0.1,0)$) {U002 [73,107)};
 \node[chip, fill=uc, text width=3.05cm, font=\scriptsize\ttfamily] (u3) at ($(u2.north east)+(0.1,0)$) {U003 [107,157)};
@@ -58,19 +58,19 @@
 
 % ---------- 4 identifiers
 \nextrow{r4}
-\node[stagelbl] at (r4) {4\enspace Give each unit a content-addressed ID};
+\node[stagelbl] at (r4) {4\enspace Give each unit a content-addressed ID $\mathit{id}(u)$};
 \node[chip, fill=gray!8, text width=8.2cm, font=\scriptsize\ttfamily] (id) at ($(r4)+(\X,0)$) {%
-h = SHA-256("evidence\_units\_v3" \textbackslash0 source\_text)[:16]\\
+h\textsubscript{S1} = SHA-256("evidence\_units\_v3" \textbackslash0 source\_text)[:16]\\
 \phantom{h }= 80a1d348f2908e99\\[2pt]
 S1:U001-80a1d348f2908e99, S1:U002-80a1d348f2908e99, \dots};
 \node[note, text width=8.2cm] at ($(id.south west)+(0,-0.06)$) {Changing one character of S1 changes $h$, so an identifier issued for the old text can never resolve against the new one (\texttt{stale\_id}).};
 
 % ---------- 5 aliases
 \nextrow{r5}
-\node[stagelbl] at (r5) {5\enspace Show the model short aliases; keep the map};
+\node[stagelbl] at (r5) {5\enspace Show $M_R$ short aliases $\alpha(u)$; keep the map};
 \node[chip, fill=gray!8, text width=8.2cm] at ($(r5)+(\X,0)$) {%
-The Reader sees \texttt{U001}--\texttt{U003} with their text only: no offsets, no hashes. The request
-records \texttt{S1}\,$\mapsto$\,\texttt{80a1d348f2908e99} \emph{before} the Reader call and uses it to expand a
-selected alias back to its canonical ID.};
+The reader model $M_R$ sees aliases $\alpha(u)$ = \texttt{U001}--\texttt{U003} with their text only: no offsets, no
+hashes. The request records \texttt{S1}\,$\mapsto$\,$h_{S1}$ = \texttt{80a1d348f2908e99} \emph{before} calling $M_R$ and
+uses it to expand a selected alias back to its canonical ID.};
 \end{tikzpicture}
 \end{document}

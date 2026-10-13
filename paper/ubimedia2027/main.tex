@@ -40,11 +40,11 @@ prompt. Every source is cut into contiguous Source units that reconstruct it exa
 a content-addressed identifier tied to the exact text it came from; the model sees only short
 aliases and may \emph{select} them but never write a quotation; and a deterministic binding step
 resolves each selection to a character range and page, or records it as an invalid pointer. Summary
-sentences end with the identifiers of the Claims they rest on, giving a two-level provenance chain
-from sentence to Claim to verbatim span. As an optional layer, a frozen NLI-based check labels each
-Claim with a warning. On WiCE it improves Macro-F1 over thresholded NLI by 0.033; machine
+sentences end with the identifiers of the claims they rest on, giving a two-level provenance chain
+from sentence to claim to verbatim span. As an optional layer, a frozen NLI-based check labels each
+claim with a warning. On WiCE it improves Macro-F1 over thresholded NLI by 0.033; machine
 translation into Thai raises its false acceptance by 17.4 points; and used as a hard filter it cut
-unsupported Claims cited in summaries from 100\% to 22.2\% while withholding 31\% of supported ones,
+unsupported claims cited in summaries from 100\% to 22.2\% while withholding 31\% of supported ones,
 which is why it only warns.
 
 \keywords{Evidence traceability \and Provenance \and Large language models \and
@@ -90,7 +90,7 @@ contiguous units with exact offsets that reconstruct it character for character
 exact source text, and short aliases for the model whose mapping is fixed before the model is called
 (Sects.~\ref{sec:ids}--\ref{sec:reading}).
 \item \emph{Deterministic binding with a two-level provenance chain}: every selection is resolved or
-recorded with a typed failure reason, and every summary sentence leads to Claims (why) and from Claims
+recorded with a typed failure reason, and every summary sentence leads to claims (why) and from claims
 to verbatim spans with page locators (where) (Sect.~\ref{sec:binding}, Fig.~\ref{fig:provenance}).
 \end{enumerate}
 As a secondary contribution, we evaluate an optional semantic warning layer on English and
@@ -116,7 +116,7 @@ problems stem from missing information about where an artifact came from and how
 source records that justify an output, from \emph{where}-provenance, the exact location a value was
 copied from \cite{buneman2001provenance}; W3C PROV standardises the entities, activities and agents
 needed to record such histories \cite{lebo2013provo}. Our design maps directly onto this vocabulary:
-a citation is where-provenance (a source and a character range), the Claim identifiers on a summary
+a citation is where-provenance (a source and a character range), the claim identifiers on a summary
 sentence are why-provenance, and both are recorded when the output is produced rather than
 reconstructed afterwards.
 
@@ -157,7 +157,7 @@ In domains, it has been applied to legal default-judgment review with a randomis
 boxes \cite{zhao2025finragbenchv} or train specialists on attributability-filtered data
 \cite{schimanski2024specialists}.
 
-We keep the attribute-first order but change what is selected. The Reader selects opaque identifiers
+We keep the attribute-first order but change what is selected. Our reader model selects opaque identifiers
 issued by the system instead of copying spans, so the existence check that attribute-first methods
 perform by string matching becomes an exact lookup, and a quotation can never drift from its source.
 
@@ -178,12 +178,39 @@ what it does at one point in the pipeline.
 \section{Problem Setting and Requirements}\label{sec:problem}
 %======================================================================
 
-A \emph{case} $K$ owns a set of sources $S_1,\dots,S_m$. A source is a string: a narrative typed by
-the user or the text extracted from an uploaded document, with page locators where they exist. An
-analysis of $K$ produces a set of \emph{Claims} $c_1,\dots,c_n$, each a short proposition with a
-type, an epistemic status and two citation lists (supporting and contradicting), and a summary
-$\Sigma = (\sigma_1,\dots,\sigma_k)$ whose sentences each reference a non-empty subset of Claims.
-A \emph{citation} is a triple $(S_i, a, b)$ denoting the substring $S_i[a{:}b]$.
+Table~\ref{tab:notation} lists the notation. A case $K$ owns sources $S_1,\dots,S_m$; a source is a
+string (a typed narrative or the text extracted from an uploaded document) with page locators where
+they exist. Three LLM roles act on it: $M_G$ looks for missing information, $M_R$ reads the sources
+and writes claims $C$, and $M_J$ writes a summary $\Sigma$ from $C$. Each claim $c\in C$ is a short
+proposition with a type, an epistemic status and two evidence lists, $E^{+}(c)$ and $E^{-}(c)$, of
+source units that support or contradict it. Each summary sentence $\sigma$ names the claims
+$R(\sigma)\subseteq C$ it rests on. A citation is a triple $(S,a,b)$ denoting the substring $S[a{:}b]$.
+
+\begin{table}[t]
+\centering
+\caption{Notation.}
+\label{tab:notation}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lL{8.3cm}}
+\toprule
+Symbol & Meaning \\
+\midrule
+$K$; $S$, $|S|$ & A case; one of its sources (a string) and its length in characters \\
+$U(S)=(u_1,\dots,u_n)$ & Source units of $S$; $u.\mathit{start}$, $u.\mathit{end}$ are offsets and $u.\mathit{text}=S[u.\mathit{start}{:}u.\mathit{end}]$ \\
+$v$; $h_S$ & Segmentation version; revision tag of $S$ (Eq.~\ref{eq:id}) \\
+$\mathit{id}(u)$; $\alpha(u)$ & Canonical identifier of $u$; the short alias shown to $M_R$ (\texttt{U001}, \dots) \\
+$\delta$; $L$ & Minimum sentence-piece length (25 non-space characters); maximum unit length (2,000) \\
+$M_G$, $M_R$, $M_J$ & LLM roles: gap assessment; reader that writes claims; judge that writes the summary \\
+$C$; $c$ & Claims written by $M_R$; one claim \\
+$E^{+}(c)$, $E^{-}(c)$ & Aliases of the units that support / contradict $c$, as selected by $M_R$ \\
+$\beta(\cdot)$ & Binding: maps a selected alias to a citation $(S,a,b,\mathit{page})$, or to $\bot_\rho$ with failure reason $\rho$ \\
+$\Sigma=(\sigma_1,\dots,\sigma_k)$ & Summary written by $M_J$, one sentence per $\sigma$ \\
+$R(\sigma)$ & Claims named by sentence $\sigma$ (why-provenance) \\
+$s(c)$; $\mathrm{w}(c)$ & Warning-layer score; label in \{\texttt{supported}, \texttt{not\_supported}, \texttt{unassessed}\} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 From the task itself (an investigator must be able to justify each statement in a case file) and
 from earlier versions of our system in which the model wrote its own quotations, which then had to be
@@ -192,12 +219,12 @@ matched back to the sources approximately, we derived five requirements:
 by the system, never by a model. \textbf{R2 Fail visibly}: an unresolvable pointer is shown as
 invalid, not dropped or repaired. \textbf{R3 Revision safety}: a pointer issued for one version of a
 document never binds to another. \textbf{R4 Sentence-level provenance}: every summary sentence names
-the Claims it rests on, and only Claims the analysis produced. \textbf{R5 Bounded cost}: expensive
+the claims it rests on, and only claims in $C$. \textbf{R5 Bounded cost}: expensive
 stages run only when the case is complete enough, and any semantic check is cheap enough for every
-Claim.
+claim.
 R1--R4 are structural and can be enforced by construction; R5 shapes the pipeline. Whether a
-Claim is \emph{true}, or even entailed by its citations, is a separate question that no structural
-rule answers, which is what the Claim/Source check in Sect.~\ref{sec:check} addresses, imperfectly.
+claim is \emph{true}, or even entailed by its citations, is a separate question that no structural
+rule answers, which is what the warning layer of Sect.~\ref{sec:check} addresses, imperfectly.
 
 %======================================================================
 \section{Traceability by Construction}\label{sec:system}
@@ -214,13 +241,13 @@ rule answers, which is what the Claim/Source check in Sect.~\ref{sec:check} addr
 % row 1: intake and preflight
 \node[det] (src)    at (0,0)     {Case sources\\ text, PDF, DOCX,\\ images (OCR)};
 \node[det] (units)  at (2.95,0)  {Source units\\ exact offsets,\\ stable IDs};
-\node[llm] (assess) at (5.9,0)   {Gap assessment\\ 5W1H checklist};
+\node[llm] (assess) at (5.9,0)   {Gap check $M_G$\\ 5W1H checklist};
 \node[det] (ask)    at (8.85,0)  {Ask one\\ follow-up question\\ and stop};
 % row 2: analysis, fan-out after binding, fan-in to the report
-\node[llm] (reader) at (0,-2.6)  {Reader\\ Claims + selected\\ unit IDs only};
-\node[det] (bind)   at (2.95,-2.6) {Binding\\ resolve IDs,\\ reproduce spans};
-\node[det] (check)  at (5.9,-1.5)  {Optional warning\\ Claim/Source check};
-\node[llm] (judge)  at (5.9,-2.6)  {Judgement\\ sentence $\to$ [A-$nn$]};
+\node[llm] (reader) at (0,-2.6)  {Reader $M_R$\\ claims + selected\\ aliases only};
+\node[det] (bind)   at (2.95,-2.6) {Binding $\beta$\\ resolve IDs,\\ reproduce spans};
+\node[det] (check)  at (5.9,-1.5)  {Optional warning\\ $\mathrm{w}(c)$};
+\node[llm] (judge)  at (5.9,-2.6)  {Judge $M_J$\\ $\sigma\to$ [A-$nn$]};
 \node[llm] (views)  at (5.9,-3.7)  {Views: parties,\\ timeline, impacts};
 \node[det] (report) at (8.85,-2.6) {Report snapshot\\ HTML / PDF,\\ no model call};
 \draw[arr] (src) -- (units);
@@ -236,75 +263,66 @@ rule answers, which is what the Claim/Source check in Sect.~\ref{sec:check} addr
 \draw[arr] (views.east) -- ++(0.25,0) |- (report.west);
 \end{tikzpicture}
 \caption{Analysis flow. Shaded boxes call an LLM; white boxes are deterministic or
-use frozen local models. The Reader can only select identifiers that the system issued, and the
-optional warning layer, Judgement and Views run concurrently after binding.}
+use frozen local models. $M_R$ can only select identifiers that the system issued; the warning
+layer, $M_J$ and the views run concurrently after binding.}
 \label{fig:pipeline}
 \end{figure}
 
 \subsection{Overview}
-Figure~\ref{fig:pipeline} shows where the method sits in the analysis. Every PDF page is rendered and
-read by OCR rather than taken from the PDF's text layer, so page locators are known. A cheap first LLM
-call checks the case against a fixed 5W1H checklist (who was affected, who was responsible, what, when,
-where, why, how and how much) and either asks the user one question and stops, or proceeds (R5).
-Answers are stored with their own identifiers (\texttt{QA-01}) rather than as case sources. The
-remaining subsections follow one case through the four steps that make its evidence traceable:
-building units, naming them, letting the model select them, and binding the selections.
+Figure~\ref{fig:pipeline} shows where the method sits: PDF pages are read by OCR so page locators are
+known, and $M_G$ checks the case against a 5W1H checklist and either asks the user one question and
+stops, or proceeds (R5). The four steps below make the evidence traceable.
 
 \subsection{Step 1: Lossless Source Units}\label{sec:units}
 Thai writes no sentence-final punctuation, so the boundaries of a quotable span have to be computed.
-Fig.~\ref{fig:units} shows the procedure on a 157-character narrative. (1) Each source is split into
-lines, keeping their offsets, and each non-empty line into sentences with the multilingual SaT
-segmenter \cite{frohmann2024sat}, falling back to PyThaiNLP's CRF segmenter
-\cite{phatthiyaphaibun2023pythainlp} when SaT is unavailable; if the pieces do not concatenate back to
-the line exactly, the whole line is kept as one piece. (2) Pieces shorter than 25 non-space characters
-are merged into the following piece, so that interjections such as \emph{ตกใจมาก} (``I was shocked'')
-do not become citable units on their own. (3) The source is then cut at every piece start, at the start
-of every table and table row produced by OCR, and every 2,000 characters within long pieces. Each unit
-runs from its start to the next unit's start, so whitespace and line breaks belong to a unit rather than
-falling between units.
+Fig.~\ref{fig:units} shows the procedure on a 157-character narrative. (1) $S$ is split into lines,
+keeping their offsets, and each non-empty line into sentences with the multilingual SaT segmenter
+\cite{frohmann2024sat}, falling back to PyThaiNLP's CRF segmenter \cite{phatthiyaphaibun2023pythainlp}
+when SaT is unavailable; if the pieces do not concatenate back to the line exactly, the whole line is
+kept as one piece. (2) Pieces shorter than $\delta$ non-space characters are merged into the following
+piece, so that interjections such as \emph{ตกใจมาก} (``I was shocked'') do not become citable units on
+their own. (3) $S$ is then cut at every piece start, at the start of every table and table row produced
+by OCR, and every $L$ characters within long pieces. Each unit runs from its start to the next unit's
+start, so whitespace and line breaks belong to a unit rather than falling between units.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/units.pdf}
-\caption{Building and naming Source units for a constructed Thai narrative. The sentence split in
+\caption{Building $U(S)$ and naming its units for a constructed Thai narrative. The sentence split in
 step~1 is illustrative; the offsets in step~3 and the identifiers in step~4 are computed from that
 split with the production rules.}
 \label{fig:units}
 \end{figure}
 
-This gives the first two guarantees. \textbf{(P1) Lossless partition}: for units $u_1,\dots,u_n$ of a
-source $S$, $u_k.\mathit{text} = S[u_k.\mathit{start}{:}u_k.\mathit{end}]$, $u_1.\mathit{start}=0$,
-$u_k.\mathit{end}=u_{k+1}.\mathit{start}$ and $u_n.\mathit{end}=|S|$; concatenating the units in order
-returns $S$. \textbf{(P2) Determinism}: units are a pure function of the text and the segmentation
-version, so they are recomputed on demand rather than stored, and no database migration is needed when
-the segmenter changes.
+This gives the first two guarantees. \textbf{(P1) Lossless partition}: for $U(S)=(u_1,\dots,u_n)$,
+$u_k.\mathit{text} = S[u_k.\mathit{start}{:}u_k.\mathit{end}]$, $u_1.\mathit{start}=0$,
+$u_k.\mathit{end}=u_{k+1}.\mathit{start}$ and $u_n.\mathit{end}=|S|$, so concatenating the units returns
+$S$. \textbf{(P2) Determinism}: $U(S)$ is a pure function of $S$ and $v$, so units are recomputed on
+demand rather than stored.
 
 \subsection{Step 2: Content-Addressed Identifiers}\label{sec:ids}
-Each unit is named by its source, its position and a revision tag computed from the whole source:
-\[
-\mathit{id}(S,k) = S.\mathit{id}\,\texttt{:U}\,k\,\texttt{-}\,h_S, \qquad
-h_S = \mathrm{SHA\text{-}256}\bigl(v \,\|\, \texttt{\textbackslash 0} \,\|\, S.\mathit{text}\bigr)_{[0:16]},
-\]
-where $k$ is zero-padded to three digits and $v$ is the segmentation version
-(\texttt{evidence\_units\_v3}). In Fig.~\ref{fig:units}, $h_{S1}=\texttt{80a1d348f2908e99}$.
-\textbf{(P3) Revision safety (R3)}: editing any character of $S$ or changing the segmenter changes
-$h_S$, so an identifier issued for an earlier text cannot resolve against the current one; a
-different text would need a 64-bit prefix collision of SHA-256 to reuse an identifier.
+Each unit is named by its source, its position $k$ and a revision tag computed from the whole source:
+\begin{equation}\label{eq:id}
+\mathit{id}(u_k) = S.\mathit{id}\,\texttt{:U}\,k\,\texttt{-}\,h_S, \qquad
+h_S = \mathrm{SHA\text{-}256}\bigl(v \,\|\, \texttt{\textbackslash 0} \,\|\, S\bigr)_{[0:16]},
+\end{equation}
+where $k$ is zero-padded to three digits and $v=\texttt{evidence\_units\_v3}$. In Fig.~\ref{fig:units},
+$h_{S1}=\texttt{80a1d348f2908e99}$. \textbf{(P3) Revision safety (R3)}: editing any character of $S$ or
+changing $v$ changes $h_S$, so an identifier issued for an earlier text cannot resolve against the
+current one; a different text would need a 64-bit prefix collision of SHA-256 to reuse an identifier.
 
 \subsection{Step 3: Request-Scoped Aliases and Claims-Only Reading}\label{sec:reading}
-Long identifiers are costly for the model to copy and easy to garble, so the Reader sees each unit only
-as a short alias (\texttt{U001}, \texttt{U002}, \dots) with its text, together with the source's
-document and extraction-quality metadata; offsets and hashes are never shown. Before the Reader is
-called, the request records $S.\mathit{id}\mapsto h_S$ for every source, and later expands each selected
-alias with \emph{that} recorded revision, so a selection is always expanded against the exact text the
-model was shown.
+Long identifiers are costly to copy and easy to garble, so $M_R$ sees each unit only as its alias
+$\alpha(u)$ (\texttt{U001}, \texttt{U002}, \dots) with its text, together with the source's document
+and extraction-quality metadata; offsets and hashes are never shown. Before $M_R$ is called, the request
+records $S.\mathit{id}\mapsto h_S$ for every source and later expands each selected alias with
+\emph{that} revision, so a selection is always expanded against the exact text $M_R$ was shown.
 
-The Reader returns a strict JSON object containing only Claims. Each Claim has an identifier, a type,
-its text, an epistemic status (\texttt{reported} for attributed assertions, \texttt{unknown} for
-uncertainty stated in a source) and lists of supporting and contradicting aliases per source. It cannot
-emit quotations, offsets, reasoning or separate lists of parties and events; inference beyond the
-sources is left to Judgement. Every model reply is validated against a strict local schema and retried
-at most once.
+$M_R$ returns a strict JSON object containing only $C$. Each $c\in C$ has an identifier, a type, its
+text, an epistemic status (\texttt{reported} for attributed assertions, \texttt{unknown} for uncertainty
+stated in a source) and the alias lists $E^{+}(c)$ and $E^{-}(c)$ per source. $M_R$ cannot emit
+quotations, offsets, reasoning or separate lists of parties and events; inference beyond the sources is
+left to $M_J$. Every model reply is validated against a strict local schema and retried at most once.
 
 \begin{figure}[t]
 \centering
@@ -316,55 +334,49 @@ production rules.}
 \end{figure}
 
 \subsection{Step 4: Deterministic Binding and the Provenance Chain}\label{sec:binding}
-Each expanded identifier is checked in a fixed order, and the first failing check is recorded as its
-reason: the source is not in the case (\texttt{unknown\_source}); the identifier is malformed
+$\beta$ checks each expanded identifier in a fixed order and records the first failing check as its
+reason $\rho$: the source is not in $K$ (\texttt{unknown\_source}); the identifier is malformed
 (\texttt{malformed\_id}); it names another source (\texttt{cross\_source}); its revision differs from
-the recorded one (\texttt{stale\_id}); no such unit exists (\texttt{unknown\_unit}); the unit is only
-whitespace (\texttt{empty\_unit}). Independently, an identifier the same Claim has already cited is
-recorded as \texttt{duplicate\_id}. A failed
-identifier is stored and shown as an invalid pointer, never repaired or dropped (R2). A passing one is
-materialised by the system as its source, start, end, page and the text
-$S[\mathit{start}{:}\mathit{end}]$.
-\textbf{(P4) Verbatim evidence (R1)}: every quotation in the analysis view and the report is produced
-this way, so it is a substring of a stored source by construction.
+the recorded one (\texttt{stale\_id}); no such unit exists (\texttt{unknown\_unit}); or the unit is only
+whitespace (\texttt{empty\_unit}). Independently, an alias already cited by the same $c$ gives
+\texttt{duplicate\_id}. A result $\bot_\rho$ is stored and shown as an invalid pointer, never repaired or
+dropped (R2); otherwise $\beta$ returns the citation $(S,u.\mathit{start},u.\mathit{end},\mathit{page})$
+and the system reproduces $u.\mathit{text}$. \textbf{(P4) Verbatim evidence (R1)}: every quotation in the
+analysis view and the report is produced this way, so it is a substring of a stored source by
+construction.
 
-Judgement then writes the summary from the Claims alone, with each sentence ending in bracketed Claim
-identifiers, and a separate call extracts parties, timeline and impacts from the same Claims for display.
-\textbf{(P5) Closed references (R4)}: if the summary or its gaps name a Claim that Judgement was not
-given, the analysis fails and is not stored. The result is the chain in Fig.~\ref{fig:provenance}: a
-sentence names its Claims (why-provenance in the sense of \cite{buneman2001provenance}), and each Claim
-names spans that the system reproduces with their character range and page (where-provenance). A
-sentence is \emph{bound} when all of its Claims have resolved support, \emph{mixed} when some do,
-\emph{unbound} when none do and \emph{no\_claim} when it names none; these states describe
-addressability, not truth. Reports are deterministic snapshots of this stored chain and call no model.
+$M_J$ then writes $\Sigma$ from $C$ alone, ending each $\sigma$ with the bracketed identifiers of
+$R(\sigma)$, and a separate call extracts parties, timeline and impacts from $C$ for display.
+\textbf{(P5) Closed references (R4)}: if any $R(\sigma)$ or gap names a claim outside $C$, the analysis
+fails and is not stored. The result is the chain in Fig.~\ref{fig:provenance}: $\sigma\to R(\sigma)$ is
+why-provenance in the sense of \cite{buneman2001provenance}, and $c\to\beta(E^{+}(c))$ is
+where-provenance. A sentence is \emph{bound} when every $c\in R(\sigma)$ has resolved support,
+\emph{mixed} when some do, \emph{unbound} when none do and \emph{no\_claim} when $R(\sigma)=\emptyset$;
+these states describe addressability, not truth. Reports are deterministic snapshots of this chain and
+call no model.
 
 \subsection{Optional Semantic Warning Layer}\label{sec:warning}\label{sec:check}
-Binding guarantees that evidence exists and is quoted exactly; it says nothing about whether the
-evidence supports the Claim. As an optional layer, each bound Claim with status \texttt{reported} is
-checked by B1-LR: a frozen multilingual MPNet encoder \cite{reimers2020multilingual} keeps the supporting
-units with cosine similarity $\ge 0.20$ to the Claim (the most similar one if none pass); a multilingual
-mDeBERTa-v3 NLI model \cite{he2021debertav3,laurer2022mdeberta} scores their concatenation against the
-Claim; and a logistic regression fitted once on the WiCE training split \cite{kamoi2023wice} maps the
-probabilities to $s=\sigma(1.411\,p_E-1.051\,p_N-0.302\,p_C+0.058)$, labelling the Claim
-\texttt{supported} when $s\ge 0.5$ and \texttt{not\_supported} otherwise. The label is shown beside the
-Claim; it never removes a Claim, never enters a model prompt, and missing model files leave Claims
-\texttt{unassessed} without failing the analysis.
-
-\paragraph{Implementation.}
-The system is a Next.js client and a FastAPI service with PostgreSQL; the default analysis model is
-Gemma~4~26B, and the verifier models run locally, pinned by revision and file hash. At the time of
-the verifier integration, 266 server-side and 76 front-end tests passed, including two that run the
-pinned models end to end.
+Binding guarantees that evidence exists and is quoted exactly; it says nothing about whether it supports
+the claim. As an optional layer, each bound $c$ with status \texttt{reported} is checked by B1-LR: a
+frozen multilingual MPNet encoder \cite{reimers2020multilingual} keeps the units of $\beta(E^{+}(c))$ with
+cosine similarity $\ge 0.20$ to $c$ (the most similar one if none pass); a multilingual mDeBERTa-v3 NLI
+model \cite{he2021debertav3,laurer2022mdeberta} scores their concatenation against $c$; and a logistic
+regression fitted once on the WiCE training split \cite{kamoi2023wice} maps the probabilities to
+$s(c)=\mathrm{sig}(1.411\,p_E-1.051\,p_N-0.302\,p_C+0.058)$, where $\mathrm{sig}$ is the logistic function, giving $\mathrm{w}(c)=\texttt{supported}$ when
+$s(c)\ge 0.5$ and \texttt{not\_supported} otherwise. $\mathrm{w}(c)$ is shown beside $c$; it never removes
+a claim, never enters a model prompt, and missing model files give \texttt{unassessed} without failing
+the analysis. The prototype uses Gemma~4~26B for $M_G$, $M_R$ and $M_J$; the warning-layer models run
+locally.
 
 %======================================================================
 \section{Evaluating the Warning Layer}\label{sec:eval}
 %======================================================================
 
-Properties P1--P5 hold by construction and are exercised by the automated tests above; we do not
+Properties P1--P5 hold by construction and are exercised by the system's automated tests; we do not
 re-measure them here. What does need measurement is the optional warning layer, because its errors are
 statistical. We ask three questions. \textbf{RQ1}: does the B1-LR rule improve on thresholded NLI?
 \textbf{RQ2}: how does it behave when inputs are machine-translated into Thai? \textbf{RQ3}: what
-happens downstream if its verdict is used to filter Claims instead of labelling them? No component was
+happens downstream if its verdict is used to filter claims instead of labelling them? No component was
 trained or tuned on test data, and we report every outcome of the agreed runs, including failures.
 
 \paragraph{Data and metrics.}
@@ -376,10 +388,21 @@ Thai with labels inherited from English, and a replay slice of 20 AttributionBen
 authors. We treat \emph{supported} as the positive class.
 FAR (false acceptance rate) is the share of gold-unsupported items labelled supported; FRR (false
 rejection rate) is the share of gold-supported items labelled not supported. For a warning label,
-FAR is the most consequential error, because an accepted unsupported Claim carries no warning.
+FAR is the most consequential error, because an accepted unsupported claim carries no warning.
 Uncertainty is estimated with paired bootstrap resampling of whole question/response clusters
 within source subsets, so that rows sharing evidence are not treated as independent.
 
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/results.pdf}
+\caption{Evaluation of the optional warning layer. (a) Variants on the WiCE test split; B1-LR is the
+deployed rule. (b) The frozen B1-LR on AttributionBench test in English and in Google machine-translated
+Thai; $\Delta$ is Thai minus English false acceptance with a 95\% cluster-bootstrap interval. (c) The
+paired replay when the label is used to filter claims before $M_J$. Values are read directly from the
+recorded result files.}
+\label{fig:results}
+\end{figure}
 
 \subsection{RQ1: Verifier Design on WiCE}
 
@@ -390,25 +413,8 @@ entailment on the full evidence with a development-tuned threshold; \textbf{B1},
 selected units; \textbf{B1-LR}, the deployed rule; and \textbf{B3}, which adds reverse-direction NLI
 features to the logistic head. Uncertainty uses 1,000 paired bootstrap resamples.
 
-\begin{table}[t]
-\centering
-\caption{Claim/Source check variants on the WiCE test split ($N=1{,}070$). Per-Claim latency on a
-GTX~1650 is about 390\,ms for B0, 227\,ms for B1 and B1-LR, and 449\,ms for B3.}
-\label{tab:wice}
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{lccccc}
-\toprule
-Variant & Acc. & Macro-F1 & Supp.\ P & Supp.\ R & FAR $\downarrow$ \\
-\midrule
-B0: full evidence, $p_E$ threshold & 64.67 & .585 & 42.68 & 42.42 & 25.41 \\
-B1: selected units, $p_E$ threshold & 63.55 & .597 & 42.65 & 52.73 & 31.62 \\
-\textbf{B1-LR: selected units, LR} & \textbf{66.64} & \textbf{.618} & \textbf{46.26} & \textbf{50.61} & \textbf{26.22} \\
-B3: B1-LR + reverse NLI & 66.54 & .621 & 46.24 & 52.12 & 27.03 \\
-\bottomrule
-\end{tabular}
-\end{table}
 
-Table~\ref{tab:wice} shows that selection alone raises supported recall but also raises false
+Fig.~\ref{fig:results}a shows that selection alone raises supported recall but also raises false
 acceptance; adding the logistic boundary recovers precision. B1-LR improves Macro-F1 over B0
 by 0.033 (95\% CI 0.013--0.053) and supported F1 by 0.058 (0.029--0.087), with no significant
 change in false acceptance ($+0.75$ pp, CI $-1.09$ to $+2.70$). Relative to B1, the logistic
@@ -431,32 +437,13 @@ the NLI checkpoint saw Thai only during pre-training, as Thai was held out of it
 and its model card reports XNLI accuracy of 0.786 for Thai against 0.871 for English
 \cite{laurer2022mdeberta}.
 
-\begin{table}[t]
-\centering
-\caption{Frozen B1-LR on AttributionBench test, original English (EN) versus Google
-machine-translated Thai (MT-TH). Thai minus English FAR, with 95\% intervals from 2,000
-question/response-cluster bootstrap resamples: ID $+17.39$ pp [$+13.73$, $+21.24$],
-OOD $+4.39$ pp [$+1.10$, $+7.59$].}
-\label{tab:transfer}
-\setlength{\tabcolsep}{4.5pt}
-\begin{tabular}{llcccccc}
-\toprule
-Split & Lang. & $N$ & Prec. & Recall & F1 & FAR $\downarrow$ & FRR $\downarrow$ \\
-\midrule
-ID  & EN    & 1,610 & 64.32 & 62.48 & .634 & 34.66 & 37.52 \\
-ID  & MT-TH & 1,610 & 57.55 & 70.56 & .634 & 52.05 & 29.44 \\
-OOD & EN    & 1,686 & 69.78 & 81.61 & .752 & 35.35 & 18.39 \\
-OOD & MT-TH & 1,686 & 66.02 & 77.22 & .712 & 39.74 & 22.78 \\
-\bottomrule
-\end{tabular}
-\end{table}
 
-Table~\ref{tab:transfer} shows why a single F1 value is misleading here. In-domain F1 is
+Fig.~\ref{fig:results}b shows why a single F1 value is misleading here. In-domain F1 is
 unchanged (.634 in both languages), yet the Thai condition accepts 140 more unsupported rows and
 recovers 65 more supported ones: the operating point shifts toward permissiveness. Out of domain,
 Thai lowers F1 by 0.040 (CI 0.018--0.063) and raises false acceptance by 4.4 points. For a check whose
-purpose is to warn about unsupported Claims, the rise in false acceptance is the result that
-matters: on Thai in-domain text, about half of unsupported Claims would carry no warning.
+purpose is to warn about unsupported claims, the rise in false acceptance is the result that
+matters: on Thai in-domain text, about half of unsupported claims would carry no warning.
 
 More Thai pairs hit the 512-token limit (311 vs.\ 288 in-domain, 154 vs.\ 124 out-of-domain), and
 BGE-M3 \cite{chen2024bgem3} similarity between each text and its translation (mean cosine 0.846) shows
@@ -465,49 +452,31 @@ effects are not separated.
 
 \subsection{RQ3: What If the Warning Were a Filter?}\label{sec:replay}
 
-To see what the check changes downstream, we replayed the Judgement stage on AttributionBench
-rather than on cases, because only there do Claims carry gold labels. Twenty label-blind,
+To see what the check changes downstream, we replayed the judge $M_J$ on AttributionBench
+rather than on cases, because only there do claims carry gold labels. Twenty label-blind,
 hash-ordered clusters (10 ID, 10 OOD; 60 rows, 29 attributable and 31 not) were each turned into a
-virtual case whose Claims are the benchmark claims and whose sources are their references,
-segmented into units exactly as production does. The same Claims, identifiers and prompt were sent
-to Judgement under two conditions: \emph{no gate} (every Claim admitted) and \emph{B1-LR gate}
-(only \texttt{supported} Claims admitted, using the frozen decisions). Judgement used Gemma~4~26B
+virtual case whose claims are the benchmark claims and whose sources are their references,
+segmented into units exactly as production does. The same claims, identifiers and prompt were sent
+to $M_J$ under two conditions: \emph{no gate} (every claim admitted) and \emph{B1-LR gate}
+(only \texttt{supported} claims admitted, using the frozen decisions). $M_J$ used Gemma~4~26B
 with temperature 0, a thinking budget of 8,192 tokens and fixed providers without fallback. The
-outcome is whether a non-attributable row's Claim identifier is cited in the generated summary.
+outcome is whether a non-attributable row's claim identifier is cited in the generated summary.
 
-\begin{table}[t]
-\centering
-\caption{Paired downstream replay. Admission counts cover all clusters; citation counts cover
-the 15 cluster pairs in which both conditions produced an observable outcome.}
-\label{tab:replay}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{lcccc}
-\toprule
- & \multicolumn{2}{c}{Admitted to Judgement} & \multicolumn{2}{c}{Cited in summary} \\
-\cmidrule(lr){2-3}\cmidrule(lr){4-5}
-Condition & Unsupp.\ $\downarrow$ & Supp.\ $\uparrow$ & Unsupp.\ $\downarrow$ & Supp.\ $\uparrow$ \\
-\midrule
-No gate     & 31/31 (100\%) & 29/29 (100\%) & 18/18 (100\%) & 24/24 (100\%) \\
-B1-LR gate  & 9/31 (29.0\%) & 20/29 (69.0\%) & 4/18 (22.2\%) & 17/24 (70.8\%) \\
-\bottomrule
-\end{tabular}
-\end{table}
 
-As a gate, B1-LR lowered the share of unsupported Claim identifiers cited in summaries from
+As a gate, B1-LR lowered the share of unsupported claim identifiers cited in summaries from
 100\% to 22.2\% (paired difference $-77.8$ pp, cluster-bootstrap CI $-95.2$ to $-53.3$). Seven
 cluster pairs lost unsupported citations and none gained them (exact McNemar $p=0.016$); the ID and
-OOD halves are each too small to be conclusive alone ($p=0.125$ and $0.25$). The cost is visible in
-the same table: 9 of 29 supported Claims were withheld, most of them in-domain, and four clusters
-had no admitted Claim at all, so no summary was produced.
+OOD halves are each too small to be conclusive alone ($p=0.125$ and $0.25$). The cost is visible in Fig.~\ref{fig:results}c: 9 of 29 supported claims were withheld, most of them in-domain, and four clusters
+had no admitted claim at all, so no summary was produced.
 
 \paragraph{Failures.}
-Six of the 36 Judgement calls failed, three per condition, all by exhausting the output budget on model
+Six of the 36 calls to $M_J$ failed, three per condition, all by exhausting the output budget on model
 reasoning; those pairs are reported as unknown and excluded, and no successful output cited a withheld
 or unknown identifier.
 
 \paragraph{A qualitative exposure.}
-One gated summary added a figure found in no admitted Claim but in the cited passages, so citation text
-reaching Judgement is a path no Claim-level check examines.
+One gated summary added a figure found in no admitted claim but in the cited passages, so citation text
+reaching $M_J$ is a path no claim-level check examines.
 
 %======================================================================
 \section{Discussion}\label{sec:discussion}
@@ -515,31 +484,31 @@ reaching Judgement is a path no Claim-level check examines.
 
 \paragraph{What the method guarantees, and what it does not.}
 P1--P5 guarantee that every displayed quotation exists in a stored source at the stated range, that no
-identifier silently survives an edit, and that every summary sentence points only to Claims the analysis
-produced. They do not guarantee that a Claim is supported by its spans, that the model cited all the
+identifier silently survives an edit, and that every summary sentence points only to claims the analysis
+produced. They do not guarantee that a claim is supported by its spans, that the model cited all the
 evidence it should have, or that the segmenter drew the most useful boundaries: a unit is the finest
 granularity a citation can have, so a poor split makes citations coarser, though never wrong in
 location. These residual questions are semantic, which is why they are left to a separate, optional
 layer whose output is a label rather than a decision.
 
 \paragraph{Gate or label.}
-The replay shows the trade-off: a filter that removes about three quarters of unsupported Claims from
+The replay shows the trade-off: a filter that removes about three quarters of unsupported claims from
 summaries also removes about three in ten supported ones, and the Thai results suggest it would be
 leakier on Thai input. A silently missing true fact can cost an investigator as much as a flagged dubious
 one, and a filter hides its errors where a label shows them. The verdict is therefore displayed beside
-the Claim and nothing else changes, while the structural checks of Sect.~\ref{sec:binding} stay strict.
+the claim and nothing else changes, while the structural checks of Sect.~\ref{sec:binding} stay strict.
 
 \paragraph{Threats to validity.}
 \emph{Scope of evidence}: P1--P5 are argued from construction and exercised by tests, but we have not
 yet compared the method head to head with a pipeline in which the model writes its own quotations.
 \emph{Construct validity}: the replay measures whether an unsupported row's identifier is cited, not
-whether the prose is faithful; a summary can cite a supported Claim and still add unsupported
+whether the prose is faithful; a summary can cite a supported claim and still add unsupported
 content, as the qualitative example shows. \emph{Internal validity}: Thai labels are inherited through
 machine translation, and translation, language and truncation effects are confounded; the replay uses
 a single model at temperature zero, and six failed generations reduce the observable pairs to 15.
 \emph{External validity}: WiCE and AttributionBench are English Wikipedia and web question-answering
 data, not cybercrime complaints, and the replay uses benchmark claims rather than claims written by
-our Reader. We therefore do not claim accuracy on real complaints, factual or legal correctness,
+$M_R$. We therefore do not claim accuracy on real complaints, factual or legal correctness,
 reduced hallucination in prose, or any benefit to investigators. Finally, mDeBERTa was chosen on WiCE
 development data before testing; a smaller multilingual MiniLM backbone, run afterwards as a
 sensitivity check, scored higher on WiCE test (Macro-F1 .650 vs.\ .618), so we do not claim the
@@ -555,7 +524,7 @@ The next study is a proof of concept on public Thai and English corpora that run
 a quote-writing pipeline and through the method above, and compares quotation fidelity, pointer validity,
 evidence coverage and output tokens, all measurable without human labels. For the warning layer, the
 missing evidence is a Thai benchmark from real, anonymised complaints; we plan labels known by
-construction (Claims with altered amounts, dates, roles or negation), the Thai XNLI test set
+construction (claims with altered amounts, dates, roles or negation), the Thai XNLI test set
 \cite{conneau2018xnli}, which the checkpoint never saw in fine-tuning, and a small doubly annotated
 subset.
 
@@ -566,8 +535,8 @@ subset.
 We showed how to make evidence traceability a property of an LLM case-analysis system rather than a
 request to the model: cut every source into lossless units, name each unit by the exact text it came
 from, let the model select short aliases but never write a quotation, and bind every selection
-deterministically, so that each summary sentence leads to Claims and each Claim to a verbatim span with
-its page. A frozen semantic check can sit on top as a warning at about 0.23\,s per Claim on a consumer
+deterministically, so that each summary sentence leads to claims and each claim to a verbatim span with
+its page. A frozen semantic check can sit on top as a warning at about 0.23\,s per claim on a consumer
 GPU, but our measurements show why it should warn rather than decide. Measuring the traceability gain
 directly against quote-writing pipelines, and testing the warning layer on real Thai complaints, are the
 next steps.

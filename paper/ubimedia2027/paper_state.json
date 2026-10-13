@@ -22,9 +22,10 @@
     "pdf": "main.pdf",
     "external_inputs": [
       "llncs.cls and splncs04.bst from the TeX distribution",
-      "figures/units.pdf and figures/provenance.pdf (built from figures/*.tex with XeLaTeX and the Loma Thai font)"
+      "figures/units.pdf and figures/provenance.pdf (built from figures/*.tex with XeLaTeX and the Loma Thai font)",
+      "figures/results.pdf (built by figures/make_results.py from recorded result files)"
     ],
-    "input_sha256": "e93e48364ee7a953cc4b6f64b7c069eea54812c21cfad4cae372ca6b08d98f2b",
-    "pdf_sha256": "ed3506a939d7f05fd1bd97a118b040e92f25c9603f2fc92b6aad66188234e30e"
+    "input_sha256": "b946809f4913bae7dd26f0f248eed1a2aa07134c4dca936f802e0d009c7cccdb",
+    "pdf_sha256": "13aa11f2f2c96c804c9eadb155fe402c9074ee7d5aa6498e02a92eaa07b0bf2d"
   }
 }
