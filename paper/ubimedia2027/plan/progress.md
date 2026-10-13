@@ -110,3 +110,18 @@
 - Review is not anonymous: the submission must include the list of authors, so author names stay.
 - Deadline Oct 15, 2026 (time zone not stated); notification Nov 15; camera-ready Nov 25.
 - One author must attend in Okinawa; papers must be in English and not under review elsewhere.
+
+## 2026-10-14 — the main contribution now has numbers (Sect. 5.1, Table 3)
+- research/traceability_properties/run.py runs the production evidence_units() (SaT sat-3l-sm) on 500
+  ThaiSum test articles and 1,000 AttributionBench references; no model calls, no labels.
+- Results: 0 reconstruction failures, 0 re-run differences; after one inserted character all old IDs
+  -> stale_id, vs 53.3%/57.1% raw offsets and 33.5%/11.7% position-only IDs returning changed text
+  silently; cost: 46.7%/42.9% of IDs invalidated although their text is unchanged; cuts inside a word
+  0.49%/0.27% for units vs 74.7%/64.8% for equal-length fixed chunks; 0 digit splits (fixed: 75/79).
+- Paper: Sect. 5 renamed "Evaluation"; new 5.1 + Table 3; one abstract sentence; contribution 1 points
+  to 5.1; Threats updated (ThaiSum is edited news, not complaints/OCR). "Next steps" folded into the
+  Conclusion and the two replay paragraphs merged to make room.
+- Length: 16 pages (CFP 2027: 6-16 pages incl. references; the older guidelines PDF says 12-15 for full
+  papers). Numbers traced in claim_evidence_map.md.
+- Observation: real SaT splits the Fig. 2 example into 2 units ([0,107), [107,157)), not the 3 drawn;
+  the caption already says the split is illustrative; the hash 80a1d348f2908e99 matches.

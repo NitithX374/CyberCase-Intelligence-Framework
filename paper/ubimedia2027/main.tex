@@ -47,7 +47,9 @@ a content-addressed identifier tied to the exact text it came from; the model se
 aliases and may \emph{select} them but never write a quotation; and a deterministic binding step
 resolves each selection to a character range and page, or records it as an invalid pointer. Summary
 sentences end with the identifiers of the claims they rest on, giving a two-level provenance chain
-from sentence to claim to verbatim span. As an optional layer, a frozen NLI-based check labels each
+from sentence to claim to verbatim span. On public Thai and English text, units reconstruct every
+source exactly, a one-character edit invalidates every old identifier, and unit boundaries fall inside a
+word in under 0.5\% of cuts against 65--75\% for fixed-size chunks. As an optional layer, a frozen NLI-based check labels each
 claim with a warning. On WiCE it improves Macro-F1 over thresholded NLI by 0.033; machine
 translation into Thai raises its false acceptance by 17.4 points; and used as a hard filter it cut
 unsupported claims cited in summaries from 100\% to 22.2\% while withholding 31\% of supported ones,
@@ -91,7 +93,7 @@ possible, described step by step with a worked Thai example:
 \begin{enumerate}
 \item \emph{Lossless, Thai-aware Source units}: a segmentation procedure that cuts every source into
 contiguous units with exact offsets that reconstruct it character for character
-(Sect.~\ref{sec:units}, Fig.~\ref{fig:units}).
+(Sect.~\ref{sec:units}, Fig.~\ref{fig:units}), checked on public Thai and English text (Sect.~\ref{sec:props}).
 \item \emph{Content-addressed identifiers and request-scoped aliases}: unit identifiers bound to the
 exact source text, and short aliases for the model whose mapping is fixed before the model is called
 (Sects.~\ref{sec:ids}--\ref{sec:reading}).
@@ -375,17 +377,60 @@ the analysis. The prototype uses Gemma~4~26B for $M_G$, $M_R$ and $M_J$; the war
 locally.
 
 %======================================================================
-\section{Evaluating the Warning Layer}\label{sec:eval}
+\section{Evaluation}\label{sec:eval}
 %======================================================================
 
-The guarantees of Sect.~\ref{sec:system} hold by construction and are exercised by the system's
-automated tests; we do not re-measure them here. What does need measurement is the optional warning
-layer, because its errors are statistical. We ask whether the B1-LR rule improves on thresholded NLI,
-how it behaves when its inputs are machine-translated into Thai, and what happens downstream if its
-verdict is used to filter claims instead of labelling them. No component was
+We first check that the construction behaves on real text as Sect.~\ref{sec:system} claims, and then
+measure the optional warning layer, whose errors are statistical. For the warning layer we ask whether
+the B1-LR rule improves on thresholded NLI, how it behaves when its inputs are machine-translated into
+Thai, and what happens downstream if its verdict is used to filter claims instead of labelling them. No
+component was
 trained or tuned on test data, and we report every outcome of the agreed runs, including failures.
 
-\paragraph{Data and metrics.}
+\subsection{The Construction on Public Text}\label{sec:props}
+
+The guarantees of Sect.~\ref{sec:system} follow from the code, but a segmenter can still misbehave on
+real text. We ran the production code, with SaT and no model call, on 500 Thai news articles from the
+ThaiSum test set \cite{chumpolsathien2020thaisum} and 1,000 English references from AttributionBench
+\cite{li2024attributionbench}, each sampled by hash (Table~\ref{tab:props}). Every source was
+reconstructed exactly, and a second run gave identical identifiers. After one random character was
+inserted into each source, every old identifier resolved to \texttt{stale\_id}, whereas more than half
+of the raw character ranges, and about a third of position-only identifiers in Thai, would have returned changed
+text without any error. The cost is that identifiers into unchanged text are invalidated as well, so every
+citation into an edited source must be selected again. Unit boundaries fell inside a word in under 0.5\%
+of cuts, against 75\% (Thai) and 65\% (English) for fixed chunks of the same mean length, and never
+between two digits. Segmentation took about 0.19\,s per 1,000 Thai characters on a CPU. Word boundaries
+come from a reference tokenizer, not from gold annotation.
+
+\begin{table}[t]
+\centering
+\caption{The production construction on public text, with no model call. Pointers are resolved after
+one random single-character insertion per source. A cut is inside a word if it falls within a PyThaiNLP
+\texttt{newmm} token (Thai) or a run of word characters (English); fixed chunks have the mean unit length
+(132 and 109 characters).}
+\label{tab:props}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrr}
+\toprule
+ & Thai & English \\
+\midrule
+Units; length in characters, mean (median) & 12,092; 131.5 (81) & 10,869; 108.5 (97) \\
+Not reconstructed exactly; re-runs differing & 0; 0 & 0; 0 \\
+\midrule
+\multicolumn{3}{l}{\emph{Old pointers after the insertion}} \\
+\quad resolve to \texttt{stale\_id} (ours) & 100\% & 100\% \\
+\quad return changed text silently: raw offsets & 53.3\% & 57.1\% \\
+\quad return changed text silently: position-only IDs & 33.5\% & 11.7\% \\
+\quad invalidated although their text is unchanged (ours) & 46.7\% & 42.9\% \\
+\midrule
+Cuts inside a word: units / fixed chunks & 0.49 / 74.7\% & 0.27 / 64.8\% \\
+Cuts between two digits: units / fixed chunks & 0 / 75 & 0 / 79 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Warning-Layer Data and Metrics}
 We use WiCE test (1,070 pairs) \cite{kamoi2023wice}, AttributionBench test (1,610 in-domain, 1,686
 out-of-domain rows) \cite{li2024attributionbench} and its Google translation into Thai, and 20
 AttributionBench clusters for the replay; all labels come from the benchmarks. FAR is the share of
@@ -467,13 +512,10 @@ cluster pairs lost unsupported citations and none gained them (exact McNemar $p=
 OOD halves are each too small to be conclusive alone ($p=0.125$ and $0.25$). The cost is visible in Fig.~\ref{fig:results}c: 9 of 29 supported claims were withheld, most of them in-domain, and four clusters
 had no admitted claim at all, so no summary was produced.
 
-\paragraph{Failures.}
+\paragraph{Failures and an exposure.}
 Six of the 36 calls to $M_J$ failed, three per condition, all by exhausting the output budget on model
 reasoning; those pairs are reported as unknown and excluded, and no successful output cited a withheld
-or unknown identifier.
-
-\paragraph{A qualitative exposure.}
-One gated summary added a figure found in no admitted claim but in the cited passages, so citation text
+or unknown identifier. One gated summary added a figure found in no admitted claim but in the cited passages, so citation text
 reaching $M_J$ is a path no claim-level check examines.
 
 %======================================================================
@@ -496,8 +538,9 @@ one, and a filter hides its errors where a label shows them. The verdict is ther
 the claim and nothing else changes, while the structural checks of Sect.~\ref{sec:binding} stay strict.
 
 \paragraph{Threats to validity.}
-These guarantees are argued from construction and exercised by tests, but the method has not yet
-been compared head to head with a quote-writing pipeline. The replay measures whether unsupported claim identifiers are cited, not whether
+These guarantees are argued from construction and checked on public text (Sect.~\ref{sec:props}),
+but the method has not yet been compared head to head with a quote-writing pipeline, and ThaiSum is
+edited news rather than complaints or OCR output. The replay measures whether unsupported claim identifiers are cited, not whether
 the prose is faithful. Thai labels are inherited through machine translation, with translation, language
 and truncation effects confounded. WiCE and AttributionBench are English web data, not complaints, so
 we claim no accuracy on real cases and no benefit to investigators. A smaller MiniLM backbone tested
@@ -509,12 +552,6 @@ Complaints contain personal and financial data. OCR and LLM stages were called t
 APIs, so deployment on real complaints needs a data-processing agreement or self-hosted models. The
 system does not decide guilt, and no real case data was used in these experiments.
 
-\paragraph{Next steps.}
-A proof of concept on public Thai and English corpora will run the same cases through a quote-writing
-pipeline and through this method, comparing quotation fidelity, pointer validity, coverage and output
-tokens without human labels. For the warning layer, we plan by-construction labels, the Thai XNLI test set
-\cite{conneau2018xnli} and a small doubly annotated subset of real, anonymised complaints.
-
 %======================================================================
 \section{Conclusion}
 %======================================================================
@@ -524,9 +561,11 @@ request to the model: cut every source into lossless units, name each unit by th
 from, let the model select short aliases but never write a quotation, and bind every selection
 deterministically, so that each summary sentence leads to claims and each claim to a verbatim span with
 its page. A frozen semantic check can sit on top as a warning at about 0.23\,s per claim on a consumer
-GPU, but our measurements show why it should warn rather than decide. Measuring the traceability gain
-directly against quote-writing pipelines, and testing the warning layer on real Thai complaints, are the
-next steps.
+GPU, but our measurements show why it should warn rather than decide. Next, a proof of concept will
+run the same public Thai and English cases through a quote-writing pipeline and through this method,
+comparing quotation fidelity, pointer validity, coverage and output tokens without human labels; the
+warning layer will be tested on the Thai XNLI test set \cite{conneau2018xnli} and a small doubly annotated
+subset of real, anonymised complaints.
 
 % TODO(authors): add acknowledgements / funding if any.
 

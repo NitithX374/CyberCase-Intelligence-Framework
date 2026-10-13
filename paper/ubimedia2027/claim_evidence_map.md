@@ -81,3 +81,21 @@ benefit; best backbone; population-level effects.
 - Fig. 4 (`figures/results.pdf`) replaces the three result tables. `figures/make_results.py` reads
   every value from `nli_grounding_experiment/outputs/canonical/final_metrics.json` and
   `research/attribution_benchmark/results/b1_20261007.json`; no number is typed in.
+
+## Sect. 5.1 / Table 3 / abstract — the construction on public text
+Source: `research/traceability_properties/results/properties.json` (run.py, SaT sat-3l-sm, evidence_units_v3).
+
+| Claim in paper | JSON key (corpus) | Value |
+|---|---|---|
+| 500 Thai news articles (ThaiSum test), 1,000 English references (AttributionBench) | inputs.thai.used / inputs.english.used | 500 / 1000 |
+| every source reconstructed exactly | results[*].lossless_failures | 0 / 0 |
+| second run identical | results[*].determinism_failures | 0 / 0 |
+| units; mean (median) length | units, unit_length_chars | 12,092; 131.5 (81) / 10,869; 108.5 (97) |
+| every old ID -> stale_id | revision.content_addressed_stale_id / old_ids | 12092/12092, 10869/10869 |
+| raw offsets silently changed (> half) | revision.raw_offsets_silently_changed / old_ids | 53.3% / 57.1% |
+| position-only IDs silently changed (about a third in Thai) | revision.positional_ids_silently_changed / old_ids | 33.5% / 11.7% |
+| invalidated although unchanged | revision.raw_offsets_unchanged / old_ids | 46.7% / 42.9% |
+| cuts inside a word: units / fixed chunks (< 0.5%; 75% Thai, 65% English) | boundaries.*_mid_word / *_cuts | 57/11592 = 0.49% vs 8822/11804 = 74.7%; 27/9869 = 0.27% vs 6676/10303 = 64.8% |
+| never between two digits | boundaries.unit_cuts_splitting_digits (fixed) | 0 (75) / 0 (79) |
+| fixed chunk length = mean unit length | boundaries.fixed_chunk_chars | 132 / 109 |
+| about 0.19 s per 1,000 Thai characters on a CPU | ms_per_1000_chars (Thai) | 186.3 ms |
