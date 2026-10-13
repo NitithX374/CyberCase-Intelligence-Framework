@@ -53,3 +53,4 @@ uncited). Kept as core despite age: gotel1994traceability, buneman2001provenance
 method), reimers2020multilingual, he2021debertav3, laurer2022mdeberta (models in the system),
 conneau2018xnli (dataset in the planned study).
 | gupta2025autosumm | ACL Anthology 2025.acl-industry.35 + full PDF read | post-hoc entity/embedding/entailment hallucination layers, sentence-level flags shown to reviewers, no evidence pointers | verified |
+| chumpolsathien2020thaisum | ThaiSum dataset card (pythainlp/thaisum @ 6c2928cb, "Citation Information", MIT licence) | source of the Thai corpus in Sect. 5 only; metadata as given by the dataset authors | verified |
