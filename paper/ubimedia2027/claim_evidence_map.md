@@ -1,5 +1,9 @@
 # Claim → evidence map
 
+> Note: P1-P5 and R1-R5 below are internal shorthand. The manuscript states them in prose
+> (Sect. 3 requirements; Sect. 4 "the units partition S without loss", "safe across revisions",
+> "by construction", "references are closed") and no longer prints the tags.
+
 Every number in `main.tex` and the file it comes from. Paths are repo-relative.
 
 | Claim in paper | Value | Evidence |

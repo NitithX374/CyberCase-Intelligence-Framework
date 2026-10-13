@@ -85,3 +85,13 @@
   (S1/U003, S2/U002). Not referenced in the text.
 - Figs. 1-2 kept as they were (a plainer LongCite-style redraw was tried and set aside at the authors' request).
 - 15 pages, no overfull boxes.
+
+## 2026-10-14 — labels written out as prose (ai-research-writing, section revision)
+- Removed the bold tags that dominated the text: requirements R1-R5 (Sect. 3), properties (P1)-(P5)
+  and "(R2)/(R3)/(R5)" back-references (Sect. 4), RQ1-RQ3 in the evaluation intro and subsection
+  headings, and bold variant names B0/B1/B1-LR/B3 (Sect. 5), "P1--P5" in the Discussion.
+- Each is now a plain sentence ("Evidence must be verbatim: ...", "Identifiers are therefore safe across
+  revisions: ...", "We ask whether ..."). Meaning unchanged.
+- Checked: numeric tokens identical to the previous version once tags are removed; \cite set identical.
+- 15 pages, no overfull boxes. Only remaining TODO: acknowledgements (authors).
+- P1-P5 / R1-R5 remain as internal shorthand in claim_evidence_map.md and paper_story.md only.

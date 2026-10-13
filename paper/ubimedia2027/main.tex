@@ -244,15 +244,14 @@ $s(c)$; $\mathrm{w}(c)$ & Warning-layer score; label in \{\texttt{supported}, \t
 
 From the task itself (an investigator must be able to justify each statement in a case file) and
 from earlier versions of our system in which the model wrote its own quotations, which then had to be
-matched back to the sources approximately, we derived five requirements:
-\textbf{R1 Verbatim evidence}: every quotation shown is a substring of a stored source, reproduced
-by the system, never by a model. \textbf{R2 Fail visibly}: an unresolvable pointer is shown as
-invalid, not dropped or repaired. \textbf{R3 Revision safety}: a pointer issued for one version of a
-document never binds to another. \textbf{R4 Sentence-level provenance}: every summary sentence names
-the claims it rests on, and only claims in $C$. \textbf{R5 Bounded cost}: expensive
-stages run only when the case is complete enough, and any semantic check is cheap enough for every
-claim.
-R1--R4 are structural and can be enforced by construction; R5 shapes the pipeline. Whether a
+matched back to the sources approximately, we derived five requirements. Evidence must be
+verbatim: every quotation shown is a substring of a stored source, reproduced by the system and never
+by a model. Failures must be visible: a pointer that cannot be resolved is shown as invalid, not dropped
+or repaired. Pointers must be safe across revisions: one issued for a version of a document never binds
+to another. Provenance must reach the sentence: every summary sentence names the claims it rests on, and
+only claims in $C$. Finally, cost must stay bounded: expensive stages run only when the case is complete
+enough, and any semantic check is cheap enough to run on every claim. The first four are structural and
+can be enforced by construction; the last shapes the pipeline. Whether a
 claim is \emph{true}, or even entailed by its citations, is a separate question that no structural
 rule answers, which is what the warning layer of Sect.~\ref{sec:check} addresses, imperfectly.
 
@@ -273,7 +272,8 @@ view and the report.}
 \subsection{Overview}
 Figure~\ref{fig:pipeline} shows where the method sits: PDF pages are read by OCR so page locators are
 known, and $M_G$ checks the case against a 5W1H checklist and either asks the user one question and
-stops, or proceeds (R5). The four steps below make the evidence traceable.
+stops, or proceeds, so the expensive stages run only on cases complete enough to analyse. The four
+steps below make the evidence traceable.
 
 \subsection{Step 1: Lossless Source Units}\label{sec:units}
 Thai writes no sentence-final punctuation, so the boundaries of a quotable span have to be computed.
@@ -301,11 +301,11 @@ production rules.}
 \label{fig:units}
 \end{figure}
 
-This gives the first two guarantees. \textbf{(P1) Lossless partition}: for $U(S)=(u_1,\dots,u_n)$,
+This construction gives two guarantees. First, the units partition $S$ without loss: for $U(S)=(u_1,\dots,u_n)$,
 $u_k.\mathit{text} = S[u_k.\mathit{start}{:}u_k.\mathit{end}]$, $u_1.\mathit{start}=0$,
 $u_k.\mathit{end}=u_{k+1}.\mathit{start}$ and $u_n.\mathit{end}=|S|$, so concatenating the units returns
-$S$. \textbf{(P2) Determinism}: $U(S)$ is a pure function of $S$ and $v$, so units are recomputed on
-demand rather than stored.
+$S$. Second, segmentation is deterministic: $U(S)$ is a pure function of $S$ and $v$, so units are
+recomputed on demand rather than stored.
 
 \subsection{Step 2: Content-Addressed Identifiers}\label{sec:ids}
 Each unit is named by its source, its position $k$ and a revision tag computed from the whole source:
@@ -314,9 +314,9 @@ Each unit is named by its source, its position $k$ and a revision tag computed f
 h_S = \mathrm{SHA\text{-}256}\bigl(v \,\|\, \texttt{\textbackslash 0} \,\|\, S\bigr)_{[0:16]},
 \end{equation}
 where $k$ is zero-padded to three digits and $v=\texttt{evidence\_units\_v3}$. In Fig.~\ref{fig:units}C,
-$h_{S1}=\texttt{80a1d348f2908e99}$, and changing 4,500 to 4,800 gives \texttt{660d3b84ad7f6992}. \textbf{(P3) Revision safety (R3)}: editing any character of $S$ or
-changing $v$ changes $h_S$, so an identifier issued for an earlier text cannot resolve against the
-current one; a different text would need a 64-bit prefix collision of SHA-256 to reuse an identifier.
+$h_{S1}=\texttt{80a1d348f2908e99}$, and changing 4,500 to 4,800 gives \texttt{660d3b84ad7f6992}. Identifiers are therefore safe across revisions: editing any
+character of $S$ or changing $v$ changes $h_S$, so an identifier issued for an earlier text cannot
+resolve against the current one; a different text would need a 64-bit prefix collision of SHA-256 to reuse an identifier.
 
 \subsection{Step 3: Request-Scoped Aliases and Claims-Only Reading}\label{sec:reading}
 Long identifiers are costly to copy and easy to garble, so $M_R$ sees each unit only as its alias
@@ -347,14 +347,13 @@ reason $\rho$: the source is not in $K$ (\texttt{unknown\_source}); the identifi
 the recorded one (\texttt{stale\_id}); no such unit exists (\texttt{unknown\_unit}); or the unit is only
 whitespace (\texttt{empty\_unit}). Independently, an alias already cited by the same $c$ gives
 \texttt{duplicate\_id}. A result $\bot_\rho$ is stored and shown as an invalid pointer, never repaired or
-dropped (R2); otherwise $\beta$ returns the citation $(S,u.\mathit{start},u.\mathit{end},\mathit{page})$
-and the system reproduces $u.\mathit{text}$. \textbf{(P4) Verbatim evidence (R1)}: every quotation in the
-analysis view and the report is produced this way, so it is a substring of a stored source by
-construction.
+dropped; otherwise $\beta$ returns the citation $(S,u.\mathit{start},u.\mathit{end},\mathit{page})$
+and the system reproduces $u.\mathit{text}$. Because every quotation in the analysis view and the
+report is produced this way, it is a substring of a stored source by construction.
 
 $M_J$ then writes $\Sigma$ from $C$ alone, ending each $\sigma$ with the bracketed identifiers of
 $R(\sigma)$, and a separate call extracts parties, timeline and impacts from $C$ for display.
-\textbf{(P5) Closed references (R4)}: if any $R(\sigma)$ or gap names a claim outside $C$, the analysis
+References are closed as well: if any $R(\sigma)$ or gap names a claim outside $C$, the analysis
 fails and is not stored. The result is the chain in Fig.~\ref{fig:provenance}: $\sigma\to R(\sigma)$ is
 why-provenance in the sense of \cite{buneman2001provenance}, and $c\to\beta(E^{+}(c))$ is
 where-provenance. A sentence is \emph{bound} when every $c\in R(\sigma)$ has resolved support,
@@ -379,11 +378,11 @@ locally.
 \section{Evaluating the Warning Layer}\label{sec:eval}
 %======================================================================
 
-Properties P1--P5 hold by construction and are exercised by the system's automated tests; we do not
-re-measure them here. What does need measurement is the optional warning layer, because its errors are
-statistical. We ask three questions. \textbf{RQ1}: does the B1-LR rule improve on thresholded NLI?
-\textbf{RQ2}: how does it behave when inputs are machine-translated into Thai? \textbf{RQ3}: what
-happens downstream if its verdict is used to filter claims instead of labelling them? No component was
+The guarantees of Sect.~\ref{sec:system} hold by construction and are exercised by the system's
+automated tests; we do not re-measure them here. What does need measurement is the optional warning
+layer, because its errors are statistical. We ask whether the B1-LR rule improves on thresholded NLI,
+how it behaves when its inputs are machine-translated into Thai, and what happens downstream if its
+verdict is used to filter claims instead of labelling them. No component was
 trained or tuned on test data, and we report every outcome of the agreed runs, including failures.
 
 \paragraph{Data and metrics.}
@@ -406,13 +405,13 @@ recorded result files.}
 \label{fig:results}
 \end{figure}
 
-\subsection{RQ1: Verifier Design on WiCE}
+\subsection{Verifier Design on WiCE}
 
 WiCE provides claim/evidence pairs from Wikipedia with entailment labels
 \cite{kamoi2023wice}. Design choices (selector, threshold, decision head, backbone) were made on the
-development split, and we report the held-out test split. We compare: \textbf{B0}, the probability of
-entailment on the full evidence with a development-tuned threshold; \textbf{B1}, the same rule on the
-selected units; \textbf{B1-LR}, the deployed rule; and \textbf{B3}, which adds reverse-direction NLI
+development split, and we report the held-out test split. We compare four rules: B0, the probability of
+entailment on the full evidence with a development-tuned threshold; B1, the same rule on the
+selected units; B1-LR, the deployed rule; and B3, which adds reverse-direction NLI
 features to the logistic head. Uncertainty uses 1,000 paired bootstrap resamples.
 
 
@@ -425,7 +424,7 @@ indistinguishable from B1-LR (Macro-F1 $-0.002$, CI $-0.011$ to $+0.007$) at rou
 latency, so B1-LR was kept. The absolute level is modest: about one in four gold-unsupported pairs is
 still accepted. Other selectors, heads and backbones were rejected on development data.
 
-\subsection{RQ2: Transfer to Machine-Translated Thai}
+\subsection{Transfer to Machine-Translated Thai}
 
 We rescored the AttributionBench test sets with the frozen B1-LR in English and in Thai. All 33,583
 unique claim and reference texts were translated English$\to$Thai with Google Cloud Translation (NMT
@@ -449,7 +448,7 @@ BGE-M3 \cite{chen2024bgem3} similarity between each text and its translation (me
 topical closeness, not that names, amounts and negations survived; translation, language and truncation
 effects are not separated.
 
-\subsection{RQ3: What If the Warning Were a Filter?}\label{sec:replay}
+\subsection{What If the Warning Were a Filter?}\label{sec:replay}
 
 To see what the check changes downstream, we replayed the judge $M_J$ on AttributionBench
 rather than on cases, because only there do claims carry gold labels. Twenty label-blind,
@@ -482,9 +481,9 @@ reaching $M_J$ is a path no claim-level check examines.
 %======================================================================
 
 \paragraph{What the method guarantees, and what it does not.}
-P1--P5 guarantee that every displayed quotation exists in a stored source at the stated range, that no
-identifier silently survives an edit, and that every summary sentence points only to claims the analysis
-produced. They do not guarantee that a claim is supported by its spans, that the model cited all the
+The construction guarantees that every displayed quotation exists in a stored source at the stated
+range, that no identifier silently survives an edit, and that every summary sentence points only to
+claims the analysis produced. It does not guarantee that a claim is supported by its spans, that the model cited all the
 evidence it should have, or that the segmenter drew the most useful boundaries: a unit is the finest
 granularity a citation can have, so a poor split makes citations coarser, though never wrong in
 location. These questions are semantic, so they are left to the optional warning layer.
@@ -497,8 +496,8 @@ one, and a filter hides its errors where a label shows them. The verdict is ther
 the claim and nothing else changes, while the structural checks of Sect.~\ref{sec:binding} stay strict.
 
 \paragraph{Threats to validity.}
-P1--P5 are argued from construction and exercised by tests, but not yet compared head to head with a
-quote-writing pipeline. The replay measures whether unsupported claim identifiers are cited, not whether
+These guarantees are argued from construction and exercised by tests, but the method has not yet
+been compared head to head with a quote-writing pipeline. The replay measures whether unsupported claim identifiers are cited, not whether
 the prose is faithful. Thai labels are inherited through machine translation, with translation, language
 and truncation effects confounded. WiCE and AttributionBench are English web data, not complaints, so
 we claim no accuracy on real cases and no benefit to investigators. A smaller MiniLM backbone tested
