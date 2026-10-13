@@ -6,6 +6,8 @@
 \usepackage{amsmath}
 \usepackage{xcolor}
 \usepackage{array}
+\usepackage{colortbl}
+\usepackage{pifont}
 \usepackage{microtype}
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta,fit,backgrounds}
@@ -17,6 +19,10 @@
 \setcounter{topnumber}{3}
 
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\definecolor{yesbg}{HTML}{CDEBC9}
+\definecolor{nobg}{HTML}{F6CFCB}
+\newcommand{\yes}{\cellcolor{yesbg}\ding{51}}
+\newcommand{\no}{\cellcolor{nobg}\ding{55}}
 
 \begin{document}
 
@@ -169,22 +175,46 @@ MiniCheck trains small grounding checkers \cite{tang2024minicheck}, and AttrScor
 with LLMs and fine-tuned models \cite{yue2023attrscore}; WiCE \cite{kamoi2023wice} and
 AttributionBench \cite{li2024attributionbench} supply labelled claim/evidence pairs. For Thai, XNLI
 provides professionally translated NLI test data \cite{conneau2018xnli}, and PyThaiNLP provides
-sentence segmentation \cite{phatthiyaphaibun2023pythainlp}. We do not propose a new checker: we
+sentence segmentation \cite{phatthiyaphaibun2023pythainlp}. AUTOSUMM, deployed for bank call summaries, combines entity, embedding and entailment layers and
+shows sentence-level flags to reviewers \cite{gupta2025autosumm}, close to our warning layer but without
+evidence pointers. Table~\ref{tab:compare} compares these systems. We do not propose a new checker: we
 assemble a cheap, frozen one from multilingual components \cite{reimers2020multilingual} and measure
 what it does at one point in the pipeline.
 
+
+
+\begin{table}[t]
+\centering
+\caption{How close systems handle evidence, as described in each paper (\ding{55}: not provided or
+not reported).}
+\label{tab:compare}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lcccccc}
+\toprule
+ & ALCE & AfG & Worledge & Yang & AUTOSUMM & \textbf{Ours} \\
+ & \cite{gao2023alce} & \cite{slobodkin2024afg} & \cite{worledge2026default} & \cite{yang2026traceable} & \cite{gupta2025autosumm} & \\
+\midrule
+No model-written evidence & \yes & \no  & \no  & \yes & \no  & \yes \\
+Exact span per claim      & \no  & \yes & \yes & \no  & \no  & \yes \\
+Failed pointers shown     & \no  & \no  & \no  & \no  & \no  & \yes \\
+Edit-safe identifiers     & \no  & \no  & \no  & \no  & \no  & \yes \\
+Runtime support check     & \no  & \no  & \no  & \no  & \yes & \yes \\
+\midrule
+Evidence unit & passage & span & quote & ID & -- & unit \\
+Domain & QA & summ. & legal & exhibit & banking & cyber \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 %======================================================================
 \section{Problem Setting and Requirements}\label{sec:problem}
 %======================================================================
 
-Table~\ref{tab:notation} lists the notation. A case $K$ owns sources $S_1,\dots,S_m$; a source is a
-string (a typed narrative or the text extracted from an uploaded document) with page locators where
-they exist. Three LLM roles act on it: $M_G$ looks for missing information, $M_R$ reads the sources
-and writes claims $C$, and $M_J$ writes a summary $\Sigma$ from $C$. Each claim $c\in C$ is a short
-proposition with a type, an epistemic status and two evidence lists, $E^{+}(c)$ and $E^{-}(c)$, of
-source units that support or contradict it. Each summary sentence $\sigma$ names the claims
-$R(\sigma)\subseteq C$ it rests on. A citation is a triple $(S,a,b)$ denoting the substring $S[a{:}b]$.
+Table~\ref{tab:notation} lists the notation. A case $K$ owns sources $S$ (typed narratives or text
+extracted from documents, with page locators). $M_R$ reads them and writes claims $C$, each with
+evidence lists $E^{+}(c)$ and $E^{-}(c)$; $M_J$ writes a summary $\Sigma$ whose sentences $\sigma$
+name the claims $R(\sigma)$ they rest on.
 
 \begin{table}[t]
 \centering
@@ -232,39 +262,11 @@ rule answers, which is what the warning layer of Sect.~\ref{sec:check} addresses
 
 \begin{figure}[t]
 \centering
-\begin{tikzpicture}[
-  font=\scriptsize,
-  box/.style={draw, rounded corners=2pt, align=center, minimum height=9mm, inner sep=2pt, text width=21mm},
-  llm/.style={box, fill=gray!18},
-  det/.style={box, fill=white},
-  arr/.style={-{Stealth[length=1.6mm]}, semithick}]
-% row 1: intake and preflight
-\node[det] (src)    at (0,0)     {Case sources\\ text, PDF, DOCX,\\ images (OCR)};
-\node[det] (units)  at (2.95,0)  {Source units\\ exact offsets,\\ stable IDs};
-\node[llm] (assess) at (5.9,0)   {Gap check $M_G$\\ 5W1H checklist};
-\node[det] (ask)    at (8.85,0)  {Ask one\\ follow-up question\\ and stop};
-% row 2: analysis, fan-out after binding, fan-in to the report
-\node[llm] (reader) at (0,-2.6)  {Reader $M_R$\\ claims + selected\\ aliases only};
-\node[det] (bind)   at (2.95,-2.6) {Binding $\beta$\\ resolve IDs,\\ reproduce spans};
-\node[det] (check)  at (5.9,-1.5)  {Optional warning\\ $\mathrm{w}(c)$};
-\node[llm] (judge)  at (5.9,-2.6)  {Judge $M_J$\\ $\sigma\to$ [A-$nn$]};
-\node[llm] (views)  at (5.9,-3.7)  {Views: parties,\\ timeline, impacts};
-\node[det] (report) at (8.85,-2.6) {Report snapshot\\ HTML / PDF,\\ no model call};
-\draw[arr] (src) -- (units);
-\draw[arr] (units) -- (assess);
-\draw[arr] (assess) -- node[above]{gap} (ask);
-\draw[arr] (assess.south) -- ++(0,-0.35) -| node[pos=0.22, below]{proceed} (reader.north);
-\draw[arr] (reader) -- (bind);
-\draw[arr] (bind.east) -- ++(0.25,0) |- (check.west);
-\draw[arr] (bind.east) -- (judge.west);
-\draw[arr] (bind.east) -- ++(0.25,0) |- (views.west);
-\draw[arr] (check.east) -- ++(0.25,0) |- (report.west);
-\draw[arr] (judge.east) -- (report.west);
-\draw[arr] (views.east) -- ++(0.25,0) |- (report.west);
-\end{tikzpicture}
-\caption{Analysis flow. Shaded boxes call an LLM; white boxes are deterministic or
-use frozen local models. $M_R$ can only select identifiers that the system issued; the warning
-layer, $M_J$ and the views run concurrently after binding.}
+\includegraphics[width=\linewidth]{figures/overview.pdf}
+\caption{Analysis flow. $M_G$ may stop the analysis to ask one question. $M_R$ can only select
+identifiers that the system issued; binding either reproduces a verbatim span or records an invalid
+pointer; $M_J$ writes the summary from the claims; the optional warning label is shown in the analysis
+view and the report.}
 \label{fig:pipeline}
 \end{figure}
 
@@ -280,7 +282,7 @@ keeping their offsets, and each non-empty line into sentences with the multiling
 \cite{frohmann2024sat}, falling back to PyThaiNLP's CRF segmenter \cite{phatthiyaphaibun2023pythainlp}
 when SaT is unavailable; if the pieces do not concatenate back to the line exactly, the whole line is
 kept as one piece. (2) Pieces shorter than $\delta$ non-space characters are merged into the following
-piece, so that interjections such as \emph{ตกใจมาก} (``I was shocked'') do not become citable units on
+piece, so that interjections such as \emph{tok jai mak} (``I was shocked'', Fig.~\ref{fig:units}) do not become citable units on
 their own. (3) $S$ is then cut at every piece start, at the start of every table and table row produced
 by OCR, and every $L$ characters within long pieces. Each unit runs from its start to the next unit's
 start, so whitespace and line breaks belong to a unit rather than falling between units.
@@ -380,17 +382,12 @@ happens downstream if its verdict is used to filter claims instead of labelling 
 trained or tuned on test data, and we report every outcome of the agreed runs, including failures.
 
 \paragraph{Data and metrics.}
-We use the WiCE test split (1,070 pairs, 330 supported; design chosen on its development split)
-\cite{kamoi2023wice}, the balanced AttributionBench test splits (1,610 in-domain and 1,686
-out-of-domain rows) \cite{li2024attributionbench}, a Google machine translation of the latter into
-Thai with labels inherited from English, and a replay slice of 20 AttributionBench clusters
-(60 rows). All labels come from the original benchmarks; none were produced by the system or the
-authors. We treat \emph{supported} as the positive class.
-FAR (false acceptance rate) is the share of gold-unsupported items labelled supported; FRR (false
-rejection rate) is the share of gold-supported items labelled not supported. For a warning label,
-FAR is the most consequential error, because an accepted unsupported claim carries no warning.
-Uncertainty is estimated with paired bootstrap resampling of whole question/response clusters
-within source subsets, so that rows sharing evidence are not treated as independent.
+We use WiCE test (1,070 pairs) \cite{kamoi2023wice}, AttributionBench test (1,610 in-domain, 1,686
+out-of-domain rows) \cite{li2024attributionbench} and its Google translation into Thai, and 20
+AttributionBench clusters for the replay; all labels come from the benchmarks. FAR is the share of
+gold-unsupported items labelled supported, the error that matters most for a warning label; FRR is the
+share of supported items labelled unsupported. Intervals come from bootstrap resampling of whole
+question/response clusters.
 
 
 \begin{figure}[t]
@@ -421,10 +418,7 @@ change in false acceptance ($+0.75$ pp, CI $-1.09$ to $+2.70$). Relative to B1, 
 boundary lowers false acceptance by 5.42 points (CI 3.70--7.17). B3 is statistically
 indistinguishable from B1-LR (Macro-F1 $-0.002$, CI $-0.011$ to $+0.007$) at roughly twice the
 latency, so B1-LR was kept. The absolute level is modest: about one in four gold-unsupported pairs is
-still accepted. Other selectors, decision heads and backbones were rejected on development data. On
-English AttributionBench a larger English-trained checker, MiniCheck \cite{tang2024minicheck}, scores
-clearly higher than our backbone, but it emits a binary label rather than the three-way vector the
-frozen boundary needs and has not been tested on Thai, so we did not adopt it.
+still accepted. Other selectors, heads and backbones were rejected on development data.
 
 \subsection{RQ2: Transfer to Machine-Translated Thai}
 
@@ -498,20 +492,13 @@ one, and a filter hides its errors where a label shows them. The verdict is ther
 the claim and nothing else changes, while the structural checks of Sect.~\ref{sec:binding} stay strict.
 
 \paragraph{Threats to validity.}
-\emph{Scope of evidence}: P1--P5 are argued from construction and exercised by tests, but we have not
-yet compared the method head to head with a pipeline in which the model writes its own quotations.
-\emph{Construct validity}: the replay measures whether an unsupported row's identifier is cited, not
-whether the prose is faithful; a summary can cite a supported claim and still add unsupported
-content, as the qualitative example shows. \emph{Internal validity}: Thai labels are inherited through
-machine translation, and translation, language and truncation effects are confounded; the replay uses
-a single model at temperature zero, and six failed generations reduce the observable pairs to 15.
-\emph{External validity}: WiCE and AttributionBench are English Wikipedia and web question-answering
-data, not cybercrime complaints, and the replay uses benchmark claims rather than claims written by
-$M_R$. We therefore do not claim accuracy on real complaints, factual or legal correctness,
-reduced hallucination in prose, or any benefit to investigators. Finally, mDeBERTa was chosen on WiCE
-development data before testing; a smaller multilingual MiniLM backbone, run afterwards as a
-sensitivity check, scored higher on WiCE test (Macro-F1 .650 vs.\ .618), so we do not claim the
-deployed backbone is optimal.
+P1--P5 are argued from construction and exercised by tests, but not yet compared head to head with a
+quote-writing pipeline. The replay measures whether unsupported claim identifiers are cited, not whether
+the prose is faithful. Thai labels are inherited through machine translation, with translation, language
+and truncation effects confounded. WiCE and AttributionBench are English web data, not complaints, so
+we claim no accuracy on real cases and no benefit to investigators. A smaller MiniLM backbone tested
+afterwards scored higher on WiCE (Macro-F1 .650 vs.\ .618), so the deployed backbone is not claimed
+optimal.
 
 \paragraph{Ethics and privacy.}
 Complaints contain personal and financial data. OCR and LLM stages were called through external
@@ -519,13 +506,10 @@ APIs, so deployment on real complaints needs a data-processing agreement or self
 system does not decide guilt, and no real case data was used in these experiments.
 
 \paragraph{Next steps.}
-The next study is a proof of concept on public Thai and English corpora that runs the same cases through
-a quote-writing pipeline and through the method above, and compares quotation fidelity, pointer validity,
-evidence coverage and output tokens, all measurable without human labels. For the warning layer, the
-missing evidence is a Thai benchmark from real, anonymised complaints; we plan labels known by
-construction (claims with altered amounts, dates, roles or negation), the Thai XNLI test set
-\cite{conneau2018xnli}, which the checkpoint never saw in fine-tuning, and a small doubly annotated
-subset.
+A proof of concept on public Thai and English corpora will run the same cases through a quote-writing
+pipeline and through this method, comparing quotation fidelity, pointer validity, coverage and output
+tokens without human labels. For the warning layer, we plan by-construction labels, the Thai XNLI test set
+\cite{conneau2018xnli} and a small doubly annotated subset of real, anonymised complaints.
 
 %======================================================================
 \section{Conclusion}

@@ -55,3 +55,11 @@
 - Three result tables replaced by one 3-panel comparison figure made with matplotlib in the
   figures4papers house style (figures/make_results.py).
 - 15 pages, no overfull boxes.
+
+## 2026-10-13 (evening) — TofuEval-style figures
+- Fig. 1 redrawn as an icon overview (figures/overview.tex, FontAwesome 5) in the style of TofuEval Fig. 1.
+- Table 1: green/red ✓/✗ comparison of ALCE, AfG, Worledge et al., Yang et al., AUTOSUMM and ours
+  (cells follow each paper's own description; ✗ = not provided or not reported).
+- Added AUTOSUMM (ACL 2025 Industry) to related work.
+- Fixed a missing Thai glyph in the body text (now transliterated, pointing to Fig. 2).
+- 15 pages, no overfull boxes.

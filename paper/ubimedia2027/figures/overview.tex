@@ -1,0 +1,88 @@
+% Icon overview of the analysis flow, in the style of TofuEval's Fig. 1
+% (black line icons, red/green accents, short bold labels, italic notes).
+% Compile separately:  tectonic figures/overview.tex  ->  figures/overview.pdf
+\documentclass[tikz,border=3pt]{standalone}
+\usepackage{fontawesome5}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usetikzlibrary{positioning,arrows.meta,calc}
+\definecolor{ink}{HTML}{222222}
+\definecolor{okgreen}{HTML}{2E8B57}
+\definecolor{badred}{HTML}{C0392B}
+\definecolor{warn}{HTML}{D68910}
+\definecolor{llm}{HTML}{1F4E79}
+\begin{document}
+\begin{tikzpicture}[x=1.12cm, y=1.5cm,
+  font=\sffamily\footnotesize, text=ink,
+  icon/.style={font=\fontsize{26}{26}\selectfont, inner sep=1pt},
+  lbl/.style={align=center, font=\sffamily\normalsize\bfseries, inner sep=1pt},
+  note/.style={align=center, font=\sffamily\small\itshape, text=ink!80, inner sep=1pt},
+  arr/.style={-{Stealth[length=1.6mm]}, thick, ink},
+  bad/.style={-{Stealth[length=1.6mm]}, thick, badred, dashed},
+  good/.style={-{Stealth[length=1.6mm]}, thick, okgreen}]
+
+% ---------------- top row: intake and preflight
+\node[icon] (src) at (0,0) {\faComments\,\faFilePdf\,\faReceipt};
+\node[lbl, below=1pt of src] (srcL) {Case sources $S$};
+\node[note, below=0pt of srcL] {text, PDF, slips (OCR)};
+
+\node[icon] (cut) at (3.0,0) {\faCut};
+\node[lbl, below=1pt of cut] (cutL) {Source units $U(S)$};
+\node[note, below=0pt of cutL] {lossless, exact offsets};
+
+\node[icon] (fp) at (5.6,0) {\faFingerprint};
+\node[lbl, below=1pt of fp] (fpL) {IDs $\mathit{id}(u)$, $h_S$};
+\node[note, below=0pt of fpL] {content hash};
+
+\node[icon, text=llm] (mg) at (8.6,0) {\faRobot};
+\node[lbl, below=1pt of mg] (mgL) {$M_G$: gap check};
+\node[note, below=0pt of mgL] {5W1H checklist};
+
+\node[icon] (user) at (12.0,0) {\faUserTie};
+\node[lbl, below=1pt of user] (userL) {Investigator};
+
+\draw[arr] (src) -- (cut);
+\draw[arr] (cut) -- (fp);
+\draw[arr] (fp) -- (mg);
+\draw[bad] (mg.north) to[bend left=28] node[above, font=\sffamily\small\itshape, text=badred]{ask one question, stop} (user.north);
+\draw[arr, dashed, ink!60] ($(user.west)+(0,-0.05)$) -- node[below, font=\sffamily\small\itshape, text=ink!70]{answer} ($(mg.east)+(0.05,-0.05)$);
+
+% ---------------- bottom row: analysis
+\node[icon, text=llm] (mr) at (0,-2.55) {\faRobot};
+\node[lbl, below=1pt of mr] (mrL) {$M_R$: reader};
+\node[note, below=0pt of mrL] {writes claims $C$,\\selects aliases only};
+
+\node[icon] (bind) at (3.0,-2.55) {\faLink};
+\node[lbl, below=1pt of bind] (bindL) {Binding $\beta$};
+\node[note, below=0pt of bindL] {7 ordered checks};
+
+\node[icon, text=okgreen] (ok) at (5.0,-1.95) {\faCheckCircle};
+\node[lbl, right=1pt of ok, text=okgreen, align=left] {verbatim span\\[-1pt]{\small\mdseries\itshape $S[a{:}b]$ + page}};
+\node[icon, text=badred] (no) at (5.0,-3.15) {\faTimesCircle};
+\node[lbl, right=1pt of no, text=badred, align=left] {invalid pointer\\[-1pt]{\small\mdseries\itshape shown, never repaired}};
+
+\node[icon, text=llm] (mj) at (10.0,-1.95) {\faRobot};
+\node[lbl, below=1pt of mj] (mjL) {$M_J$: judge};
+\node[note, below=0pt of mjL] {$\sigma\to$ [A-01, A-02]};
+
+\node[icon] (rep) at (12.0,-1.95) {\faClipboardList};
+\node[lbl, below=1pt of rep] (repL) {Report};
+\node[note, below=0pt of repL] {no model call};
+
+\node[icon, text=warn] (w) at (10.0,-3.75) {\faExclamationTriangle};
+\node[lbl, right=1pt of w, text=warn, align=left] {optional warning $\mathrm{w}(c)$\\[-1pt]{\small\mdseries\itshape label only, never filters}};
+
+\draw[arr] ($(mg.south)+(0,-0.72)$) -- ++(0,-0.38) -| node[pos=0.25, above, font=\sffamily\small\itshape, text=ink!70]{proceed} (mr.north);
+\draw[arr] (mr) -- (bind);
+\draw[good] (bind.east) -- (ok.west);
+\draw[bad] (bind.east) -- (no.west);
+\draw[arr] ($(ok.east)+(2.45,0)$) -- (mj.west);
+\draw[arr, warn] ($(ok.east)+(2.75,0)$) |- (w.west);
+\draw[arr] (mj) -- (rep);
+
+% legend
+\node[anchor=west, font=\sffamily\small, text=ink!80] at (-0.7,-4.55) {%
+\textcolor{llm}{\faRobot}\ LLM call\qquad other icons: deterministic or frozen local models\qquad
+\textcolor{okgreen}{\faCheckCircle}/\textcolor{badred}{\faTimesCircle}\ binding outcome};
+\end{tikzpicture}
+\end{document}
