@@ -101,3 +101,12 @@
   dropped from the title; no real Thai cases were evaluated, so the title no longer implies it).
 - Keyword "Thai language" -> "Low-resource languages"; intro: "Thai, a low-resource language for this task, ...".
 - Thai stays in the body (segmentation motivation, Fig. 2 example, MT-Thai evaluation). 15 pages.
+
+## 2026-10-14 — venue check (2027umediaconf.com, CFP PDF, submission guidelines PDF)
+- Topics now list "Generative AI, large language models, and foundation models", "Privacy, security, and
+  trustworthy AI" and "Environmental sustainability and public safety": the paper fits.
+- Length: CFP 2027 says 6-16 pages incl. figures, tables and references; guidelines say full papers 12-15.
+  The paper is 15 pages.
+- Review is not anonymous: the submission must include the list of authors, so author names stay.
+- Deadline Oct 15, 2026 (time zone not stated); notification Nov 15; camera-ready Nov 25.
+- One author must attend in Okinawa; papers must be in English and not under review elsewhere.

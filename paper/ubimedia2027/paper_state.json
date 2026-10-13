@@ -2,7 +2,7 @@
   "schema_version": "ai-research-writing/paper-state-v1",
   "mode": "full-paper",
   "stage": "drafting",
-  "target_venue": "Ubi-Media 2027 (Springer CCIS, LNCS template; regular paper ~12-15 pages; deadline 2026-10-15)",
+  "target_venue": "Ubi-Media 2027 (Springer CCIS, LNCS/CCIS one-column; 6-16 pages incl. references per the 2027 CFP, full papers 12-15 per the guidelines; deadline 2026-10-15, time zone not stated; EasyChair conf=ubimedia2027)",
   "main_tex": "main.tex",
   "bibliography": "references.bib",
   "required_artifacts": [
@@ -14,7 +14,8 @@
   "blockers": [
     "Advisor review and co-author approval not yet obtained.",
     "No evaluation on native Thai case files; stated as a limitation, not resolved.",
-    "Check the EasyChair deadline time zone and whether the venue is double-blind."
+    "Deadline time zone is not stated on the CFP; submit on Oct 15 local time or earlier.",
+    "Attendance by at least one author in Okinawa (Jan 17-21, 2027) is mandatory for accepted papers."
   ],
   "build": {
     "status": "artifact-only",
