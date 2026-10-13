@@ -25,7 +25,7 @@
       "figures/units.pdf and figures/provenance.pdf (built from figures/*.tex with XeLaTeX and the Loma Thai font)",
       "figures/results.pdf (built by figures/make_results.py from recorded result files)"
     ],
-    "input_sha256": "b946809f4913bae7dd26f0f248eed1a2aa07134c4dca936f802e0d009c7cccdb",
-    "pdf_sha256": "13aa11f2f2c96c804c9eadb155fe402c9074ee7d5aa6498e02a92eaa07b0bf2d"
+    "input_sha256": "e89bb2c461688e0529b9a798dae25d7e57d0d3f4485c43b0382f03ad68791bae",
+    "pdf_sha256": "bb856f0a3aba809a1c8c1259e58d8aefdbbb7b2f9c53c5aff38bec7370ee9633"
   }
 }

@@ -114,15 +114,16 @@ follow the life of a requirement both forwards and backwards; Gotel and Finkelst
 problems stem from missing information about where an artifact came from and how it was produced
 \cite{gotel1994traceability}. Database research distinguishes \emph{why}-provenance, the
 source records that justify an output, from \emph{where}-provenance, the exact location a value was
-copied from \cite{buneman2001provenance}; W3C PROV standardises the entities, activities and agents
-needed to record such histories \cite{lebo2013provo}. Our design maps directly onto this vocabulary:
+copied from \cite{buneman2001provenance}. Our design maps directly onto this vocabulary:
 a citation is where-provenance (a source and a character range), the claim identifiers on a summary
 sentence are why-provenance, and both are recorded when the output is produced rather than
 reconstructed afterwards.
 
 For LLM output, the need is well documented. An audit of four generative search engines found that
 only 51.5\% of generated sentences were fully supported by their citations and only 74.5\% of
-citations supported the sentence they were attached to \cite{liu2023verifiability}. Domain
+citations supported the sentence they were attached to \cite{liu2023verifiability}. In medicine,
+between 50\% and 90\% of LLM responses were not fully supported by the sources they cited
+\cite{wu2025sourcecheckup}. Domain
 systems respond with explicit evidence records. Yang et al.\ register exhibition evidence under
 stable identifiers and label each generated unit as grounded or creative, auditing the links
 manually \cite{yang2026traceable}; Dehing et al.\ carry message trace identifiers into structured
@@ -132,9 +133,9 @@ checked afterwards; in ours it is issued and resolved by the system.
 
 \subsection{Attribute First, then Generate}
 
-Attributed question answering frames attribution as a task in its own right
-\cite{bohnet2022attributedqa}, and attribution is commonly judged by whether a statement is
-supported by an identified source \cite{rashkin2023ais}. Two families of methods followed.
+Attribution is commonly judged by whether a statement is supported by an identified source
+\cite{rashkin2023ais}, and support alone is not enough: up to 57\% of citations in a recent study were
+post-rationalised rather than the evidence the model actually used \cite{wallat2025faithfulness}. Two families of methods followed.
 \emph{Post-hoc} methods generate first and attach or repair evidence later: RARR searches for
 evidence for an existing output and revises unsupported content \cite{gao2023rarr}, and ALCE
 benchmarks models that cite retrieved passages while writing \cite{gao2023alce}. \emph{Attribute-first}
@@ -144,18 +145,17 @@ source \cite{slobodkin2024afg}; this shortened human verification time in both o
 while human-judged attribution rose in one task and fell in the other.
 
 Later work refines the selected unit and what is done with it. FRONT trains models to extract
-fine-grained quotes before writing grounded citations \cite{huang2024front}; GenerationPrograms
+fine-grained quotes before writing grounded citations \cite{huang2024front}; LongCite trains long-context models to cite
+at sentence level as they write \cite{zhang2025longcite}; GenerationPrograms
 expresses the answer as an executable program of operations over source sentences, so that each
 output sentence carries its derivation \cite{wan2025generationprograms}; Worledge et al.\ show
 that moving from quotation toward abstraction makes answers more fluent and useful but harder and
 slower to verify \cite{worledge2024spectrum}; CiteLab provides tooling to compare citation workflows,
 attribute-first among them \cite{shen2025citelab}; and QA-based propositions can localise exactly
 which part of an attributed sentence is inconsistent with its source \cite{cattan2026localizing}.
-In domains, it has been applied to legal default-judgment review with a randomised user study
-\cite{worledge2026default} and used as a baseline for evidence-based medical answers
-\cite{wu2025medgraphrag}, while related benchmarks move the evidence unit to page images and bounding
-boxes \cite{zhao2025finragbenchv} or train specialists on attributability-filtered data
-\cite{schimanski2024specialists}.
+It has been applied to legal review \cite{worledge2026default} and used as a medical baseline
+\cite{wu2025medgraphrag}; related work moves the evidence unit to page regions \cite{zhao2025finragbenchv}
+or filters training data for attributability \cite{schimanski2024specialists}.
 
 We keep the attribute-first order but change what is selected. Our reader model selects opaque identifiers
 issued by the system instead of copying spans, so the existence check that attribute-first methods
@@ -164,7 +164,7 @@ perform by string matching becomes an exact lookup, and a quotation can never dr
 \subsection{Claim Verification}
 
 A third line checks generated text against evidence. FActScore checks atomic facts
-\cite{min2023factscore}, SummaC applies sentence-level NLI to summaries \cite{laban2022summac},
+\cite{min2023factscore},
 MiniCheck trains small grounding checkers \cite{tang2024minicheck}, and AttrScore judges attribution
 with LLMs and fine-tuned models \cite{yue2023attrscore}; WiCE \cite{kamoi2023wice} and
 AttributionBench \cite{li2024attributionbench} supply labelled claim/evidence pairs. For Thai, XNLI
@@ -488,8 +488,7 @@ identifier silently survives an edit, and that every summary sentence points onl
 produced. They do not guarantee that a claim is supported by its spans, that the model cited all the
 evidence it should have, or that the segmenter drew the most useful boundaries: a unit is the finest
 granularity a citation can have, so a poor split makes citations coarser, though never wrong in
-location. These residual questions are semantic, which is why they are left to a separate, optional
-layer whose output is a label rather than a decision.
+location. These questions are semantic, so they are left to the optional warning layer.
 
 \paragraph{Gate or label.}
 The replay shows the trade-off: a filter that removes about three quarters of unsupported claims from

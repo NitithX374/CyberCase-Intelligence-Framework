@@ -43,3 +43,12 @@ reading the abstract/known content; the uploaded PDF of Yang et al. was read in 
 AfG verification-time / AIS trade-off sentence follows the repo survey's reading of Slobodkin et al. Tables 3–4
 (MDS 47→22 s, AIS 89.3→79.9; LFQA 59→35 s, AIS 87.6→94.4).
 | frohmann2024sat | ACL Anthology 2024.emnlp-main.665 | SaT sentence segmenter used for Source units (code: trace/sentences.py, model sat-3l-sm) | verified |
+| wu2025sourcecheckup | Crossref 10.1038/s41467-025-58551-6 | 50–90% of medical LLM responses not fully supported by cited sources (abstract) | verified |
+| wallat2025faithfulness | Crossref 10.1145/3731120.3744592 | up to 57% of citations lack faithfulness (post-rationalised) | verified |
+| zhang2025longcite | ACL Anthology 2025.findings-acl.264 | sentence-level citations in long-context QA | verified |
+
+2026-10-13: per the authors' request, citations are kept within roughly the last three years except
+core ones. Removed: bohnet2022attributedqa, laban2022summac, lebo2013provo (entries kept in .bib,
+uncited). Kept as core despite age: gotel1994traceability, buneman2001provenance (concepts used in the
+method), reimers2020multilingual, he2021debertav3, laurer2022mdeberta (models in the system),
+conneau2018xnli (dataset in the planned study).
