@@ -57,3 +57,16 @@ benefit; best backbone; population-level effects.
 | 266 backend + 76 frontend tests + 2 real-model tests at integration time | | `B1_RESULTS_2026-10-07.md` validation |
 | Usability protocol 5–10 participants, prepared, not run | | `docs/research/USABILITY_PROTOCOL.md` |
 | Fig. 2 example | constructed | not system output; stated in caption |
+
+## Reframe (2026-10-13): traceability method as the main contribution
+
+| Claim | Evidence |
+|---|---|
+| Segmentation: lines -> SaT (sat-3l-sm, threshold 0.025) with PyThaiNLP crfcut fallback; whole line if pieces do not rejoin; merge < 25 non-space chars; table/row starts; 2,000-char cap | `backend/app/trace/sentences.py`, `backend/app/sources/evidence.py`, `trace/quotes.py` (MAX_QUOTE_CHARS) |
+| P1 lossless partition | `evidence_units()` (starts/ends); test `test_units_partition_original_text_without_normalizing_any_character` |
+| P3 revision safety, ID formula `S:U{k:03d}-sha256("evidence_units_v3\0"+text)[:16]` | `evidence_revision()`; tests `test_a_text_change_invalidates_ids_even_when_the_ordinal_stays_the_same`, `test_segmentation_version_makes_old_unit_ids_stale` |
+| Aliases U001.. with text only; revision map captured before Reader; expansion | `backend/app/analysis/reading_sources.py` (`ReadingSources`) |
+| Check order unknown_source, malformed_id, cross_source, stale_id, unknown_unit, empty_unit; duplicate_id per Claim | `EvidenceIndex.resolve`, `trace/evidence_binding.py::bind_citations`, `trace/bind.py` (seen per Claim) |
+| P5 closed references → analysis fails (502) | `analysis/claim_gate.py::check_judgement_references` |
+| Fig. 2/3 offsets and hashes (S1: 157 chars, [0,73) [73,107) [107,157), h=80a1d348f2908e99; S2: 58 chars, [14,37), h=64037a8f547b2daa) | computed with the production formulas; sentence split in step 1 is illustrative (stated in caption) |
+| Removed from this version | design-decision table, checkpoint table, positioning table (content still in this map above) |

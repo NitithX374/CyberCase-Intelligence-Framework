@@ -21,9 +21,10 @@
     "command": "tectonic main.tex",
     "pdf": "main.pdf",
     "external_inputs": [
-      "llncs.cls and splncs04.bst from the Tectonic TeX Live bundle"
+      "llncs.cls and splncs04.bst from the TeX distribution",
+      "figures/units.pdf and figures/provenance.pdf (built from figures/*.tex with XeLaTeX and the Loma Thai font)"
     ],
-    "input_sha256": "a532848791b7dda40a72308c96280cddc67f99e947e193bcd6d562dbd0ac5d0f",
-    "pdf_sha256": "300aac03a10ca52221e661895b982c50a91cee7303218a01fe61643ee9348bd9"
+    "input_sha256": "e93e48364ee7a953cc4b6f64b7c069eea54812c21cfad4cae372ca6b08d98f2b",
+    "pdf_sha256": "ed3506a939d7f05fd1bd97a118b040e92f25c9603f2fc92b6aad66188234e30e"
   }
 }

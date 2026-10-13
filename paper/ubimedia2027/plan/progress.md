@@ -40,3 +40,11 @@
 - Removed for space and to reduce system detail: Implementation section (now a 4-line paragraph),
   Fig. 2 constructed example, binding-check table (now one sentence), cost paragraph, long lessons.
 - Still 15 pages, no overfull boxes.
+
+## 2026-10-13 — reframed: traceability method as hero, NLI as optional warning layer
+- New abstract/contributions; Section 4 "Traceability by Construction" in four steps with
+  properties P1–P5; two XeLaTeX infographics (figures/units.tex, figures/provenance.tex, Thai via
+  the system Loma font; compiled PDFs committed so the main paper builds anywhere).
+- Fixed an accuracy issue: the primary segmenter is SaT (wtpsplit), PyThaiNLP is only the fallback.
+- Evaluation retitled "Evaluating the Warning Layer" (RQ1 WiCE, RQ2 MT-TH, RQ3 filter replay).
+- 15 pages, no overfull boxes.

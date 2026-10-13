@@ -42,3 +42,4 @@ reading the abstract/known content; the uploaded PDF of Yang et al. was read in 
 
 AfG verification-time / AIS trade-off sentence follows the repo survey's reading of Slobodkin et al. Tables 3–4
 (MDS 47→22 s, AIS 89.3→79.9; LFQA 59→35 s, AIS 87.6→94.4).
+| frohmann2024sat | ACL Anthology 2024.emnlp-main.665 | SaT sentence segmenter used for Source units (code: trace/sentences.py, model sat-3l-sm) | verified |

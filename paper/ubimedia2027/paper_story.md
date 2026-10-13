@@ -3,12 +3,13 @@
 ## Title
 "Traceable by Construction: Evidence-Grounded LLM Analysis of Thai Cybercrime Cases" (system left unnamed; "backend" kept only in Implementation).
 
-## Thesis
-LLM case-analysis tools for cybercrime complaints should not be trusted to write their own
-evidence pointers. CyberCase moves traceability out of the prompt and into the backend: the
-model may only *select* backend-issued Source-unit IDs, the backend reproduces the quoted text
-from exact offsets, and a frozen, cheap Claim/Source NLI check labels each Claim before
-synthesis.
+## Thesis (reframed 2026-10-13)
+Traceability is the main contribution, as a method: (1) lossless Thai-aware Source units,
+(2) content-addressed identifiers + request-scoped aliases, (3) deterministic binding with typed
+failure reasons and a two-level provenance chain (sentence -> Claims -> verbatim spans).
+Properties P1-P5 hold by construction (tests in backend/tests/test_evidence_units.py,
+test_evidence_binding.py, test_reading_sources.py, test_claims_only_judgement.py).
+The NLI check (B1-LR) is an optional warning layer, evaluated as a secondary contribution.
 
 ## Gap
 - Attributed-generation work (ALCE, Attribute-First) and domain workflows (default-judgment

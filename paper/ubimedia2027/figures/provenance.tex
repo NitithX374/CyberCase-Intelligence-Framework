@@ -1,0 +1,76 @@
+% Provenance-chain infographic. Compile separately (XeLaTeX/Tectonic):
+%   tectonic figures/provenance.tex   ->  figures/provenance.pdf
+% Offsets and revisions computed with the production rules (evidence_units_v3).
+% S1 is the narrative of figures/units.tex; S2 is a constructed three-line OCR bank
+% slip ("โอนเงินสำเร็จ\nจำนวนเงิน 4,500.00 บาท\nไปยังบัญชีลงท้าย 1234",
+% revision 64037a8f547b2daa). Failure reasons are the ones returned by
+% EvidenceIndex.resolve and bind_citations. Constructed example, not case data.
+\documentclass[tikz,border=2pt]{standalone}
+\usepackage{fontspec}
+\newfontfamily\thai{Loma}[Scale=0.78]
+\XeTeXlinebreaklocale "th"
+\XeTeXlinebreakskip=0pt
+\usepackage{xcolor}
+\usetikzlibrary{positioning,arrows.meta,calc,fit,backgrounds}
+\definecolor{ua}{HTML}{DCE9F7}
+\definecolor{ub}{HTML}{FBE3C8}
+\definecolor{uc}{HTML}{DDEFD9}
+\definecolor{why}{HTML}{6A4C93}
+\definecolor{where}{HTML}{1F6F8B}
+\definecolor{ink}{HTML}{333333}
+\begin{document}
+\begin{tikzpicture}[
+  font=\scriptsize\sffamily, text=ink,
+  card/.style={draw=ink!60, rounded corners=1.5pt, inner sep=3pt, align=left, anchor=north west, fill=white},
+  head/.style={font=\tiny\bfseries\sffamily, text=ink!70},
+  arr/.style={-{Stealth[length=1.4mm]}, semithick},
+  lbl/.style={font=\tiny\sffamily\itshape, fill=white, inner sep=1pt}]
+
+% ---- summary sentence
+\node[card, fill=gray!8, text width=11.2cm] (sum) at (0,0) {%
+{\tiny\bfseries\sffamily SUMMARY SENTENCE (Judgement)}\\
+\thai ผู้เสียหายโอนเงิน 4,500 บาท หลังได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง {\sffamily\bfseries [A-01, A-02]}};
+
+% ---- claims
+\node[card, fill=uc, text width=5.35cm] (a1) at ($(sum.south west)+(0,-0.5)$) {%
+{\tiny\bfseries\sffamily CLAIM A-01}\quad{\tiny event, reported}\\
+\thai ผู้เสียหายโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234\\
+{\ttfamily\tiny supporting: S1/U003, S2/U002}};
+\node[card, fill=ua, text width=5.35cm] (a2) at ($(a1.north west)+(5.85,0)$) {%
+{\tiny\bfseries\sffamily CLAIM A-02}\quad{\tiny actor, reported}\\
+\thai ผู้ส่งข้อความอ้างว่าเป็นบริษัทขนส่ง\\
+{\ttfamily\tiny supporting: S1/U001}};
+\draw[arr, why] ($(sum.south west)+(2.6,0)$) -- node[lbl, text=why, right]{why} (a1.north);
+\draw[arr, why] ($(sum.south east)+(-2.2,0)$) -- node[lbl, text=why, right]{why} (a2.north);
+
+% ---- binding strip
+\node[card, fill=gray!5, text width=11.2cm, font=\tiny\sffamily] (bind) at ($(a1.south west)+(0,-0.45)$) {%
+{\tiny\bfseries\sffamily DETERMINISTIC BINDING}\quad
+expand alias with the revision recorded before the Reader call:\enspace
+{\ttfamily S1/U003} $\to$ {\ttfamily S1:U003-80a1d348f2908e99}\\[1pt]
+check, in order:\enspace {\ttfamily unknown\_source $\cdot$ malformed\_id $\cdot$ cross\_source $\cdot$ stale\_id $\cdot$ unknown\_unit $\cdot$ empty\_unit $\cdot$ duplicate\_id}\\[1pt]
+any failure $\Rightarrow$ stored and shown as an \emph{invalid pointer}, never repaired;\enspace pass $\Rightarrow$ reproduce $\mathit{source}[\mathit{start}{:}\mathit{end}]$};
+\draw[arr, ink!60] (a1.south) -- (a1.south |- bind.north);
+\draw[arr, ink!60] (a2.south) -- (a2.south |- bind.north);
+
+% ---- citations (where-provenance)
+\node[card, fill=uc, text width=3.45cm] (c1) at ($(bind.south west)+(0,-0.45)$) {%
+{\tiny\bfseries\sffamily S1 \,[107,157)}\quad{\tiny narrative}\\
+\thai ตกใจมาก จึงโอนเงิน 4,500 บาท ไปยังบัญชีลงท้าย 1234};
+\node[card, fill=uc, text width=3.45cm] (c2) at ($(c1.north west)+(3.85,0)$) {%
+{\tiny\bfseries\sffamily S2 \,[14,37)}\quad{\tiny bank slip, OCR, page 1}\\
+\thai จำนวนเงิน 4,500.00 บาท};
+\node[card, fill=ua, text width=3.45cm] (c3) at ($(c1.north west)+(7.7,0)$) {%
+{\tiny\bfseries\sffamily S1 \,[0,73)}\quad{\tiny narrative}\\
+\thai เมื่อวันที่ 3 มีนาคม ดิฉันได้รับข้อความจากบัญชีที่อ้างว่าเป็นบริษัทขนส่ง};
+\foreach \c in {c1,c2,c3} \draw[arr, where] (\c.north |- bind.south) -- (\c.north);
+\node[lbl, text=where, anchor=west] at ($(c1.north east)!0.5!(c2.north west)+(0,0.22)$) {where};
+
+% ---- legend / states
+\node[anchor=north west, align=left, text width=11.2cm, font=\tiny\sffamily, text=ink!80] (leg) at ($(c1.south west |- c3.south)+(0,-0.1)$) {%
+\textcolor{why}{\textbf{why}}: which Claims a sentence rests on (Claim IDs written by Judgement, checked against the Claims it was given).\quad
+\textcolor{where}{\textbf{where}}: the exact source, character range and page, reproduced by the system.\\
+Binding state of a sentence: \textbf{bound} (all linked Claims resolve) $\cdot$ \textbf{mixed} $\cdot$ \textbf{unbound} $\cdot$ \textbf{no\_claim}.\quad
+Optional warning layer (Sect.~4.6): each bound Claim may also carry \texttt{supported} / \texttt{not\_supported} / \texttt{unassessed}; it is displayed, never used to filter, never sent to a model.};
+\end{tikzpicture}
+\end{document}
