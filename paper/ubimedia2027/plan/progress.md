@@ -163,3 +163,4 @@
 - Zhang et al. 2026 kept although it is an arXiv preprint (authors' choice).
 - schreieder2025survey: arXiv comment says "Accepted at ACL 2026"; bib now uses the ACL Anthology
   record (2026.acl-long.1430, pp. 30956-31000, DOI). 16 pages.
+- Sect. 4 heading: "Traceability by Construction" -> "Traceable Evidence in Four Steps" (authors' choice). 16 pages.
