@@ -165,3 +165,4 @@
   record (2026.acl-long.1430, pp. 30956-31000, DOI). 16 pages.
 - Sect. 4 heading: "Traceability by Construction" -> "Traceable Evidence in Four Steps" (authors' choice). 16 pages.
 - Fig. 3 redrawn plain (black lines, serif fonts incl. FreeSerif for Thai, grey shading for cited units, no colour chips/icons, binding band moved to the caption and Sect. 4.5). Full width; 16 pages.
+- Bib: DeBERTaV3 -> ICLR 2023, GenerationPrograms -> COLM 2025 (COLM 2025 paper list), BLIP -> PVLDB 19(11) 2026 (Crossref). tools/crosscheck_citations.py added. 16 pages.
