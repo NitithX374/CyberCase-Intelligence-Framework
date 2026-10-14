@@ -164,3 +164,4 @@
 - schreieder2025survey: arXiv comment says "Accepted at ACL 2026"; bib now uses the ACL Anthology
   record (2026.acl-long.1430, pp. 30956-31000, DOI). 16 pages.
 - Sect. 4 heading: "Traceability by Construction" -> "Traceable Evidence in Four Steps" (authors' choice). 16 pages.
+- Fig. 3 redrawn plain (black lines, serif fonts incl. FreeSerif for Thai, grey shading for cited units, no colour chips/icons, binding band moved to the caption and Sect. 4.5). Full width; 16 pages.

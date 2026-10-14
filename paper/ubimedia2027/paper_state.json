@@ -28,7 +28,7 @@
       "research/traceability_properties/results/properties.json (Table 3, Sect. 5.1)",
       "llncs.cls and splncs04.bst v2.26 (CTAN), vendored in this folder"
     ],
-    "input_sha256": "fe23244a678fb8126f2ab916986987b65cbd1b5de987c71d4d3e44ff61c64d95",
-    "pdf_sha256": "21f1c1d6722625783125e428405ad35ab64a94a1427d2cda598588be9b37c24b"
+    "input_sha256": "d2ef8aa3b73358af7b621ab5da1c40cdf19a17a4a7bf6952b9f451e1cba8c772",
+    "pdf_sha256": "f0da7759cdf7b6ccdd1ab9ad4a3556e0bb4ceb7e27595ed3d6977a183b029dff"
   }
 }
