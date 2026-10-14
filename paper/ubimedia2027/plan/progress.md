@@ -179,4 +179,6 @@
   ("in ours the system issues every identifier...") removed, as the intro and Sect. 2.2 state it.
 - Code fix (segmenter in the revision tag) left as a separate task; changing the hash would change the
   hashes in Fig. 1, Eq. 1 and the Table 3 digest.
+- Title subtitle: "Traceable LLM Analysis of Case Files" -> "Traceable Evidence for LLM Document Analysis"
+  (authors' choice, no "case files"); Sect. 3 "justify each statement in a case file" -> "from the documents".
 

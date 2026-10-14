@@ -1,7 +1,7 @@
 # Paper story — Ubi-Media 2027 short paper
 
 ## Title
-"From Lossless Units to Verbatim Spans: Traceable LLM Analysis of Case Files" (renamed 2026-10-14 to avoid a clash with Zhang et al. 2026, "Verifiable by Construction"; earlier "Traceable by Construction: Evidence-Grounded LLM Analysis of Case Files", before that "... of Thai Cybercrime Cases"; Thai kept in the body as the low-resource worked example and the MT-Thai evaluation, not in the title, because no real Thai cases were evaluated) (system left unnamed; "backend" kept only in Implementation).
+"From Lossless Units to Verbatim Spans: Traceable Evidence for LLM Document Analysis" (subtitle changed 2026-10-14 at the authors' request to drop "case files"; before that "From Lossless Units to Verbatim Spans: Traceable LLM Analysis of Case Files", renamed 2026-10-14 to avoid a clash with Zhang et al. 2026, "Verifiable by Construction"; earlier "Traceable by Construction: Evidence-Grounded LLM Analysis of Case Files", before that "... of Thai Cybercrime Cases"; Thai kept in the body as the low-resource worked example and the MT-Thai evaluation, not in the title, because no real Thai cases were evaluated) (system left unnamed; "backend" kept only in Implementation).
 
 ## Thesis (reframed 2026-10-13)
 Traceability is the main contribution, as a method: (1) lossless Thai-aware Source units,
