@@ -166,3 +166,17 @@
 - Sect. 4 heading: "Traceability by Construction" -> "Traceable Evidence in Four Steps" (authors' choice). 16 pages.
 - Fig. 3 redrawn plain (black lines, serif fonts incl. FreeSerif for Thai, grey shading for cited units, no colour chips/icons, binding band moved to the caption and Sect. 4.5). Full width; 16 pages.
 - Bib: DeBERTaV3 -> ICLR 2023, GenerationPrograms -> COLM 2025 (COLM 2025 paper list), BLIP -> PVLDB 19(11) 2026 (Crossref). tools/crosscheck_citations.py added. 16 pages.
+
+## 2026-10-14 — segmenter dependence stated as a limitation
+- Found that unit identity assumes a pinned segmenter: h_S hashes v and S only, units are recomputed, and
+  sentences.py falls back to PyThaiNLP crfcut when SaT cannot load. Measured with
+  research/traceability_properties/segmenter_switch.py on the Table 3 sample: 91.4% of Thai and 54.8% of
+  English SaT-era identifiers return other text without an error after the fall-back.
+- Sect. 4.2: "with a pinned segmenter, U(S) is a pure function of S and v". Discussion: new Limitations
+  paragraph (granularity set by the segmenter; identity assumes a pinned segmenter; prototype does not yet
+  name the segmenter in v). Conclusion: next step names the fix; proof-of-concept detail shortened.
+- To stay at 16 pages: short paragraph endings trimmed (no number removed); the closing clause of Sect. 2.1
+  ("in ours the system issues every identifier...") removed, as the intro and Sect. 2.2 state it.
+- Code fix (segmenter in the revision tag) left as a separate task; changing the hash would change the
+  hashes in Fig. 1, Eq. 1 and the Table 3 digest.
+

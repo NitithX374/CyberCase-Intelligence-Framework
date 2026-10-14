@@ -100,6 +100,18 @@ Source: `research/traceability_properties/results/properties.json` (run.py, SaT 
 | fixed chunk length = mean unit length | boundaries.fixed_chunk_chars | 132 / 109 |
 | about 0.19 s per 1,000 Thai characters on a CPU | ms_per_1000_chars (Thai) | 186.3 ms |
 
+## Sect. 6 Limitations — segmenter switch
+Source: `research/traceability_properties/results/segmenter_switch.json` (segmenter_switch.py; SaT sat-3l-sm -> PyThaiNLP crfcut fall-back; same 500 Thai / 1,000 English sources as Table 3).
+
+| Claim in paper | JSON key (corpus) | Value |
+|---|---|---|
+| fall-back moved 91% of Thai identifiers to other text without an error | results[0].different_text_without_error / old_ids | 11058/12092 = 91.4% |
+| ... and 55% of English identifiers | results[1].different_text_without_error / old_ids | 5955/10869 = 54.8% |
+| (not in paper) typed failures; unchanged | typed_failures.unknown_unit; same_text | 828, 206 (Thai); 947, 3967 (English) |
+| hS hashes v and S only; units recomputed | `backend/app/sources/evidence.py::evidence_revision`, `evidence_units` | code |
+| fall-back to crfcut when SaT cannot load (or a split call fails) | `backend/app/trace/sentences.py::get_sat_segmenter`, `tokenize_sentences` | code |
+| "a SaT upgrade can move identifiers" | not measured; wtpsplit>=2.1.0 and the SaT model revision are unpinned (`backend/requirements.txt`, `SaT("sat-3l-sm")`) | stated as possible, hedged "can" |
+
 ## Related Work additions (2026-10-14)
 | Claim | Source |
 |---|---|
