@@ -188,4 +188,12 @@
   ends at Dehing et al. ("In both cases ... by hand or by matching": Yang by hand, Dehing trace-ID checks);
   Sect. 2.2 extractive-abstractive sentence and "applied to legal review" removed; Table 1 row removed.
   No preprint is cited; 36 references; 16 pages.
+- ai-tell-audit loop (3 rounds), 15 -> 3 findings. Applied: abstract/conclusion identifier wording (tied to the
+  source's text and position, not the unit's own text); intro pointer critique limited to quotations and
+  free-form identifiers (ALCE indices excluded); "A case can hold" (was "typical"); "machine-translated Thai
+  in-domain text"; segmentation time "in one run on a 4-vCPU cloud virtual machine"; "these runs" (was
+  "agreed runs"); M_G proceeds once the question rounds are spent (Sects. 3 and 4.1); tokeniser, artefact,
+  fallback spelling; "maps onto"; Threats antithesis cluster; intro restatement; Sect. 4.6 restated opening;
+  motto "the model selects evidence; the system produces it"; "Context matters here:" removed; "hard filter"
+  -> "filter" (abstract kept at 250 words). No number, citation, heading or caption moved. 16 pages.
 

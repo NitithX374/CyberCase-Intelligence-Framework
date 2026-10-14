@@ -38,8 +38,8 @@ Large language models (LLMs) can summarise cybercrime complaints that span sever
 investigator cannot act on a summary without knowing which document sentence supports each statement,
 and citations written by the model are as fragile as the rest of its output. We present a method that
 makes evidence traceability a property of the system rather than a request in the prompt. Every source
-is cut into contiguous units that reconstruct it exactly; each unit gets an identifier derived from its
-exact text; the model sees only short aliases and may \emph{select} them but never writes an evidence
+is cut into contiguous units that reconstruct it exactly; each unit gets an identifier tied to its
+source's exact text; the model sees only short aliases and may \emph{select} them but never writes an evidence
 quotation; and a deterministic binding step resolves each selection to a character range and page, or
 records it as an invalid pointer. Each summary sentence ends with the identifiers of its claims, so every
 sentence leads to claims and every claim to a verbatim span. On 500 Thai news articles and 1,000 English
@@ -47,7 +47,7 @@ references, units reconstruct every source exactly, a one-character edit invalid
 identifier into that source, and unit boundaries fall inside a word in under 0.5\% of cuts against
 65--75\% for fixed-size chunks. An optional frozen NLI-based check labels each claim with a warning. On
 WiCE it improves Macro-F1 over thresholded NLI by 0.033; machine translation into Thai raises its false
-acceptance by 17.4 points in domain and 4.4 out of domain; and as a hard filter it cut unsupported
+acceptance by 17.4 points in domain and 4.4 out of domain; and as a filter it cut unsupported
 claims cited in summaries from 100\% to 22.2\% while withholding 31\% of supported ones, so it only warns.
 
 \keywords{Evidence traceability \and Provenance \and Large language models \and
@@ -58,7 +58,7 @@ Attributed generation \and Cybercrime investigation \and Low-resource languages}
 \section{Introduction}
 %======================================================================
 
-Cybercrime complaints rarely arrive as one clean narrative. A typical case holds a victim's
+Cybercrime complaints rarely arrive as one clean narrative. A case can hold a victim's
 account, screenshots of chats, bank transfer slips and scanned police forms, much of it in Thai
 and much of it recovered by optical character recognition (OCR). LLMs can condense such a case
 into a readable summary, but they also produce fluent statements that no source supports
@@ -68,8 +68,8 @@ officer after the wrong account, or put a wrong figure into a request to freeze 
 The common remedy is to make the model cite: attributed-generation methods train or
 prompt models to attach citations or quoted spans to each sentence
 \cite{gao2023alce,slobodkin2024afg}. Domain workflows go further and label every output unit
-with an explicit evidence identifier \cite{yang2026traceable}. In all of these, however, the
-pointer is still text written by the model, so it must be checked
+with an explicit evidence identifier \cite{yang2026traceable}. When the pointer is a quotation or a
+free-form identifier, however, it is still text written by the model, so it must be checked
 afterwards, often by people. To a reader who does not open the source, a wrong citation can look like a correct one.
 
 Thai, a low-resource language for this task, adds two difficulties. Sentence boundaries are not marked by punctuation, so even deciding
@@ -81,11 +81,10 @@ measured.
 
 Index-based citation already lets a model cite numbered passages or sentences
 \cite{gao2023alce,zhang2025longcite}, and quote-first methods extract fine-grained quotes before citing
-\cite{huang2024front}. We build on both with one rule: \emph{the model chooses evidence; the system
-owns it}. No model writes the quotations, offsets or page numbers shown as evidence. The model may only
+\cite{huang2024front}. We build on both with one rule: \emph{the model selects evidence; the system
+produces it}. No model writes the quotations, offsets or page numbers shown as evidence. The model may only
 select identifiers that the system issued for spans it can reproduce byte for byte. Each identifier
-names the exact source text, so it fails visibly when that text changes, and everything the user sees
-as evidence is regenerated from storage. Our main contribution is the method that makes this
+names the exact source text, so it fails visibly when that text changes. Our main contribution is the method that makes this
 possible, described step by step with a worked Thai example:
 \begin{enumerate}
 \item \emph{Lossless, Thai-aware source units}: every source is cut into contiguous units with exact
@@ -115,12 +114,12 @@ step before writing. We also draw on claim verification for the semantic check.
 
 Traceability has a long history outside NLP. In requirements engineering it is the ability to
 follow the life of a requirement both forwards and backwards; Gotel and Finkelstein argued that many
-problems stem from missing information about where an artifact came from and how it was produced
+problems stem from missing information about where an artefact came from and how it was produced
 \cite{gotel1994traceability}. Database research distinguishes \emph{why}-provenance, the
 source records that justify an output, from \emph{where}-provenance, the exact location a value was
 copied from \cite{buneman2001provenance}. For LLM data processing, Lin et al.\ define verifiable
 provenance as a minimal subset of the input that reproduces the model's answer, and search for it by
-querying the model on candidate subsets \cite{lin2026blip}. Our design maps directly onto this vocabulary:
+querying the model on candidate subsets \cite{lin2026blip}. Our design maps onto this vocabulary:
 a citation is where-provenance (a source and a character range), the claim identifiers on a summary
 sentence are why-provenance, and both are recorded when the output is produced rather than
 reconstructed afterwards.
@@ -243,8 +242,8 @@ verbatim: every quotation shown is a substring of a stored source, reproduced by
 by a model. Failures must be visible: a pointer that cannot be resolved is shown as invalid, not dropped
 or repaired. Pointers must be safe across revisions: one issued for a version of a document never binds
 to another. Provenance must reach the sentence: every summary sentence names the claims it rests on, and
-only claims in $C$. Finally, cost must stay bounded: expensive stages run only when the case is complete
-enough, and any semantic check is cheap enough to run on every claim. The first four are structural and
+only claims in $C$. Finally, cost must stay bounded: expensive stages wait until the case is judged complete
+enough or its question rounds are spent, and any semantic check is cheap enough to run on every claim. The first four are structural and
 can be enforced by construction; the last shapes the pipeline. No structural
 rule can tell whether a claim is \emph{true}, or even entailed by its citations; the warning layer of
 Sect.~\ref{sec:check} addresses that, imperfectly.
@@ -266,7 +265,7 @@ view and the report.}
 \subsection{Overview}
 Figure~\ref{fig:pipeline} shows where the method sits: PDF pages are read by OCR so page locators are
 known, and $M_G$ checks the case against a 5W1H checklist and either asks the user one question and
-stops, or proceeds, so the expensive stages run only on cases complete enough to analyse.
+stops, or proceeds; once the question rounds are spent, the analysis proceeds without it.
 
 \subsection{Step 1: Lossless Source Units}\label{sec:units}
 Thai writes no sentence-final punctuation, so the boundaries of a quotable span have to be computed.
@@ -356,8 +355,7 @@ these states describe addressability, not truth. Reports are deterministic snaps
 call no model.
 
 \subsection{Optional Semantic Warning Layer}\label{sec:warning}\label{sec:check}
-Binding guarantees that evidence exists and is quoted exactly; it says nothing about whether it supports
-the claim. As an optional layer, each bound $c$ with status \texttt{reported} is checked by B1-LR: a
+As an optional layer, each bound $c$ with status \texttt{reported} is checked by B1-LR: a
 frozen multilingual MPNet encoder \cite{reimers2020multilingual} keeps the units of $\beta(E^{+}(c))$ with
 cosine similarity $\ge 0.20$ to $c$ (the most similar one if none pass); a multilingual mDeBERTa-v3 NLI
 model \cite{he2021debertav3,laurer2022mdeberta} scores their concatenation against $c$; and a logistic
@@ -377,7 +375,7 @@ measure the optional warning layer, whose errors are statistical. For the warnin
 the B1-LR rule improves on thresholded NLI, how it behaves when its inputs are machine-translated into
 Thai, and what happens downstream if its verdict is used to filter claims instead of labelling them. No
 component was
-trained or tuned on test data, and we report every outcome of the agreed runs, including failures.
+trained or tuned on test data, and we report every outcome of these runs, including failures.
 
 \subsection{The Construction on Public Text}\label{sec:props}
 
@@ -390,8 +388,8 @@ of the raw character ranges, and about a third of position-only identifiers in T
 text without any error. The cost is that identifiers into unchanged text are invalidated as well, so every
 citation into an edited source must be selected again. Unit boundaries fell inside a word in under 0.5\%
 of cuts, against 75\% (Thai) and 65\% (English) for fixed chunks of the same mean length, and never
-between two digits. Segmentation took about 0.19\,s per 1,000 Thai characters on an Intel Xeon CPU at 2.10\,GHz. Word boundaries
-come from a reference tokenizer, not from gold annotation.
+between two digits. Segmentation took about 0.19\,s per 1,000 Thai characters in one run on a 4-vCPU cloud virtual machine (Intel Xeon, 2.10\,GHz). Word boundaries
+come from a reference tokeniser, not from gold annotation.
 
 \begin{table}[t]
 \centering
@@ -466,8 +464,7 @@ We rescored the AttributionBench test sets with the frozen B1-LR in English and 
 unique claim and reference texts were translated from English into Thai with Google Cloud Translation (NMT
 model). Row order, unit segmentation and gold labels stayed the same. Both languages were rescored with
 identical frozen assets on the same device. Thai labels are \emph{inherited} from English under a
-label-invariance assumption; no bilingual human adjudication was performed. Context matters here:
-the NLI checkpoint saw Thai only during pre-training, as Thai was held out of its NLI fine-tuning,
+label-invariance assumption; no bilingual human adjudication was performed. The NLI checkpoint saw Thai only during pre-training, as Thai was held out of its NLI fine-tuning,
 and its model card reports XNLI accuracy of 0.786 for Thai against 0.871 for English
 \cite{laurer2022mdeberta}.
 
@@ -477,7 +474,7 @@ unchanged (.634 in both languages), yet the Thai condition accepts 140 more unsu
 recovers 65 more supported ones: the operating point shifts toward permissiveness. Out of domain,
 Thai lowers F1 by 0.040 (CI 0.018--0.063) and raises false acceptance by 4.4 points. For a check meant
 to warn about unsupported claims, the rise in false acceptance is what
-matters: on Thai in-domain text, about half of unsupported claims would carry no warning.
+matters: on machine-translated Thai in-domain text, about half of unsupported claims would carry no warning.
 
 More Thai pairs hit the 512-token limit (311 vs.\ 288 in-domain, 154 vs.\ 124 out-of-domain).
 BGE-M3 \cite{chen2024bgem3} similarity between texts and translations (mean cosine 0.846) shows topical
@@ -523,8 +520,8 @@ should have.
 Owning the quotation moves its boundaries to the segmenter. A unit is the finest span a claim can
 cite, so a long unit carries text the claim does not need, and a fact split across two units needs
 both. Identity also assumes a pinned segmenter: $h_S$ hashes $v$ and $S$ only, and units are
-recomputed, so the PyThaiNLP fall-back or a SaT upgrade can move identifiers to other text without an
-error, as the fall-back did for 91\% of the Thai and 55\% of the English identifiers of
+recomputed, so the PyThaiNLP fallback or a SaT upgrade can move identifiers to other text without an
+error, as the fallback did for 91\% of the Thai and 55\% of the English identifiers of
 Sect.~\ref{sec:props}. The prototype does not
 yet add the segmenter to $v$, which would make this fail as \texttt{stale\_id}.
 
@@ -538,8 +535,8 @@ claim, and the structural checks stay strict.
 \paragraph{Threats to validity.}
 These guarantees are argued from construction and checked on public text (Sect.~\ref{sec:props}),
 but the method has not yet been compared head to head with a quote-writing pipeline, and ThaiSum is
-edited news rather than complaints or OCR output. The replay measures whether unsupported claim identifiers are cited, not whether
-the prose is faithful. Thai labels are inherited through machine translation (Sect.~\ref{sec:mtth}). WiCE and AttributionBench are English web data, not complaints, so
+edited news, whereas complaints are often OCR output. The replay measures whether unsupported claim identifiers are cited; it does
+not measure whether the prose is faithful. Thai labels are inherited through machine translation (Sect.~\ref{sec:mtth}). WiCE and AttributionBench are English web data, so
 we claim no accuracy on real cases and no benefit to investigators. A smaller MiniLM backbone tested
 later scored higher on WiCE (Macro-F1 .650 vs.\ .618), so we do not claim ours is optimal.
 
@@ -553,8 +550,8 @@ system does not decide guilt, and no real case data was used in these experiment
 %======================================================================
 
 We presented a method that makes evidence traceability a property of an LLM case-analysis system
-rather than a request to the model: cut every source into lossless units, name each unit by the exact text it came
-from, let the model select short aliases but never write a quotation, and bind every selection
+rather than a request to the model: cut every source into lossless units, name each unit by its position and the exact
+text of its source, let the model select short aliases but never write a quotation, and bind every selection
 deterministically, so that each summary sentence leads to claims and each claim to a verbatim span with
 its page. A frozen semantic check can sit on top as a warning; used as a filter in our replay, it also
 withheld 9 of 29 supported claims. Next, we will name the segmenter in $v$, compare the
