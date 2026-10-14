@@ -38,3 +38,19 @@ back to PyThaiNLP `crfcut`; the result records which segmenter ran.
 ## Result
 
 `results/properties.json` (see `created_at`, `segmenter`, `environment` and `inputs` inside).
+
+## Segmenter switch
+
+The revision tag hashes the segmentation version and the source text, not the segmenter, and units
+are recomputed rather than stored. `segmenter_switch.py` segments the same sample with SaT, then with
+the PyThaiNLP `crfcut` fall-back that production uses when SaT cannot be loaded, and resolves every
+SaT-era identifier against the fall-back units with the production `EvidenceIndex`. It counts
+identifiers that still return their text, identifiers that return different text without an error,
+and typed failures.
+
+```bash
+python research/traceability_properties/segmenter_switch.py --thai-n 500 --en-n 1000
+```
+
+Result: `results/segmenter_switch.json`. This is a limitation of the prototype (Discussion of the
+paper), not a property it has.

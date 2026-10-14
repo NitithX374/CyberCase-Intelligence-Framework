@@ -69,7 +69,7 @@ The common remedy is to make the model cite: attributed-generation methods train
 prompt models to attach citations or quoted spans to each sentence
 \cite{gao2023alce,slobodkin2024afg}. Domain workflows go further and label every output unit
 with an explicit evidence identifier \cite{yang2026traceable}. In all of these, however, the
-pointer is still text written by the model, so its existence and accuracy must be checked
+pointer is still text written by the model, so it must be checked
 afterwards, often by people. To a reader who does not open the source, a wrong citation can look like a correct one.
 
 Thai, a low-resource language for this task, adds two difficulties. Sentence boundaries are not marked by punctuation, so even deciding
@@ -101,7 +101,7 @@ As a secondary contribution, we evaluate an optional semantic warning layer on E
 machine-translated Thai benchmarks and in a paired downstream replay, and report the trade-off that
 led us to show it as a label rather than use it as a filter (Sects.~\ref{sec:warning} and~\ref{sec:eval}).
 The setting is a public-safety service: every
-statement an officer reads should lead back to a document, a page and a character range.
+statement an officer reads should lead to a document, page and character range.
 
 %======================================================================
 \section{Related Work}
@@ -135,8 +135,7 @@ stable identifiers and label each generated unit as grounded or creative, auditi
 manually \cite{yang2026traceable}; Dehing et al.\ carry message trace identifiers into structured
 forensic reports \cite{dehing2026forensics}; Worledge et al.\ locate every quote on its court-file
 page \cite{worledge2026default}. In each case the model's references are checked after generation, by
-hand or by matching; in ours the system issues every identifier and resolves every selection when the
-output is produced.
+hand or by matching.
 
 \subsection{Attribute First, Then Generate}
 
@@ -252,9 +251,9 @@ or repaired. Pointers must be safe across revisions: one issued for a version of
 to another. Provenance must reach the sentence: every summary sentence names the claims it rests on, and
 only claims in $C$. Finally, cost must stay bounded: expensive stages run only when the case is complete
 enough, and any semantic check is cheap enough to run on every claim. The first four are structural and
-can be enforced by construction; the last shapes the pipeline. Whether a
-claim is \emph{true}, or even entailed by its citations, is a separate question that no structural
-rule answers, which is what the warning layer of Sect.~\ref{sec:check} addresses, imperfectly.
+can be enforced by construction; the last shapes the pipeline. No structural
+rule can tell whether a claim is \emph{true}, or even entailed by its citations; the warning layer of
+Sect.~\ref{sec:check} addresses that, imperfectly.
 
 %======================================================================
 \section{Traceable Evidence in Four Steps}\label{sec:system}
@@ -286,7 +285,7 @@ piece, so that interjections such as \emph{tok jai mak} (``I was shocked'', Fig.
 their own. (3) $S$ is then cut at every piece start, at the start of every table and table row produced
 by OCR, and every $L$ characters within long pieces. Each unit runs from its start to the next unit's
 start, so whitespace and line breaks belong to a unit rather than falling between units. Unlike
-fixed-size chunks, which can split a Thai word from the number it governs (Fig.~\ref{fig:units}B), units
+fixed chunks, which can split a Thai word from its number (Fig.~\ref{fig:units}B), units
 follow sentence boundaries.
 
 \begin{figure}[t]
@@ -304,8 +303,8 @@ system's rules.}
 This construction gives two guarantees. First, the units partition $S$ without loss: for $U(S)=(u_1,\dots,u_n)$,
 $u_k.\mathit{text} = S[u_k.\mathit{start}{:}u_k.\mathit{end}]$, $u_1.\mathit{start}=0$,
 $u_k.\mathit{end}=u_{k+1}.\mathit{start}$ and $u_n.\mathit{end}=|S|$, so concatenating the units returns
-$S$. Second, segmentation is deterministic: $U(S)$ is a pure function of $S$ and $v$, so units are
-recomputed on demand rather than stored.
+$S$. Second, with a pinned segmenter (Sect.~\ref{sec:discussion}), $U(S)$ is a pure function of $S$
+and $v$, so units are recomputed on demand rather than stored.
 
 \subsection{Step 2: Content-Addressed Identifiers}\label{sec:ids}
 Each unit is named by its source, its position $k$ and a revision tag computed from the whole source:
@@ -433,7 +432,7 @@ We use WiCE test (1,070 pairs) \cite{kamoi2023wice}, AttributionBench test (1,61
 out-of-domain rows) \cite{li2024attributionbench} and its Google translation into Thai, and 20
 AttributionBench clusters for the replay; all labels come from the benchmarks. FAR is the share of
 gold-unsupported items labelled supported, the error that matters most for a warning label; FRR is the
-share of supported items labelled unsupported. Intervals come from bootstrap resampling of whole
+share of supported items labelled unsupported. Bootstrap intervals resample whole
 question/response clusters.
 
 
@@ -443,7 +442,7 @@ question/response clusters.
 \caption{Evaluation of the optional warning layer. (a) Variants on the WiCE test split; B1-LR is the
 rule the prototype uses. (b) The frozen B1-LR on AttributionBench test in English and in Google machine-translated
 Thai; $\Delta$ is Thai minus English false acceptance with a 95\% cluster-bootstrap interval. (c) The
-paired replay when the label is used to filter claims before $M_J$. Values are read directly from the
+paired replay when the label is used to filter claims before $M_J$. Values are read from the
 recorded result files.}
 \label{fig:results}
 \end{figure}
@@ -464,8 +463,8 @@ by 0.033 (95\% CI 0.013--0.053) and supported F1 by 0.058 (0.029--0.087), with n
 change in false acceptance ($+0.75$ pp, CI $-1.09$ to $+2.70$). Relative to B1, the logistic
 boundary lowers false acceptance by 5.42 points (CI 3.70--7.17). B3 is statistically
 indistinguishable from B1-LR (Macro-F1 $-0.002$, CI $-0.011$ to $+0.007$) at roughly twice the
-latency, so B1-LR was kept. The absolute level is modest: about one in four gold-unsupported pairs is
-still accepted.
+latency, so B1-LR was kept. The absolute level is modest: about a quarter of gold-unsupported pairs
+pass.
 
 \subsection{Transfer to Machine-Translated Thai}\label{sec:mtth}
 
@@ -482,8 +481,8 @@ and its model card reports XNLI accuracy of 0.786 for Thai against 0.871 for Eng
 Fig.~\ref{fig:results}b shows why a single F1 value is misleading here. In-domain F1 is
 unchanged (.634 in both languages), yet the Thai condition accepts 140 more unsupported rows and
 recovers 65 more supported ones: the operating point shifts toward permissiveness. Out of domain,
-Thai lowers F1 by 0.040 (CI 0.018--0.063) and raises false acceptance by 4.4 points. For a check whose
-purpose is to warn about unsupported claims, the rise in false acceptance is the result that
+Thai lowers F1 by 0.040 (CI 0.018--0.063) and raises false acceptance by 4.4 points. For a check meant
+to warn about unsupported claims, the rise in false acceptance is what
 matters: on Thai in-domain text, about half of unsupported claims would carry no warning.
 
 More Thai pairs hit the 512-token limit (311 vs.\ 288 in-domain, 154 vs.\ 124 out-of-domain).
@@ -511,10 +510,10 @@ OOD halves are each too small to be conclusive alone ($p=0.125$ and $0.25$). The
 had no admitted claim at all, so no summary was produced.
 
 \paragraph{Failures and an exposure.}
-Six of the 36 calls to $M_J$ failed, three per condition, all by exhausting the output budget on model
+Six of the 36 calls to $M_J$ failed, three per condition, all by spending the output budget on
 reasoning; those pairs are reported as unknown and excluded, and no successful output cited a withheld
 or unknown identifier. One gated summary added a figure found in no admitted claim but in the cited passages, so citation text
-reaching $M_J$ is a path no claim-level check examines.
+reaching $M_J$ escapes every claim-level check.
 
 %======================================================================
 \section{Discussion}\label{sec:discussion}
@@ -524,8 +523,15 @@ reaching $M_J$ is a path no claim-level check examines.
 Every displayed quotation exists in a stored source at the stated range, no identifier survives an
 edit unnoticed, and every summary sentence points only to claims the analysis produced. The method does
 not check whether a claim is supported by its spans or whether the model cited all the evidence it
-should have. A poor segmentation makes citations coarser, though never wrong in location, because a
-unit is the finest granularity a citation can have.
+should have.
+
+\paragraph{Limitations.}
+Owning the quotation moves its boundaries to the segmenter. A unit is the finest span a claim can
+cite, so a long unit carries text the claim does not need, and a fact split across two units needs
+both. Identity also assumes a pinned segmenter: $h_S$ hashes $v$ and $S$ only, and units are
+recomputed, so the PyThaiNLP fall-back or a SaT upgrade can move identifiers to other text without an
+error, as the fall-back did for XX\% of the Thai identifiers of Sect.~\ref{sec:props}. The prototype does not
+yet add the segmenter to $v$, which would make this fail as \texttt{stale\_id}.
 
 \paragraph{Gate or label.}
 The replay shows the trade-off: a filter that removes about three quarters of unsupported claims from
@@ -540,8 +546,7 @@ but the method has not yet been compared head to head with a quote-writing pipel
 edited news rather than complaints or OCR output. The replay measures whether unsupported claim identifiers are cited, not whether
 the prose is faithful. Thai labels are inherited through machine translation (Sect.~\ref{sec:mtth}). WiCE and AttributionBench are English web data, not complaints, so
 we claim no accuracy on real cases and no benefit to investigators. A smaller MiniLM backbone tested
-afterwards scored higher on WiCE (Macro-F1 .650 vs.\ .618), so the prototype's backbone is not claimed
-optimal.
+later scored higher on WiCE (Macro-F1 .650 vs.\ .618), so we do not claim ours is optimal.
 
 \paragraph{Ethics and privacy.}
 Complaints contain personal and financial data. OCR and LLM stages were called through external
@@ -557,11 +562,10 @@ rather than a request to the model: cut every source into lossless units, name e
 from, let the model select short aliases but never write a quotation, and bind every selection
 deterministically, so that each summary sentence leads to claims and each claim to a verbatim span with
 its page. A frozen semantic check can sit on top as a warning; used as a filter in our replay, it also
-withheld 9 of 29 supported claims. Next, a proof of concept will
-run the same public Thai and English cases through a quote-writing pipeline and through this method,
-comparing quotation fidelity, pointer validity, coverage and output tokens without human labels; the
-warning layer will be tested on the Thai XNLI test set \cite{conneau2018xnli} and a small doubly annotated
-subset of real, anonymised complaints.
+withheld 9 of 29 supported claims. Next, we will name the segmenter in $v$, compare the
+method with a quote-writing pipeline on the same public cases, and test the warning layer on the Thai
+XNLI test set \cite{conneau2018xnli} and a small doubly annotated subset of real, anonymised
+complaints.
 
 \begin{credits}
 % TODO(authors): add \subsubsection{\ackname} with funding or thanks, if any.
