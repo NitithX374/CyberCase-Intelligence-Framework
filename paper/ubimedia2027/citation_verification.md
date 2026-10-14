@@ -15,7 +15,7 @@ reading the abstract/known content; the uploaded PDF of Yang et al. was read in 
 | ji2023hallucination | Crossref 10.1145/3571730 | hallucination in NLG | verified |
 | dehing2026forensics | Crossref 10.1145/3785318.3785330 | chat forensics structured reports | verified (method per repo survey) |
 | yang2026traceable | Crossref 10.1145/3829918.3829930 + full PDF | evidence IDs, G/C labels, 2 experts | verified |
-| worledge2026default | arXiv API 2607.01256 (author list corrected: 7 authors) | default-judgment review assistant | verified (numbers per repo survey) |
+| worledge2026default | arXiv API 2607.01256 (author list corrected: 7 authors) | default-judgment review assistant | verified (numbers per repo survey) | (removed from the paper 2026-10-14, advisor's decision; kept in .bib, not cited)
 | lewis2020rag | arXiv API 2005.11401 | (not cited in the 15-page draft; kept in .bib) | verified |
 | he2021debertav3 | arXiv API 2111.09543 | DeBERTaV3 backbone | verified |
 | laurer2022mdeberta | Hugging Face API (sha b5113eb…, created 2022-08-22) | deployed NLI checkpoint | verified |
@@ -33,7 +33,7 @@ reading the abstract/known content; the uploaded PDF of Yang et al. was read in 
 | gao2023rarr | ACL Anthology 2023.acl-long.910; abstract read | post-hoc research and revision | verified |
 | huang2024front | ACL Anthology 2024.findings-acl.838 | quote extraction before grounded citation (per repo survey matrix) | verified |
 | wan2025generationprograms | arXiv API 2506.14580 | executable programs over source sentences (per repo survey) | verified |
-| worledge2024spectrum | arXiv API 2411.17375 | extractive–abstractive verifiability trade-off (per repo survey) | verified |
+| worledge2024spectrum | arXiv API 2411.17375 | extractive–abstractive verifiability trade-off (per repo survey) | verified | (removed from the paper 2026-10-14, advisor's decision; kept in .bib, not cited)
 | shen2025citelab | ACL Anthology 2025.acl-demo.47 | citation workflow tooling incl. AfG baseline (per repo survey) | verified |
 | cattan2026localizing | Crossref 10.1162/tacl.a.598 | QA-proposition localisation of inconsistencies (per repo survey) | verified |
 | wu2025medgraphrag | ACL Anthology 2025.acl-long.1381 | uses AfG as baseline (per repo survey) | verified |

@@ -184,4 +184,8 @@
 - Zhang et al. 2026 (arXiv preprint) removed at the advisor's decision: intro sentence now cites FRONT for
   quote-first methods; Sect. 2.2 clause and Table 1 row removed. Worledge et al. 2024/2026 (also arXiv)
   kept, not part of the question. 38 references; 16 pages.
+- Worledge et al. 2026 and 2024 (arXiv preprints) removed as well, at the advisor's decision: Sect. 2.1 list
+  ends at Dehing et al. ("In both cases ... by hand or by matching": Yang by hand, Dehing trace-ID checks);
+  Sect. 2.2 extractive-abstractive sentence and "applied to legal review" removed; Table 1 row removed.
+  No preprint is cited; 36 references; 16 pages.
 

@@ -133,8 +133,7 @@ between 50\% and 90\% of LLM responses were not fully supported by the sources t
 systems respond with explicit evidence records. Yang et al.\ register exhibition evidence under
 stable identifiers and label each generated unit as grounded or creative, auditing the links
 manually \cite{yang2026traceable}; Dehing et al.\ carry message trace identifiers into structured
-forensic reports \cite{dehing2026forensics}; Worledge et al.\ locate every quote on its court-file
-page \cite{worledge2026default}. In each case the model's references are checked after generation, by
+forensic reports \cite{dehing2026forensics}. In both cases the model's references are checked after generation, by
 hand or by matching.
 
 \subsection{Attribute First, Then Generate}
@@ -156,9 +155,8 @@ Later work refines the selected unit. FRONT extracts fine-grained quotes before 
 \cite{huang2024front}; LongCite numbers the sentences of the context and cites sentence ranges
 \cite{zhang2025longcite}; GenerationPrograms writes the answer as a program over source sentences
 \cite{wan2025generationprograms}; and QA-based propositions localise the inconsistent part of an
-attributed sentence \cite{cattan2026localizing}. Moving from quotation toward abstraction makes answers
-more fluent but slower to verify \cite{worledge2024spectrum}. Attribute-first generation has been
-compared in CiteLab \cite{shen2025citelab}, applied to legal review \cite{worledge2026default} and used
+attributed sentence \cite{cattan2026localizing}. Attribute-first generation has been
+compared in CiteLab \cite{shen2025citelab} and used
 as a medical baseline \cite{wu2025medgraphrag}; other work moves the evidence unit to page regions
 \cite{zhao2025finragbenchv} or filters training data for attributability \cite{schimanski2024specialists}.
 
@@ -197,7 +195,6 @@ System & Evidence unit & Pointer & Checked & Domain \\
 ALCE \cite{gao2023alce} & passage & passage number & eval., NLI & QA \\
 AfG \cite{slobodkin2024afg} & span & span text & gen., string match & summ., QA \\
 LongCite \cite{zhang2025longcite} & sentence & sentence range & eval., LLM judge & long QA \\
-Worledge \cite{worledge2026default} & quote & quote text & after gen., page search & legal \\
 Yang \cite{yang2026traceable} & registry entry & registry ID & after gen., by hand & exhibits \\
 Ours & source unit & alias of a system ID & gen., exact lookup & cybercrime \\
 \bottomrule
