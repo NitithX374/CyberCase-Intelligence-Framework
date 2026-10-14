@@ -80,8 +80,8 @@ check a Thai system relies on is therefore a cross-lingual transfer whose behavi
 measured.
 
 Index-based citation already lets a model cite numbered passages or sentences
-\cite{gao2023alce,zhang2025longcite}, and verbatim quotes can make answers verifiable by construction
-\cite{zhang2026verifiable}. We build on both with one rule: \emph{the model chooses evidence; the system
+\cite{gao2023alce,zhang2025longcite}, and quote-first methods extract fine-grained quotes before citing
+\cite{huang2024front}. We build on both with one rule: \emph{the model chooses evidence; the system
 owns it}. No model writes the quotations, offsets or page numbers shown as evidence. The model may only
 select identifiers that the system issued for spans it can reproduce byte for byte. Each identifier
 names the exact source text, so it fails visibly when that text changes, and everything the user sees
@@ -154,9 +154,7 @@ while human-judged attribution rose in one task and fell in the other.
 
 Later work refines the selected unit. FRONT extracts fine-grained quotes before citing
 \cite{huang2024front}; LongCite numbers the sentences of the context and cites sentence ranges
-\cite{zhang2025longcite}; Zhang et al.\ attach verbatim quotes to clinical answers, which most of twelve
-LLMs do for over 90\% of claims, though the quotes often fail to substantiate them
-\cite{zhang2026verifiable}; GenerationPrograms writes the answer as a program over source sentences
+\cite{zhang2025longcite}; GenerationPrograms writes the answer as a program over source sentences
 \cite{wan2025generationprograms}; and QA-based propositions localise the inconsistent part of an
 attributed sentence \cite{cattan2026localizing}. Moving from quotation toward abstraction makes answers
 more fluent but slower to verify \cite{worledge2024spectrum}. Attribute-first generation has been
@@ -201,7 +199,6 @@ AfG \cite{slobodkin2024afg} & span & span text & gen., string match & summ., QA 
 LongCite \cite{zhang2025longcite} & sentence & sentence range & eval., LLM judge & long QA \\
 Worledge \cite{worledge2026default} & quote & quote text & after gen., page search & legal \\
 Yang \cite{yang2026traceable} & registry entry & registry ID & after gen., by hand & exhibits \\
-Zhang \cite{zhang2026verifiable} & quote & quote text & eval., match and judge & clinical QA \\
 Ours & source unit & alias of a system ID & gen., exact lookup & cybercrime \\
 \bottomrule
 \end{tabular}

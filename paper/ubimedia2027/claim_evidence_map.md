@@ -115,7 +115,6 @@ Source: `research/traceability_properties/results/segmenter_switch.json` (segmen
 ## Related Work additions (2026-10-14)
 | Claim | Source |
 |---|---|
-| Zhang et al.: most of twelve LLMs attach verbatim quotes to >90% of claims; quotes often fail to substantiate | arXiv 2609.15964 abstract (literature/raw/arxiv_2508.15396_2608.25210_2609.15964.xml) |
 | Lin et al. (BLIP): verifiable provenance as a minimal input subset reproducing the answer | arXiv 2608.25210 abstract |
 | Survey of 134 papers on citation, attribution and quotation | arXiv 2508.15396 abstract |
 | LongCite numbers context sentences and cites sentence ranges; GPT-4o judges citation quality | ACL 2025.findings-acl.264 (full PDF read, Sect. 3.1 and 3.3) |

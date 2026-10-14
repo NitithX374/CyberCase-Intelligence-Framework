@@ -181,4 +181,7 @@
   hashes in Fig. 1, Eq. 1 and the Table 3 digest.
 - Title subtitle: "Traceable LLM Analysis of Case Files" -> "Traceable Evidence for LLM Document Analysis"
   (authors' choice, no "case files"); Sect. 3 "justify each statement in a case file" -> "from the documents".
+- Zhang et al. 2026 (arXiv preprint) removed at the advisor's decision: intro sentence now cites FRONT for
+  quote-first methods; Sect. 2.2 clause and Table 1 row removed. Worledge et al. 2024/2026 (also arXiv)
+  kept, not part of the question. 38 references; 16 pages.
 

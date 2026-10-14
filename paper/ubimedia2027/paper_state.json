@@ -29,8 +29,8 @@
       "research/traceability_properties/results/segmenter_switch.json (Limitations, Sect. 6)",
       "llncs.cls and splncs04.bst v2.26 (CTAN), vendored in this folder"
     ],
-    "input_sha256": "37e29d531b5f07af402ad741561e39c94f14fa43a4850fee7a0e6bc6f765a398",
-    "pdf_sha256": "f916689576285ea9bfbdade8d5b7bf1c890753c200f127fdcbff946322606b3b",
+    "input_sha256": "895df2140c50022412052753619ae0873bd7170633a67339a20f5a74c4739538",
+    "pdf_sha256": "9c19cc6241324e7f83a0a4c20a32c4e5c686f07fe8ef34cbc8d796914d7d4370",
     "input_sha256_of": "main.tex"
   }
 }
