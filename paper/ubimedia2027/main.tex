@@ -19,10 +19,6 @@
 \setcounter{topnumber}{3}
 
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
-\definecolor{yesbg}{HTML}{CDEBC9}
-\definecolor{nobg}{HTML}{F6CFCB}
-\newcommand{\yes}{\cellcolor{yesbg}\ding{51}}
-\newcommand{\no}{\cellcolor{nobg}\ding{55}}
 
 \begin{document}
 
@@ -39,22 +35,20 @@ King Mongkut's University of Technology North Bangkok, Bangkok, Thailand\\
 
 \begin{abstract}
 Large language models (LLMs) can summarise cybercrime complaints that span several documents, but an
-investigator cannot act on a summary without knowing which sentence of which document supports each
-statement, and citations written by the model are as fragile as the rest of its output. We present a
-method that makes evidence traceability a property of the system rather than a request in the
-prompt. Every source is cut into contiguous Source units that reconstruct it exactly; each unit gets
-a content-addressed identifier tied to the exact text it came from; the model sees only short
-aliases and may \emph{select} them but never write a quotation; and a deterministic binding step
-resolves each selection to a character range and page, or records it as an invalid pointer. Summary
-sentences end with the identifiers of the claims they rest on. This gives a two-level provenance chain
-from sentence to claim to verbatim span. On 500 Thai news articles and 1,000 English references,
-units reconstruct every source exactly, a one-character edit invalidates every old identifier into
-that source, and unit boundaries fall inside a
-word in under 0.5\% of cuts against 65--75\% for fixed-size chunks. As an optional layer, a frozen NLI-based check labels each
-claim with a warning. On WiCE it improves Macro-F1 over thresholded NLI by 0.033; machine
-translation into Thai raises its false acceptance by 17.4 points in domain and 4.4 out of domain; and used as a hard filter it cut
-unsupported claims cited in summaries from 100\% to 22.2\% while withholding 31\% of supported ones,
-which is why it only warns.
+investigator cannot act on a summary without knowing which document sentence supports each statement,
+and citations written by the model are as fragile as the rest of its output. We present a method that
+makes evidence traceability a property of the system rather than a request in the prompt. Every source
+is cut into contiguous units that reconstruct it exactly; each unit gets an identifier derived from its
+exact text; the model sees only short aliases and may \emph{select} them but never writes an evidence
+quotation; and a deterministic binding step resolves each selection to a character range and page, or
+records it as an invalid pointer. Each summary sentence ends with the identifiers of its claims, so every
+sentence leads to claims and every claim to a verbatim span. On 500 Thai news articles and 1,000 English
+references, units reconstruct every source exactly, a one-character edit invalidates every old
+identifier into that source, and unit boundaries fall inside a word in under 0.5\% of cuts against
+65--75\% for fixed-size chunks. An optional frozen NLI-based check labels each claim with a warning. On
+WiCE it improves Macro-F1 over thresholded NLI by 0.033; machine translation into Thai raises its false
+acceptance by 17.4 points in domain and 4.4 out of domain; and as a hard filter it cut unsupported
+claims cited in summaries from 100\% to 22.2\% while withholding 31\% of supported ones, so it only warns.
 
 \keywords{Evidence traceability \and Provenance \and Large language models \and
 Attributed generation \and Cybercrime investigation \and Low-resource languages}
@@ -85,21 +79,23 @@ example, was deliberately trained without Thai NLI data \cite{laurer2022mdeberta
 check a Thai system relies on is therefore a cross-lingual transfer whose behaviour has to be
 measured.
 
-We take a different position: \emph{the model chooses evidence; the system owns it}.
-No model writes the quotations, offsets or page numbers shown as evidence. It may only select identifiers
-that the system issued for spans it can reproduce byte for byte, and everything the user sees as
-evidence is regenerated from storage. Our main contribution is the method that makes this
+Index-based citation already lets a model cite numbered passages or sentences
+\cite{gao2023alce,zhang2025longcite}, and verbatim quotes can make answers verifiable by construction
+\cite{zhang2026verifiable}. We build on both with one rule: \emph{the model chooses evidence; the system
+owns it}. No model writes the quotations, offsets or page numbers shown as evidence. The model may only
+select identifiers that the system issued for spans it can reproduce byte for byte. Each identifier
+names the exact source text, so it fails visibly when that text changes, and everything the user sees
+as evidence is regenerated from storage. Our main contribution is the method that makes this
 possible, described step by step with a worked Thai example:
 \begin{enumerate}
-\item \emph{Lossless, Thai-aware Source units}: a segmentation procedure that cuts every source into
-contiguous units with exact offsets that reconstruct it character for character
-(Sect.~\ref{sec:units}, Fig.~\ref{fig:units}), checked on public Thai and English text (Sect.~\ref{sec:props}).
-\item \emph{Content-addressed identifiers and request-scoped aliases}: unit identifiers bound to the
-exact source text, and short aliases for the model whose mapping is fixed before the model is called
-(Sects.~\ref{sec:ids}--\ref{sec:reading}).
-\item \emph{Deterministic binding with a two-level provenance chain}: every selection is resolved or
-recorded with a typed failure reason, and every summary sentence leads to claims (why) and from claims
-to verbatim spans with page locators (where) (Sect.~\ref{sec:binding}, Fig.~\ref{fig:provenance}).
+\item \emph{Lossless, Thai-aware source units}: every source is cut into contiguous units with exact
+offsets that reconstruct it character for character (Sect.~\ref{sec:units}, Fig.~\ref{fig:units},
+Sect.~\ref{sec:props}).
+\item \emph{Content-addressed identifiers and request-scoped aliases}: identifiers bound to the exact
+source text, and short aliases fixed before the model is called (Sects.~\ref{sec:ids}--\ref{sec:reading}).
+\item \emph{Deterministic binding with a two-level provenance chain}: every selection resolves to a
+verbatim span with its page (where) or records a typed failure, and every summary sentence leads to its
+claims (why) (Sect.~\ref{sec:binding}, Fig.~\ref{fig:provenance}).
 \end{enumerate}
 As a secondary contribution, we evaluate an optional semantic warning layer on English and
 machine-translated Thai benchmarks and in a paired downstream replay, and report the trade-off that
@@ -122,7 +118,9 @@ follow the life of a requirement both forwards and backwards; Gotel and Finkelst
 problems stem from missing information about where an artifact came from and how it was produced
 \cite{gotel1994traceability}. Database research distinguishes \emph{why}-provenance, the
 source records that justify an output, from \emph{where}-provenance, the exact location a value was
-copied from \cite{buneman2001provenance}. Our design maps directly onto this vocabulary:
+copied from \cite{buneman2001provenance}. For LLM data processing, Lin et al.\ define verifiable
+provenance as a minimal subset of the input that reproduces the model's answer, and search for it by
+querying the model on candidate subsets \cite{lin2026blip}. Our design maps directly onto this vocabulary:
 a citation is where-provenance (a source and a character range), the claim identifiers on a summary
 sentence are why-provenance, and both are recorded when the output is produced rather than
 reconstructed afterwards.
@@ -144,31 +142,34 @@ output is produced.
 
 Attribution is commonly judged by whether a statement is supported by an identified source
 \cite{rashkin2023ais}, and support alone is not enough: up to 57\% of citations in a recent study were
-post-rationalised rather than the evidence the model actually used \cite{wallat2025faithfulness}. Two families of methods followed.
+post-rationalised rather than the evidence the model actually used \cite{wallat2025faithfulness}. A recent
+survey organises 134 papers on citation, attribution and quotation \cite{schreieder2025survey}; two
+families of methods matter here.
 \emph{Post-hoc} methods generate first and attach or repair evidence later: RARR searches for
 evidence for an existing output and revises unsupported content \cite{gao2023rarr}, and ALCE
 benchmarks models that cite retrieved passages while writing \cite{gao2023alce}. \emph{Attribute-first}
 methods invert the order. Slobodkin et al.\ select concise source spans, cluster them into a
 sentence-level plan, and only then generate. They discard any selected span that does not occur in the
-source \cite{slobodkin2024afg}; this shortened human verification time in both of their tasks,
+source \cite{slobodkin2024afg}; the method shortened human verification time in both of their tasks,
 while human-judged attribution rose in one task and fell in the other.
 
-Later work refines the selected unit and what is done with it. FRONT trains models to extract
-fine-grained quotes before writing grounded citations \cite{huang2024front}; LongCite trains long-context models to cite
-at sentence level as they write \cite{zhang2025longcite}; GenerationPrograms
-expresses the answer as an executable program of operations over source sentences, so that each
-output sentence carries its derivation \cite{wan2025generationprograms}; Worledge et al.\ show
-that moving from quotation toward abstraction makes answers more fluent and useful but harder and
-slower to verify \cite{worledge2024spectrum}; CiteLab provides tooling to compare citation workflows,
-attribute-first among them \cite{shen2025citelab}; and QA-based propositions can localise exactly
-which part of an attributed sentence is inconsistent with its source \cite{cattan2026localizing}.
-It has been applied to legal review \cite{worledge2026default} and used as a medical baseline
-\cite{wu2025medgraphrag}; related work moves the evidence unit to page regions \cite{zhao2025finragbenchv}
-or filters training data for attributability \cite{schimanski2024specialists}.
+Later work refines the selected unit. FRONT extracts fine-grained quotes before citing
+\cite{huang2024front}; LongCite numbers the sentences of the context and cites sentence ranges
+\cite{zhang2025longcite}; Zhang et al.\ attach verbatim quotes to clinical answers, which most of twelve
+LLMs do for over 90\% of claims, though the quotes often fail to substantiate them
+\cite{zhang2026verifiable}; GenerationPrograms writes the answer as a program over source sentences
+\cite{wan2025generationprograms}; and QA-based propositions localise the inconsistent part of an
+attributed sentence \cite{cattan2026localizing}. Moving from quotation toward abstraction makes answers
+more fluent but slower to verify \cite{worledge2024spectrum}. Attribute-first generation has been
+compared in CiteLab \cite{shen2025citelab}, applied to legal review \cite{worledge2026default} and used
+as a medical baseline \cite{wu2025medgraphrag}; other work moves the evidence unit to page regions
+\cite{zhao2025finragbenchv} or filters training data for attributability \cite{schimanski2024specialists}.
 
-We keep the attribute-first order but change what is selected. Our reader model selects opaque identifiers
-issued by the system instead of copying spans, so the existence check that attribute-first methods
-perform by string matching becomes an exact lookup, and a quotation can never drift from its source.
+We keep the attribute-first order and, like index-based citation, let the model select instead of
+copy. Our identifiers differ: they name lossless source units, carry the revision of the text, and
+resolve deterministically or fail with a typed reason. The existence check that attribute-first methods
+perform by string matching becomes an exact lookup, and a displayed quotation cannot drift from its
+source. Table~\ref{tab:compare} summarises how close systems handle evidence.
 
 \subsection{Claim Verification}
 
@@ -176,11 +177,9 @@ A third line checks generated text against evidence. FActScore checks atomic fac
 \cite{min2023factscore},
 MiniCheck trains small grounding checkers \cite{tang2024minicheck}, and AttrScore judges attribution
 with LLMs and fine-tuned models \cite{yue2023attrscore}; WiCE \cite{kamoi2023wice} and
-AttributionBench \cite{li2024attributionbench} supply labelled claim/evidence pairs. For Thai, XNLI
-provides professionally translated NLI test data \cite{conneau2018xnli}, and PyThaiNLP provides
-sentence segmentation \cite{phatthiyaphaibun2023pythainlp}. AUTOSUMM, deployed for bank call summaries, combines entity, embedding and entailment layers and
+AttributionBench \cite{li2024attributionbench} supply labelled claim/evidence pairs. AUTOSUMM, deployed for bank call summaries, combines entity, embedding and entailment layers and
 shows sentence-level flags to reviewers \cite{gupta2025autosumm}, close to our warning layer but without
-evidence pointers. Table~\ref{tab:compare} compares these systems. We do not propose a new checker: we
+evidence pointers. We do not propose a new checker: we
 assemble a cheap, frozen one from multilingual components \cite{reimers2020multilingual} and measure
 what it does at one point in the pipeline.
 
@@ -188,24 +187,23 @@ what it does at one point in the pipeline.
 
 \begin{table}[t]
 \centering
-\caption{How close systems handle evidence, as described in each paper (\ding{55}: not provided or
-not reported).}
+\caption{How close systems handle evidence, as described in each paper. \emph{Pointer}: what the
+model writes to cite; \emph{checked}: when the pointer is checked against its source (eval.: only when
+the paper evaluates the system; gen.: while the output is generated).}
 \label{tab:compare}
 \scriptsize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{lcccccc}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lllll@{}}
 \toprule
- & ALCE & AfG & Worledge & Yang & AUTOSUMM & \textbf{Ours} \\
- & \cite{gao2023alce} & \cite{slobodkin2024afg} & \cite{worledge2026default} & \cite{yang2026traceable} & \cite{gupta2025autosumm} & \\
+System & Evidence unit & Pointer & Checked & Domain \\
 \midrule
-No model-written evidence & \yes & \no  & \no  & \yes & \no  & \yes \\
-Exact span per claim      & \no  & \yes & \yes & \no  & \no  & \yes \\
-Failed pointers shown     & \no  & \no  & \no  & \no  & \no  & \yes \\
-Edit-safe identifiers     & \no  & \no  & \no  & \no  & \no  & \yes \\
-Runtime support check     & \no  & \no  & \no  & \no  & \yes & \yes \\
-\midrule
-Evidence unit & passage & span & quote & ID & -- & unit \\
-Domain & QA & summ. & legal & exhibit & banking & cyber \\
+ALCE \cite{gao2023alce} & passage & passage number & eval., NLI & QA \\
+AfG \cite{slobodkin2024afg} & span & span text & gen., string match & summ., QA \\
+LongCite \cite{zhang2025longcite} & sentence & sentence range & eval., LLM judge & long QA \\
+Worledge \cite{worledge2026default} & quote & quote text & after gen., page search & legal \\
+Yang \cite{yang2026traceable} & registry entry & registry ID & after gen., by hand & exhibits \\
+Zhang \cite{zhang2026verifiable} & quote & quote text & eval., match and judge & clinical QA \\
+Ours & source unit & alias of a system ID & gen., exact lookup & cybercrime \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -245,9 +243,9 @@ $s(c)$; $\mathrm{w}(c)$ & Warning-layer score; label in \{\texttt{supported}, \t
 \end{tabular}
 \end{table}
 
-From the task itself (an investigator must be able to justify each statement in a case file) and
-from earlier versions of our system in which the model wrote its own quotations, which then had to be
-matched back to the sources approximately, we derived five requirements. Evidence must be
+From the task (an investigator must justify each statement in a case file) and from earlier versions
+of our system, whose model-written quotations had to be matched back to the sources approximately, we
+derived five requirements. Evidence must be
 verbatim: every quotation shown is a substring of a stored source, reproduced by the system and never
 by a model. Failures must be visible: a pointer that cannot be resolved is shown as invalid, not dropped
 or repaired. Pointers must be safe across revisions: one issued for a version of a document never binds
@@ -293,7 +291,7 @@ follow sentence boundaries.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\linewidth]{figures/units.pdf}
+\includegraphics[width=0.92\linewidth]{figures/units.pdf}
 \caption{Building Source units for a constructed Thai narrative. (A) Segmentation into contiguous
 units with exact offsets; a 7-character interjection is merged into the next piece. (B) For contrast,
 fixed 40-character chunks of the same text split the word for ``transfer'' from the amount, while units
@@ -335,7 +333,7 @@ left to $M_J$. Every model reply is validated against a strict local schema and 
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\linewidth]{figures/provenance.pdf}
+\includegraphics[width=0.92\linewidth]{figures/provenance.pdf}
 \caption{Two-level provenance for one summary sentence ($S_1$ of Fig.~\ref{fig:units}; $S_2$ a
 constructed OCR slip). Each claim's colour marks the units it cites; grey units are uncited.
 Offsets and identifiers follow the system's rules.}
@@ -466,7 +464,7 @@ change in false acceptance ($+0.75$ pp, CI $-1.09$ to $+2.70$). Relative to B1, 
 boundary lowers false acceptance by 5.42 points (CI 3.70--7.17). B3 is statistically
 indistinguishable from B1-LR (Macro-F1 $-0.002$, CI $-0.011$ to $+0.007$) at roughly twice the
 latency, so B1-LR was kept. The absolute level is modest: about one in four gold-unsupported pairs is
-still accepted. Other selectors, heads and backbones were rejected on development data.
+still accepted.
 
 \subsection{Transfer to Machine-Translated Thai}\label{sec:mtth}
 
@@ -487,10 +485,10 @@ Thai lowers F1 by 0.040 (CI 0.018--0.063) and raises false acceptance by 4.4 poi
 purpose is to warn about unsupported claims, the rise in false acceptance is the result that
 matters: on Thai in-domain text, about half of unsupported claims would carry no warning.
 
-More Thai pairs hit the 512-token limit (311 vs.\ 288 in-domain, 154 vs.\ 124 out-of-domain), and
-BGE-M3 \cite{chen2024bgem3} similarity between each text and its translation (mean cosine 0.846) shows
-topical closeness, not that names, amounts and negations survived; translation, language and truncation
-effects are not separated.
+More Thai pairs hit the 512-token limit (311 vs.\ 288 in-domain, 154 vs.\ 124 out-of-domain).
+BGE-M3 \cite{chen2024bgem3} similarity between texts and translations (mean cosine 0.846) shows topical
+closeness, not that names, amounts and negations survived; translation, language and truncation effects
+are not separated.
 
 \subsection{What If the Warning Were a Filter?}\label{sec:replay}
 
@@ -532,8 +530,8 @@ unit is the finest granularity a citation can have.
 The replay shows the trade-off: a filter that removes about three quarters of unsupported claims from
 summaries also removes about three in ten supported ones, and the machine-translated Thai results
 suggest it would be leakier on Thai input. We judge that a silently missing true fact can cost an investigator as much as a flagged
-dubious one; a filter hides its errors, while a label shows them. The verdict is therefore displayed beside
-the claim and nothing else changes, while the structural checks of Sect.~\ref{sec:binding} stay strict.
+dubious one; a filter hides its errors, while a label shows them. The label is therefore shown beside the
+claim, and the structural checks stay strict.
 
 \paragraph{Threats to validity.}
 These guarantees are argued from construction and checked on public text (Sect.~\ref{sec:props}),

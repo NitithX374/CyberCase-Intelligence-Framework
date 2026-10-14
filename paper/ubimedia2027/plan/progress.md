@@ -144,3 +144,15 @@
 - Re-audit: 35 -> 3 (A4-1 and C6-1 unapproved; one new referent issue after C1-2, reported).
 - Invariance: no number removed; added only approved values (500, 1,000, 4.4, 9/29, GTX 1650,
   2.10 GHz); citation set identical; one heading changed (capitalisation). 16 pages, fonts embedded.
+
+## 2026-10-14 — Table 1 descriptive; positioning against close work
+- Table 1 is now descriptive (evidence unit, what the model writes, when it is checked, domain), with
+  no ticks or colours; AUTOSUMM moved to text only; LongCite and Zhang et al. added as rows.
+- "We take a different position" replaced: the intro now says the method builds on index-based
+  citation (ALCE, LongCite) and verbatim quotation (Zhang et al. 2026, "verifiable by construction"),
+  and states the delta (identifiers name exact text and fail visibly on change).
+- New citations from a broadened search: zhang2026verifiable, lin2026blip, schreieder2025survey.
+- Fixed two referents left by earlier edits ("It may only select" -> "The model may only select";
+  AfG "this shortened" -> "the method shortened").
+- Abstract trimmed to 250 words (Springer limit); Related Work 2.2 list compressed; Figs. 2-3 at
+  0.92 linewidth. 16 pages; citation set = old + 3; no reported number removed.

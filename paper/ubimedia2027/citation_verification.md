@@ -54,3 +54,6 @@ method), reimers2020multilingual, he2021debertav3, laurer2022mdeberta (models in
 conneau2018xnli (dataset in the planned study).
 | gupta2025autosumm | ACL Anthology 2025.acl-industry.35 + full PDF read | post-hoc entity/embedding/entailment hallucination layers, sentence-level flags shown to reviewers, no evidence pointers | verified |
 | chumpolsathien2020thaisum | ThaiSum dataset card (pythainlp/thaisum @ 6c2928cb, "Citation Information", MIT licence) | source of the Thai corpus in Sect. 5 only; metadata as given by the dataset authors | verified |
+| zhang2026verifiable | arXiv API 2609.15964 (title, 4 authors, 2026-09-14, abstract read) | verbatim quotes for clinical QA; most of 12 LLMs quote >90% of claims, quotes often fail to substantiate (98.0% vs 37.1% for one model) | verified (abstract) |
+| lin2026blip | arXiv API 2608.25210 (title, 3 authors, 2026-08-25, abstract read) | verifiable provenance = minimal input subset that reproduces the LLM answer; found by querying the LLM on candidate subsets (BLIP) | verified (abstract) |
+| schreieder2025survey | arXiv API 2508.15396 (title, 3 authors, 2025-08-21, abstract read) | survey of 134 papers on citation, attribution and quotation | verified (abstract) |

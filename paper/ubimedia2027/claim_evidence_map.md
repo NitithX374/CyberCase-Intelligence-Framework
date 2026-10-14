@@ -99,3 +99,12 @@ Source: `research/traceability_properties/results/properties.json` (run.py, SaT 
 | never between two digits | boundaries.unit_cuts_splitting_digits (fixed) | 0 (75) / 0 (79) |
 | fixed chunk length = mean unit length | boundaries.fixed_chunk_chars | 132 / 109 |
 | about 0.19 s per 1,000 Thai characters on a CPU | ms_per_1000_chars (Thai) | 186.3 ms |
+
+## Related Work additions (2026-10-14)
+| Claim | Source |
+|---|---|
+| Zhang et al.: most of twelve LLMs attach verbatim quotes to >90% of claims; quotes often fail to substantiate | arXiv 2609.15964 abstract (literature/raw/arxiv_2508.15396_2608.25210_2609.15964.xml) |
+| Lin et al. (BLIP): verifiable provenance as a minimal input subset reproducing the answer | arXiv 2608.25210 abstract |
+| Survey of 134 papers on citation, attribution and quotation | arXiv 2508.15396 abstract |
+| LongCite numbers context sentences and cites sentence ranges; GPT-4o judges citation quality | ACL 2025.findings-acl.264 (full PDF read, Sect. 3.1 and 3.3) |
+| AfG evaluated on multi-document summarisation and long-form QA | ACL Anthology 2024.acl-long.182 abstract |
