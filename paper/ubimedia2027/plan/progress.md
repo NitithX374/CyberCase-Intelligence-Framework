@@ -156,3 +156,10 @@
   AfG "this shortened" -> "the method shortened").
 - Abstract trimmed to 250 words (Springer limit); Related Work 2.2 list compressed; Figs. 2-3 at
   0.92 linewidth. 16 pages; citation set = old + 3; no reported number removed.
+
+## 2026-10-14 — retitled; survey now cited as ACL 2026
+- Title: "From Lossless Units to Verbatim Spans: Traceable LLM Analysis of Case Files" (authors'
+  choice), to avoid a clash with Zhang et al. 2026 "Verifiable by Construction"; running head updated.
+- Zhang et al. 2026 kept although it is an arXiv preprint (authors' choice).
+- schreieder2025survey: arXiv comment says "Accepted at ACL 2026"; bib now uses the ACL Anthology
+  record (2026.acl-long.1430, pp. 30956-31000, DOI). 16 pages.

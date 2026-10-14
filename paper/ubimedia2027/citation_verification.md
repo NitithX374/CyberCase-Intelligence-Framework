@@ -56,4 +56,4 @@ conneau2018xnli (dataset in the planned study).
 | chumpolsathien2020thaisum | ThaiSum dataset card (pythainlp/thaisum @ 6c2928cb, "Citation Information", MIT licence) | source of the Thai corpus in Sect. 5 only; metadata as given by the dataset authors | verified |
 | zhang2026verifiable | arXiv API 2609.15964 (title, 4 authors, 2026-09-14, abstract read) | verbatim quotes for clinical QA; most of 12 LLMs quote >90% of claims, quotes often fail to substantiate (98.0% vs 37.1% for one model) | verified (abstract) |
 | lin2026blip | arXiv API 2608.25210 (title, 3 authors, 2026-08-25, abstract read) | verifiable provenance = minimal input subset that reproduces the LLM answer; found by querying the LLM on candidate subsets (BLIP) | verified (abstract) |
-| schreieder2025survey | arXiv API 2508.15396 (title, 3 authors, 2025-08-21, abstract read) | survey of 134 papers on citation, attribution and quotation | verified (abstract) |
+| schreieder2025survey | arXiv API 2508.15396 (abstract read; comment "Accepted at ACL 2026") + ACL Anthology 2026.acl-long.1430 BibTeX | survey of 134 papers on citation, attribution and quotation | verified |
