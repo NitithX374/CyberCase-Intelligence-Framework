@@ -128,3 +128,19 @@
 
 ## 2026-10-14 — author name
 - Second author's surname corrected to "Khamwiset" (was "Kahmwiset") in \author and \authorrunning.
+
+## 2026-10-14 — ai-tell-audit Phase 2 + paper-writing-style + LNCS v2.24 template
+- Audit (Phase 1) found 35 items; the authors approved all E, C1, C2, C7, D1, D2, F1, A2 and the
+  LNCS items. Applied exactly those (40 edits); not applied: C6-1, A4-1 (not approved).
+- Honesty fixes: "deployed"/"production" -> "the rule the prototype uses"/"the system's"; "never
+  writes a quotation" scoped to evidence; abstract now names the two corpora, gives 17.4 in domain
+  and 4.4 out of domain, and scopes identifier invalidation to the edited source; Related Work no
+  longer lumps Yang et al. with model-written pointers; warn-vs-filter stated as a reported trade-off.
+- 0.23 s per claim moved from the Conclusion to Sect. 4.6 with its device (GTX 1650, FINAL_VERDICT.md);
+  segmentation timing names the CPU (Intel Xeon 2.10 GHz). Latency x2, MiniLM .650/.618 and 33,583
+  confirmed against CROSS_FAMILY_REEVALUATION.md, FINAL_VERDICT.md and B1_RESULTS.
+- LNCS: credits environment with the mandatory Disclosure of Interests (llncs v2.26 vendored),
+  "Attribute First, Then Generate"; Fig. 4 legend "B1-LR (prototype)". ORCID not added (needs IDs).
+- Re-audit: 35 -> 3 (A4-1 and C6-1 unapproved; one new referent issue after C1-2, reported).
+- Invariance: no number removed; added only approved values (500, 1,000, 4.4, 9/29, GTX 1650,
+  2.10 GHz); citation set identical; one heading changed (capitalisation). 16 pages, fonts embedded.

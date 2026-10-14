@@ -105,7 +105,7 @@ def main():
     names = {
         "B0": "B0: full evidence",
         "B1": "B1: selected units",
-        "B1-LR": "B1-LR (deployed)",
+        "B1-LR": "B1-LR (prototype)",
         "B3": "B3: + reverse NLI",
     }
     series = [

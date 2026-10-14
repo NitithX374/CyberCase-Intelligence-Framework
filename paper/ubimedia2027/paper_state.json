@@ -22,13 +22,13 @@
     "command": "tectonic main.tex",
     "pdf": "main.pdf",
     "external_inputs": [
-      "llncs.cls and splncs04.bst from the TeX distribution",
       "figures/units.pdf and figures/provenance.pdf (built from figures/*.tex with XeLaTeX and the Loma Thai font)",
       "figures/results.pdf (built by figures/make_results.py from recorded result files)",
       "figures/overview.pdf (built from figures/overview.tex; needs fontawesome5)",
-      "research/traceability_properties/results/properties.json (Table 3, Sect. 5.1)"
+      "research/traceability_properties/results/properties.json (Table 3, Sect. 5.1)",
+      "llncs.cls and splncs04.bst v2.26 (CTAN), vendored in this folder"
     ],
-    "input_sha256": "064ccad6288e4e30dd82440d09e807b8d93cb6f1799ab535a453233a04336971",
-    "pdf_sha256": "75c8ddd880d51dd3093432273b695dc6bdddc4a240a7d994dc2a9084332c896f"
+    "input_sha256": "1ea8c071503e549a71e491cad4593f016f53f0b1d41c0773334f781d3e9172c8",
+    "pdf_sha256": "b8a9fcb078e839d8df2e94e414b62573bf081dc5b291ed2d9a9973c763575be4"
   }
 }
