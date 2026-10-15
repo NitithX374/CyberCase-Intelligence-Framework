@@ -1,6 +1,8 @@
-# CyberCase — Ubi-Media 2027 short paper draft
+# CyberCase: Ubi-Media 2027 paper
 
-Build (Springer LNCS class comes from the TeX distribution, not vendored here):
+Start with `HANDOFF.md` for the current state and open items.
+
+Build (Springer LNCS class v2.26 and `splncs04.bst` are vendored in this folder):
 
 ```bash
 tectonic main.tex        # or: latexmk -pdf main.tex
