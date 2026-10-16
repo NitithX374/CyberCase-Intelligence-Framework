@@ -89,13 +89,16 @@ def test_a_sat_failure_is_raised_rather_than_split_by_the_fallback(monkeypatch):
 
 
 def test_the_segmenter_identity_names_what_splits_the_text(monkeypatch):
+    monkeypatch.setattr(sentences, "package_version", lambda name: f"{name}-version")
     monkeypatch.setattr(sentences, "get_sat_segmenter", lambda: object())
     sat = sentences.segmenter_identity()
     monkeypatch.setattr(sentences, "get_sat_segmenter", lambda: None)
     fallback = sentences.segmenter_identity()
 
-    assert sat.startswith(f"sat:sat-3l-sm@{sentences.SAT_REVISION}:threshold=0.025:wtpsplit=")
-    assert fallback.startswith("crfcut:pythainlp=")
+    assert sat == (
+        f"sat:sat-3l-sm@{sentences.SAT_REVISION}:threshold=0.025:wtpsplit=wtpsplit-version"
+    )
+    assert fallback == "crfcut:pythainlp=pythainlp-version"
 
 
 def test_a_long_thai_paragraph_is_cut_into_sentences_rather_than_kept_whole():
