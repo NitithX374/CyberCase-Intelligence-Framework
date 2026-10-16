@@ -130,8 +130,8 @@ Its failure cancels outstanding extraction. UI/Report views trace through Claims
 to their Source units; no views enter Judgement/chat. Stored analysis snapshots
 cache the output for reads/reports, without a new table or revision mechanism.
 Historical local-extraction metadata and offsets remain readable. The former
-local loader/per-Claim runtime and Compose service are removed. The encoder
-and Claim support verifier have separate purposes; the stopped research experiments remain separate.
+local loader/per-Claim runtime and Compose service are removed; the stopped research
+experiments remain separate.
 
 The judgement therefore reads only claims that pass the structural checks: their statuses, and only the
 source spans that were resolved. Its payload retains Claim IDs but citation records
@@ -289,8 +289,7 @@ violations or `<stage>_incomplete` for token limits. Refusals and timeouts are n
 generation retries. Model, provider, temperature and token settings are unchanged.
 A caller's `calls` list receives model, estimated input tokens, output mode,
 request max_tokens, generation attempts, usage, status and elapsed time. Production
-logs output mode and the request cap without prompt or source text. The encoder
-gate (`MITRE_GATE_MODE=encoder`) runs a local model and calls no provider.
+logs output mode and the request cap without prompt or source text.
 
 A chat answer reads what the analysis reads — the case sources, the answered
 follow-ups and the technical context the latest analysis retrieved — and that
