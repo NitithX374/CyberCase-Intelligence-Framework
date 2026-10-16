@@ -329,6 +329,29 @@ async def test_pinned_providers_are_the_only_ones_asked(monkeypatch) -> None:
     assert "provider" not in sent[1]
 
 
+async def test_a_vllm_server_is_asked_to_think_through_its_chat_template(monkeypatch) -> None:
+    sent: list[dict[str, object]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content))
+        return answered()
+
+    config = AnalysisPipelineConfig(model="test/model", providers=("pinned",), server="vllm")
+    await run_stage(monkeypatch, handler, [], config=config)
+    await run_stage(
+        monkeypatch,
+        handler,
+        [],
+        config=AnalysisPipelineConfig(model="test/model", thinking_tokens=0, server="vllm"),
+    )
+
+    assert sent[0]["chat_template_kwargs"] == {"enable_thinking": True}
+    assert sent[0]["max_tokens"] == config.output_tokens + config.thinking_tokens
+    assert sent[1]["chat_template_kwargs"] == {"enable_thinking": False}
+    assert sent[1]["max_tokens"] == config.output_tokens
+    assert all("thinking" not in payload and "provider" not in payload for payload in sent)
+
+
 async def test_the_receipt_records_what_the_provider_counted(monkeypatch) -> None:
     calls: list[dict[str, object]] = []
     result = await run_stage(monkeypatch, lambda request: thought_and_answered(), calls)

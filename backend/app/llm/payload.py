@@ -32,6 +32,12 @@ def thinking_option(config: AnalysisPipelineConfig) -> dict[str, object]:
     return {"type": "enabled", "budget_tokens": config.thinking_tokens}
 
 
+def thinking_fields(config: AnalysisPipelineConfig) -> dict[str, object]:
+    if config.server == "vllm":
+        return {"chat_template_kwargs": {"enable_thinking": config.thinking_tokens > 0}}
+    return {"thinking": thinking_option(config)}
+
+
 def stage_payload(
     config: AnalysisPipelineConfig,
     system: str,
@@ -43,7 +49,7 @@ def stage_payload(
     payload: dict[str, object] = {
         "model": config.model,
         "max_tokens": config.max_tokens,
-        "thinking": thinking_option(config),
+        **thinking_fields(config),
         "system": structured_system_prompt(system, schema),
         "messages": [
             {
@@ -56,6 +62,6 @@ def stage_payload(
     }
     if temperature is not None:
         payload["temperature"] = temperature
-    if config.providers:
+    if config.providers and config.server == "openrouter":
         payload["provider"] = {"order": list(config.providers), "allow_fallbacks": False}
     return payload

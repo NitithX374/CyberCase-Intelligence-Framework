@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.config import settings
@@ -21,6 +23,9 @@ class AnalysisPipelineConfig(BaseModel):
     )
     providers: tuple[str, ...] = Field(
         default_factory=lambda: provider_order(settings.case_analysis_providers)
+    )
+    server: Literal["openrouter", "vllm"] = Field(
+        default_factory=lambda: settings.case_analysis_server
     )
     context_tokens: int = Field(default=128_000, ge=1)
     input_tokens: int = Field(default=80_000, ge=1)

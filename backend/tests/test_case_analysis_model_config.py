@@ -47,6 +47,22 @@ def test_the_configured_pipeline_follows_the_model_setting(monkeypatch, selector
     assert configured_pipeline().model == model
 
 
+def test_the_backend_calls_openrouter_unless_told_otherwise(monkeypatch):
+    monkeypatch.delenv("CASE_ANALYSIS_SERVER", raising=False)
+
+    assert Settings(_env_file=None).case_analysis_server == "openrouter"
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, case_analysis_server="ollama")
+
+
+def test_every_stage_config_follows_the_server_setting(monkeypatch):
+    monkeypatch.setattr("app.llm.settings.settings.case_analysis_server", "vllm")
+
+    assert configured_pipeline().server == "vllm"
+    assert configured_pipeline().for_views().server == "vllm"
+    assert AnalysisPipelineConfig(output_tokens=512, thinking_tokens=0).server == "vllm"
+
+
 def test_a_context_budget_that_output_and_safety_exhaust_is_rejected():
     with pytest.raises(ValidationError, match="exhaust context"):
         AnalysisPipelineConfig(context_tokens=100)
