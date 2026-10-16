@@ -13,6 +13,11 @@ def no_shadow_gate(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def openrouter_server(monkeypatch):
+    monkeypatch.setattr(settings, "case_analysis_server", "openrouter")
+
+
+@pytest.fixture(autouse=True)
 def no_model_warmup(monkeypatch):
     monkeypatch.setattr(settings, "warmup_models", False)
 

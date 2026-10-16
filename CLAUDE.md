@@ -98,6 +98,9 @@ The frontend's folders and the rules they keep are in `frontend/README.md`.
 doppler run -- docker compose up --build   # PostgreSQL (host port 5433) + backend + rag-service + frontend, all published on 127.0.0.1 only
 ```
 Neo4j and Qdrant are cloud-hosted — no local containers for them.
+`docker-compose.selfhosted.yml` points the backend and the RAG service at vLLM servers with the same
+weights (Gemma 4 26B A4B for the LLM, Typhoon OCR 1.5 2B for OCR), on Modal or, with
+`--profile local-models`, in local containers; `deploy/selfhosted/README.md` has the steps.
 
 ## Architecture
 
@@ -167,8 +170,9 @@ Backend (prefix `/api/v1`), one `routes.py` per feature folder. `tests/test_rout
 - **Progress stream.** `POST /cases/{case_id}/analysis` and `POST /cases/{case_id}/chat/messages` answer a request sent
   with `Accept: text/event-stream` with a Server-Sent Events stream on the same request, instead of one JSON body
   (`analysis/stream.py`):
-  - a `step` event as the analysis reaches each step (`assess`, `gate`, `retrieve` only when the RAG service is asked,
-    `read`, `bind`, `judge`), with the seconds since it began;
+  - a `step` event as the analysis reaches each step (`warmup` only when a self-hosted model server had to be woken,
+    `assess`, `gate`, `retrieve` only when the RAG service is asked, `read`, `bind`, `judge`), with the seconds since
+    it began;
   - a `: heartbeat` comment every 15 seconds of quiet, so the browser can tell a slow step from a lost connection;
   - then `result`, holding the JSON body a plain request gets, or `error`, holding its status and `detail`.
   - The analysis runs in a task of its own, so it finishes and is stored even if the browser leaves. When the task
@@ -550,7 +554,7 @@ The frontend loads and generates reports through the case-scoped report endpoint
 
 ## Secrets & Environment
 - **Doppler** is used for secrets management (replaces `.env` files in deployed environments); local dev can use `.env` files
-- Backend runtime and online migrations read `POSTGRES_*`, or `DATABASE_URL`, which wins when set. The analysis's technical-context step reads `RAG_SERVICE_URL`; every backend model call reads `OPENROUTER_CYBERCASE`; OCR reads `TYPHOON_API_KEY`; a session cookie needs a `JWT_SECRET_KEY` of at least 32 characters. A chat answer never calls the RAG service. A reply that closes a round runs the analysis, and the analysis's technical-context step may call it. `CASE_ANALYSIS_MODEL` selects the model for every backend model call — the preflight, Main Case Analysis, its chat answers, and the LLM MITRE applicability gate; it accepts a registry alias or full OpenRouter ID and defaults to `google/gemma-4-26b-a4b-it`. The backend calls OpenRouter only — there is no provider switch or provider fallback. `CASE_ANALYSIS_PROVIDERS` (comma-separated OpenRouter endpoint tags, e.g. `parasail/fp8,coreweave/fp8`) pins every backend model call to those endpoints in that order with `allow_fallbacks: false`; empty lets OpenRouter route, and the tags must serve the configured model. `CORE_LLM_PROVIDER` belongs to the RAG service alone. `MITRE_GATE_MODE` and `MITRE_GATE_MODEL_PATH` select the applicability gate, and `MITRE_GATE_SHADOW` runs the encoder beside it
+- Backend runtime and online migrations read `POSTGRES_*`, or `DATABASE_URL`, which wins when set. The analysis's technical-context step reads `RAG_SERVICE_URL`; every backend model call reads `OPENROUTER_CYBERCASE`; OCR reads `TYPHOON_API_KEY`; a session cookie needs a `JWT_SECRET_KEY` of at least 32 characters. A chat answer never calls the RAG service. A reply that closes a round runs the analysis, and the analysis's technical-context step may call it. `CASE_ANALYSIS_MODEL` selects the model for every backend model call — the preflight, Main Case Analysis, its chat answers, and the LLM MITRE applicability gate; it accepts a registry alias or full OpenRouter ID and defaults to `google/gemma-4-26b-a4b-it`. The backend calls OpenRouter unless `CASE_ANALYSIS_SERVER=vllm`, which sends the same Messages API calls to a self-hosted vLLM server at `OPENROUTER_MESSAGES_URL`: thinking is then `chat_template_kwargs.enable_thinking` (on when the stage has a budget, with no budget enforced) and no `provider` routing is sent; there is no provider fallback (`docker-compose.selfhosted.yml`, `deploy/selfhosted/README.md`). `CASE_ANALYSIS_WARMUP_SECONDS` (0 by default) lets a `vllm` call wait that long for a server that is starting, counting HTTP 503 and a refused connection as starting, and `run_case_analysis` wakes the server through its `/health` before it calls `advance_case`. `DOCUMENT_RECOGNITION_WARMUP_SECONDS` (0 by default) does the same for OCR, before its ordinary retries count. `CASE_ANALYSIS_PROVIDERS` (comma-separated OpenRouter endpoint tags, e.g. `parasail/fp8,coreweave/fp8`) pins every backend model call to those endpoints in that order with `allow_fallbacks: false`; empty lets OpenRouter route, and the tags must serve the configured model. `CORE_LLM_PROVIDER` belongs to the RAG service alone. `MITRE_GATE_MODE` and `MITRE_GATE_MODEL_PATH` select the applicability gate, and `MITRE_GATE_SHADOW` runs the encoder beside it
 - RAG service reads `OPENROUTER_CYBERCASE` (or `ANTHROPIC_API_KEY` when `CORE_LLM_PROVIDER=anthropic`), `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`, `QDRANT_URL`/`QDRANT_API_KEY`, and `THANOY_API_URL`/`THANOY_API_KEY` for the legal lookup. `OPENROUTER_API_KEY` is read only by the RAGAS evaluation
 - Default Compose forwards the OpenRouter key. Selecting Anthropic requires an explicit environment override supplying `ANTHROPIC_API_KEY`; the provider implementation remains available. The RAG image includes its model registry and legal-reference client without requiring a source bind mount.
 - Deployment targets **Railway** platform via GitHub Actions in `.github/workflows/deploy.yml`

@@ -206,3 +206,5 @@ backend/models/
 backend/xlmr_ladder_best/
 backend/nli_mdeberta/
 backend/source_selector_mpnet/
+# Weights the local-models profile of docker-compose.selfhosted.yml downloads: ~56 GB.
+local_model_cache/

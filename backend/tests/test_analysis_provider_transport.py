@@ -235,6 +235,116 @@ async def test_a_transient_status_is_retried_after_the_same_delay_as_a_dropped_c
     assert waited == [2.0]
 
 
+def warming_target(seconds: float = 60.0):
+    return lambda model: CoreLlmTarget(
+        model=model,
+        messages_url="https://provider.test/v1/messages",
+        headers={"Authorization": "Bearer test-key"},
+        warmup_seconds=seconds,
+    )
+
+
+def scripted_outcomes(*outcomes):
+    seen: list[str] = []
+    remaining = list(outcomes)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.url.path)
+        outcome = remaining.pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+    return handler, seen
+
+
+async def test_a_server_that_is_starting_is_waited_for(monkeypatch) -> None:
+    monkeypatch.setattr(provider, "resolve_core_llm_target", warming_target())
+    monkeypatch.setattr(provider, "WARMUP_RETRY_DELAY_SECONDS", 0)
+    starting = httpx.Request("POST", "https://provider.test/v1/messages")
+    handler, seen = scripted_outcomes(
+        httpx.Response(503, json={"error": "no container"}),
+        httpx.ConnectError("connection refused", request=starting),
+        httpx.Response(503, json={"error": "no container"}),
+        httpx.Response(503, json={"error": "no container"}),
+        answered(),
+    )
+
+    assert await run_stage(monkeypatch, handler, []) == Probe(ok=True)
+    assert len(seen) == 5
+
+
+@pytest.mark.parametrize("status_code", [500, 502, 504])
+async def test_only_a_503_counts_as_a_server_that_is_starting(monkeypatch, status_code) -> None:
+    monkeypatch.setattr(provider, "resolve_core_llm_target", warming_target())
+    attempts = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts.append(request)
+        return httpx.Response(status_code, json={"error": "down"})
+
+    with pytest.raises(CaseAnalysisFailure):
+        await run_stage(monkeypatch, handler, [])
+
+    assert len(attempts) == provider.TRANSPORT_ATTEMPTS
+
+
+async def test_the_wait_for_a_starting_server_ends_at_its_limit(monkeypatch) -> None:
+    monkeypatch.setattr(provider, "resolve_core_llm_target", warming_target(seconds=0.05))
+    monkeypatch.setattr(provider, "WARMUP_RETRY_DELAY_SECONDS", 0.02)
+    attempts = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts.append(request)
+        return httpx.Response(503, json={"error": "no container"})
+
+    with pytest.raises(CaseAnalysisFailure) as failure:
+        await run_stage(monkeypatch, handler, [])
+
+    assert failure.value.code == "analysis_provider_down"
+    assert provider.TRANSPORT_ATTEMPTS < len(attempts) < 20
+
+
+async def wake(monkeypatch, *outcomes, server: str = "vllm") -> tuple[list[str], list[str]]:
+    monkeypatch.setattr(provider.settings, "case_analysis_server", server)
+    monkeypatch.setattr(provider.settings, "case_analysis_warmup_seconds", 60)
+    monkeypatch.setattr(provider, "resolve_core_llm_target", warming_target())
+    monkeypatch.setattr(provider, "WARMUP_RETRY_DELAY_SECONDS", 0)
+    handler, seen = scripted_outcomes(*outcomes)
+    monkeypatch.setattr(provider, "transport", httpx.MockTransport(handler))
+    announced: list[str] = []
+    await provider.wake_server(on_wait=lambda: announced.append("warmup"))
+    return seen, announced
+
+
+async def test_a_sleeping_server_is_woken_and_the_wait_is_announced_once(monkeypatch) -> None:
+    probe = httpx.Request("GET", "https://provider.test/health")
+    seen, announced = await wake(
+        monkeypatch,
+        httpx.Response(503),
+        httpx.ConnectError("connection refused", request=probe),
+        httpx.Response(503),
+        httpx.Response(200),
+    )
+
+    assert seen == ["/health"] * 4
+    assert announced == ["warmup"]
+
+
+async def test_a_server_that_is_up_is_not_announced_as_starting(monkeypatch) -> None:
+    seen, announced = await wake(monkeypatch, httpx.Response(200))
+
+    assert seen == ["/health"]
+    assert announced == []
+
+
+async def test_openrouter_is_never_woken(monkeypatch) -> None:
+    seen, announced = await wake(monkeypatch, server="openrouter")
+
+    assert seen == []
+    assert announced == []
+
+
 async def test_a_timeout_is_not_retried(monkeypatch) -> None:
     attempts = []
 
@@ -327,6 +437,29 @@ async def test_pinned_providers_are_the_only_ones_asked(monkeypatch) -> None:
 
     assert sent[0]["provider"] == {"order": list(pinned), "allow_fallbacks": False}
     assert "provider" not in sent[1]
+
+
+async def test_a_vllm_server_is_asked_to_think_through_its_chat_template(monkeypatch) -> None:
+    sent: list[dict[str, object]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content))
+        return answered()
+
+    config = AnalysisPipelineConfig(model="test/model", providers=("pinned",), server="vllm")
+    await run_stage(monkeypatch, handler, [], config=config)
+    await run_stage(
+        monkeypatch,
+        handler,
+        [],
+        config=AnalysisPipelineConfig(model="test/model", thinking_tokens=0, server="vllm"),
+    )
+
+    assert sent[0]["chat_template_kwargs"] == {"enable_thinking": True}
+    assert sent[0]["max_tokens"] == config.output_tokens + config.thinking_tokens
+    assert sent[1]["chat_template_kwargs"] == {"enable_thinking": False}
+    assert sent[1]["max_tokens"] == config.output_tokens
+    assert all("thinking" not in payload and "provider" not in payload for payload in sent)
 
 
 async def test_the_receipt_records_what_the_provider_counted(monkeypatch) -> None:

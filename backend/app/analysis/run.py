@@ -15,6 +15,7 @@ from app.analysis.store import (
     store_analysis,
     store_assessment,
 )
+from app.analysis.stream import announce
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.analysis.technical_context.retrieve import technical_context_key
 from app.cases.ownership import owned_case
@@ -31,6 +32,7 @@ from app.followup.conversation import (
     pending_question,
     rounds_asked,
 )
+from app.llm.request import wake_server
 from app.models.analysis_result import CaseAnalysisResult
 from app.sources.bundle import WITH_SOURCES, analysable_bundle
 from app.sources.service import SourceError
@@ -61,6 +63,7 @@ class UnassessedAdvance(AnalysisAdvance):
 
 
 async def think(pipeline: Callable, started: CaseUnderAnalysis) -> AnalysisAdvance:
+    await wake_server(on_wait=lambda: announce("warmup"))
     try:
         outcome = await pipeline(
             AnalysisInput(

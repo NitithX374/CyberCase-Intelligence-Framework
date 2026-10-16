@@ -2,6 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.config import DEFAULT_CASE_ANALYSIS_MODEL, Settings
+from app.llm.openrouter import resolve_core_llm_target
 from app.llm.registry import DEFAULT_OPENROUTER_MODEL
 from app.llm.settings import AnalysisPipelineConfig, configured_pipeline
 
@@ -45,6 +46,39 @@ def test_the_configured_pipeline_follows_the_model_setting(monkeypatch, selector
     )
 
     assert configured_pipeline().model == model
+
+
+def test_the_backend_calls_openrouter_unless_told_otherwise(monkeypatch):
+    monkeypatch.delenv("CASE_ANALYSIS_SERVER", raising=False)
+
+    assert Settings(_env_file=None).case_analysis_server == "openrouter"
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, case_analysis_server="ollama")
+
+
+def test_every_stage_config_follows_the_server_setting(monkeypatch):
+    monkeypatch.setattr("app.llm.settings.settings.case_analysis_server", "vllm")
+
+    assert configured_pipeline().server == "vllm"
+    assert configured_pipeline().for_views().server == "vllm"
+    assert AnalysisPipelineConfig(output_tokens=512, thinking_tokens=0).server == "vllm"
+
+
+def test_only_a_vllm_server_is_waited_for_while_it_starts():
+    common = {
+        "_env_file": None,
+        "openrouter_cybercase": "key",
+        "openrouter_messages_url": "http://llm:8000/v1/messages",
+        "case_analysis_warmup_seconds": 420,
+    }
+    vllm = resolve_core_llm_target(
+        "default", configured_settings=Settings(**common, case_analysis_server="vllm")
+    )
+    hosted = resolve_core_llm_target("default", configured_settings=Settings(**common))
+
+    assert vllm.warmup_seconds == 420
+    assert vllm.health_url == "http://llm:8000/health"
+    assert hosted.warmup_seconds == 0
 
 
 def test_a_context_budget_that_output_and_safety_exhaust_is_rejected():
