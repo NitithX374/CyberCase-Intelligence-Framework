@@ -97,8 +97,10 @@ Modal stops workloads that would cost more than the spend limit (modal.com/docs/
    python -c "import modal; print(modal.Server.from_name('cybercase-llm', 'Llm').get_url()); print(modal.Server.from_name('cybercase-ocr', 'Ocr').get_url())"
    ```
 
-6. Wake the servers and check them. The first start compiles and captures CUDA graphs, which
-   takes a few minutes; later starts reuse the `cybercase-vllm-cache` volume.
+6. Check the servers after a deploy. This wakes them too, but you need not run it before each
+   use, because the backend waits for a sleeping server itself. The first start compiles and
+   captures CUDA graphs, which takes a few minutes; later starts reuse the `cybercase-vllm-cache`
+   volume.
 
    ```bash
    python deploy/selfhosted/smoke.py
@@ -170,7 +172,8 @@ LOCAL_MODEL_CACHE=<a folder with 60 GB free>
 docker compose -f docker-compose.yml -f docker-compose.selfhosted.yml --profile local-models up -d
 ```
 
-This profile has not been run: no machine here has such a GPU.
+This profile has not been run: no machine here has such a GPU. Its vLLM flags match
+`modal_app.py` apart from the GPU shares, so a change to one belongs in the other too.
 
 ## Measured on Modal, 2026-10-16
 
@@ -194,9 +197,10 @@ tracks only `analysis_arms.py` in that folder.
 
 ### Grammar on this server
 
-The LLM server starts with `--structured-outputs-config '{"backend": "xgrammar",
-"disable_any_whitespace": true}'`. That setting changes only requests that send a grammar, so
-the backend's prompt-only requests are unaffected. Ten Thai news articles ran in two arms at once
+For this run the LLM server was started with `--structured-outputs-config '{"backend":
+"xgrammar", "disable_any_whitespace": true}'`. That setting changes only requests that send a
+grammar. The backend sends none, so `modal_app.py` leaves the flag out; add it back to run the
+comparison again. Ten Thai news articles ran in two arms at once
 on one A100, with the same `.env` thinking settings. Arm B sent each stage's contract as
 `output_config.format` as well as in the prompt; arm C sent it in the prompt only.
 
@@ -239,7 +243,8 @@ to bring it back.
 
 ## Checks
 
-`smoke.py` waits for each server's `/health`, asks the LLM for a JSON reply with thinking off and
+`smoke.py` is a check after a deploy, not a step before each use. It waits for each server's
+`/health`, asks the LLM for a JSON reply with thinking off and
 again with thinking on (the second must come back as a separate thinking block), and checks that
 the OCR server serves `typhoon-ocr`. It reads the three `SELFHOSTED_` values from the environment
 or from `.env` and never prints the token.

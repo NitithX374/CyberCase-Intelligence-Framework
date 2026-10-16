@@ -94,8 +94,6 @@ class Llm:
             "0.90",
             "--reasoning-parser",
             "gemma4",
-            "--structured-outputs-config",
-            json.dumps({"backend": "xgrammar", "disable_any_whitespace": True}),
             "--limit-mm-per-prompt",
             json.dumps({"image": 0, "video": 0, "audio": 0}),
         )
