@@ -71,6 +71,29 @@ describe("the steps an analysis has reached", () => {
     ]);
   });
 
+  it("shows the model server starting only when the analysis had to wait for it", () => {
+    const rows = progressRows(
+      [
+        { step: "warmup", elapsed: 0.2, reachedAt: 1_000 },
+        { step: "assess", elapsed: 275, reachedAt: 276_000 },
+      ],
+      280_000,
+    );
+
+    expect(rows.slice(0, 3).map(({ step, state }) => ({ step, state }))).toEqual([
+      { step: "warmup", state: "done" },
+      { step: "assess", state: "current" },
+      { step: "gate", state: "waiting" },
+    ]);
+    expect(rows[0].seconds).toBeCloseTo(274.8);
+    expect(rows[0].label).toBe("Starting the model server");
+    expect(
+      progressRows([{ step: "warmup", elapsed: 0, reachedAt: 1_000 }], 5_000).map(
+        (row) => row.step,
+      ),
+    ).toEqual(["warmup", "assess", "gate", "read", "bind", "verify", "views", "judge"]);
+  });
+
   it("times a finished step by the server and the current one from when it arrived", () => {
     const rows = progressRows(
       [

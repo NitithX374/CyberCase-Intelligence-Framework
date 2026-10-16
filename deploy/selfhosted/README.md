@@ -111,9 +111,29 @@ Modal stops workloads that would cost more than the spend limit (modal.com/docs/
    docker compose -f docker-compose.yml -f docker-compose.selfhosted.yml up -d backend rag-service
    ```
 
-A request that reaches a server with no container gets HTTP 503 while one starts. The backend
-retries once after 2 seconds and then reports the provider as down, so run `smoke.py` again
-after a quiet spell.
+A server with no container answers HTTP 503 while one starts, which took about 4.5 minutes. With
+the override the backend waits for it:
+
+- Before an analysis it checks the server's `/health`, and while the server is starting the
+  progress list shows "Starting the model server" with its time.
+- Every model call counts a 503 or a refused connection as a server that is starting, and waits
+  for up to `CASE_ANALYSIS_WARMUP_SECONDS` (420 in the override). A chat question asked while the
+  server sleeps waits the same way, with only "Answering…" showing.
+- OCR waits through its retries: 6 attempts, 10 s apart and doubling, about 5 minutes.
+
+To skip the wait during a demo, keep one container running and put it back afterwards. A new
+deploy also puts it back.
+
+```bash
+python deploy/selfhosted/warm.py up
+```
+
+```bash
+python deploy/selfhosted/warm.py down
+```
+
+`up` costs about $2.50 an hour for the LLM and $0.80 for OCR until `down`; `up llm` or `up ocr`
+picks one.
 
 Back to OpenRouter and the Typhoon API:
 

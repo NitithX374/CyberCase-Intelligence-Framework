@@ -17,6 +17,11 @@ class CoreLlmTarget:
     model: str
     messages_url: str
     headers: dict[str, str]
+    warmup_seconds: float = 0.0
+
+    @property
+    def health_url(self) -> str:
+        return f"{self.messages_url.removesuffix('/v1/messages')}/health"
 
 
 def resolve_core_llm_target(
@@ -35,6 +40,11 @@ def resolve_core_llm_target(
             "Authorization": f"Bearer {api_key}",
             "anthropic-version": "2023-06-01",
         },
+        warmup_seconds=(
+            active_settings.case_analysis_warmup_seconds
+            if active_settings.case_analysis_server == "vllm"
+            else 0.0
+        ),
     )
 
 

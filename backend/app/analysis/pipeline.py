@@ -26,7 +26,7 @@ from app.followup.clarification import (
     decide_followup,
     rounds_are_spent,
 )
-from app.llm.request import request_stage
+from app.llm.request import request_stage, wake_server
 from app.llm.settings import AnalysisPipelineConfig, configured_pipeline
 from app.sources.bundle import CaseSourceBundle
 from app.trace.bind import bound_references, resolve_case_trace
@@ -68,6 +68,7 @@ class AnalysisAdvance:
 
 
 async def advance_case(data: AnalysisInput) -> AnalysisAdvance:
+    await wake_server(on_wait=lambda: announce("warmup"))
     assessment = (
         None if rounds_are_spent(data.rounds_spent, data.max_rounds) else await assess_gaps(data)
     )

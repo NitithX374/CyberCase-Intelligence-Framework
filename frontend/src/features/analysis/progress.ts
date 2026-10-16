@@ -3,7 +3,7 @@ import type { StreamedStep } from "@/lib/api/stream";
 import { caseQueryKeys } from "@/lib/queryKeys";
 
 export type AnalysisStepName =
-  "assess" | "gate" | "retrieve" | "read" | "judge" | "bind" | "verify" | "views";
+  "warmup" | "assess" | "gate" | "retrieve" | "read" | "judge" | "bind" | "verify" | "views";
 
 export interface ReachedStep {
   step: AnalysisStepName;
@@ -19,6 +19,7 @@ export interface ProgressRow {
 }
 
 const STEP_LABELS: Record<AnalysisStepName, string> = {
+  warmup: "Starting the model server",
   assess: "Checking what the case is missing",
   gate: "Checking whether ATT&CK applies",
   retrieve: "Retrieving ATT&CK context",
@@ -29,7 +30,16 @@ const STEP_LABELS: Record<AnalysisStepName, string> = {
   views: "Starting case details preparation",
 };
 
-const PLANNED: AnalysisStepName[] = ["assess", "gate", "read", "bind", "verify", "views", "judge"];
+const PLANNED: AnalysisStepName[] = [
+  "warmup",
+  "assess",
+  "gate",
+  "read",
+  "bind",
+  "verify",
+  "views",
+  "judge",
+];
 
 function isStepName(step: string): step is AnalysisStepName {
   return step in STEP_LABELS;
@@ -59,10 +69,13 @@ export function useAnalysisProgress(caseId: string | null): ReachedStep[] {
 }
 
 export function progressRows(reached: ReachedStep[], now: number): ProgressRow[] {
-  const skippedAssess = reached.length > 0 && !reached.some((r) => r.step === "assess");
-  const order = PLANNED.filter((step) => !(skippedAssess && step === "assess")).flatMap(
-    (step): AnalysisStepName[] =>
-      step === "gate" && reached.some((r) => r.step === "retrieve") ? ["gate", "retrieve"] : [step],
+  const analysing = reached.filter((r) => r.step !== "warmup");
+  const skippedAssess = analysing.length > 0 && !analysing.some((r) => r.step === "assess");
+  const wokeServer = reached.some((r) => r.step === "warmup");
+  const order = PLANNED.filter(
+    (step) => !(skippedAssess && step === "assess") && (step !== "warmup" || wokeServer),
+  ).flatMap((step): AnalysisStepName[] =>
+    step === "gate" && reached.some((r) => r.step === "retrieve") ? ["gate", "retrieve"] : [step],
   );
   return order.map((step) => {
     const label = STEP_LABELS[step];

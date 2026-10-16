@@ -4,12 +4,14 @@ import asyncio
 import logging
 import re
 import time
+from collections.abc import Callable
 from typing import TypeVar
 
 import httpx
 from fastapi import status
 from pydantic import BaseModel, ValidationError
 
+from app.config import settings
 from app.errors import CaseAnalysisFailure
 from app.llm.openrouter import CoreLlmTarget, resolve_core_llm_target
 from app.llm.payload import input_budget, stage_payload, thinking_option, token_count
@@ -34,6 +36,8 @@ TRANSIENT_TRANSPORT_ERRORS = (
 TRANSIENT_STATUSES = frozenset({429, 500, 502, 503, 504})
 TRANSPORT_ATTEMPTS = 2
 TRANSPORT_RETRY_DELAY_SECONDS = 2.0
+SERVER_STARTING_STATUS = 503
+WARMUP_RETRY_DELAY_SECONDS = 5.0
 RUNAWAY_ATTEMPTS = 2
 JSON_FENCE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$")
 transport: httpx.AsyncBaseTransport | None = None
@@ -49,6 +53,8 @@ async def post_stage(
     stage: str,
     timeout: float,
 ) -> httpx.Response:
+    warm_until = time.monotonic() + target.warmup_seconds
+    waiting = False
     async with httpx.AsyncClient(transport=transport) as client:
         attempt = 1
         while True:
@@ -60,6 +66,10 @@ async def post_stage(
                     timeout=timeout,
                 )
             except TRANSIENT_TRANSPORT_ERRORS as error:
+                if isinstance(error, httpx.ConnectError) and time.monotonic() < warm_until:
+                    waiting = wait_note(stage, target, waiting)
+                    await asyncio.sleep(WARMUP_RETRY_DELAY_SECONDS)
+                    continue
                 if attempt >= TRANSPORT_ATTEMPTS:
                     raise
                 logger.warning(
@@ -69,6 +79,10 @@ async def post_stage(
                     error,
                 )
             else:
+                if response.status_code == SERVER_STARTING_STATUS and time.monotonic() < warm_until:
+                    waiting = wait_note(stage, target, waiting)
+                    await asyncio.sleep(WARMUP_RETRY_DELAY_SECONDS)
+                    continue
                 if response.status_code not in TRANSIENT_STATUSES or attempt >= TRANSPORT_ATTEMPTS:
                     return response
                 logger.warning(
@@ -79,6 +93,38 @@ async def post_stage(
                 )
             attempt += 1
             await asyncio.sleep(TRANSPORT_RETRY_DELAY_SECONDS)
+
+
+def wait_note(stage: str, target: CoreLlmTarget, waiting: bool) -> bool:
+    if not waiting:
+        logger.info(
+            "Analysis stage %s: the model server is starting; waiting up to %d s",
+            stage,
+            target.warmup_seconds,
+        )
+    return True
+
+
+async def wake_server(on_wait: Callable[[], None]) -> None:
+    if settings.case_analysis_server != "vllm" or settings.case_analysis_warmup_seconds <= 0:
+        return
+    target = resolve_core_llm_target(settings.case_analysis_model)
+    warm_until = time.monotonic() + target.warmup_seconds
+    announced = False
+    async with httpx.AsyncClient(transport=transport) as client:
+        while True:
+            try:
+                response = await client.get(target.health_url, headers=target.headers, timeout=30)
+            except httpx.TransportError:
+                response = None
+            if response is not None and response.status_code != SERVER_STARTING_STATUS:
+                return
+            if time.monotonic() >= warm_until:
+                return
+            if not announced:
+                on_wait()
+                announced = True
+            await asyncio.sleep(WARMUP_RETRY_DELAY_SECONDS)
 
 
 def validation_problem(error: ValidationError) -> str:
@@ -206,4 +252,5 @@ __all__ = [
     "token_count",
     "usage_summary",
     "validated_reply",
+    "wake_server",
 ]
