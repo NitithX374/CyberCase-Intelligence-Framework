@@ -50,6 +50,10 @@ Modal refuses every GPU function, the L4 included, until the workspace has a pay
 Without one, the workspace on 2026-10-16 showed $1.00 of monthly credit and a $1 usage limit
 set by Modal. The pricing page says the Starter plan includes $30 of compute a month.
 
+To keep charges at zero, set the usage limit under Settings, Usage & billing to the monthly
+credit. The spend limit then defaults to the usage limit minus the credits, which is $0, and
+Modal stops workloads that would cost more than the spend limit (modal.com/docs/guide/budgets).
+
 1. Install the client and sign in. `modal setup` opens the browser.
 
    ```bash
