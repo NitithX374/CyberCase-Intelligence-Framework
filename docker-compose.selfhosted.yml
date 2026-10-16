@@ -1,0 +1,100 @@
+# ── Self-hosted models ─────────────────────────────────────────────────────────
+# Points the backend and the RAG service at vLLM servers that serve the same
+# weights the hosted services do: Gemma 4 26B A4B (BF16) for every LLM call and
+# Typhoon OCR 1.5 2B for document recognition. Nothing else changes.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.selfhosted.yml up -d backend rag-service
+#
+# SELFHOSTED_LLM_URL and SELFHOSTED_OCR_URL are the server origins, without /v1.
+# SELFHOSTED_TOKEN is sent as the bearer token to both: a Modal proxy token
+# (wk-....ws-....) for the Modal servers, or any string for the local ones.
+#
+# The local servers need an NVIDIA GPU with about 80 GB of memory:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.selfhosted.yml --profile local-models up -d
+#
+# with SELFHOSTED_LLM_URL=http://llm:8000, SELFHOSTED_OCR_URL=http://ocr:8000 and
+# LOCAL_MODEL_CACHE set to a folder with about 60 GB free. See deploy/selfhosted/README.md.
+# ──────────────────────────────────────────────────────────────────────────────
+
+services:
+  backend:
+    environment:
+      CASE_ANALYSIS_SERVER: vllm
+      CASE_ANALYSIS_PROVIDERS: ""
+      OPENROUTER_MESSAGES_URL: ${SELFHOSTED_LLM_URL:?SELFHOSTED_LLM_URL is required}/v1/messages
+      OPENROUTER_CYBERCASE: ${SELFHOSTED_TOKEN:?SELFHOSTED_TOKEN is required}
+      TYPHOON_OCR_BASE_URL: ${SELFHOSTED_OCR_URL:?SELFHOSTED_OCR_URL is required}/v1
+      TYPHOON_OCR_MODEL: typhoon-ocr
+      TYPHOON_API_KEY: ${SELFHOSTED_TOKEN:?SELFHOSTED_TOKEN is required}
+
+  rag-service:
+    environment:
+      CORE_LLM_PROVIDER: openrouter
+      CORE_LLM_OPENROUTER_BASE_URL: ${SELFHOSTED_LLM_URL:?SELFHOSTED_LLM_URL is required}
+      CORE_LLM_OPENROUTER_MODEL: google/gemma-4-26b-a4b-it
+      OPENROUTER_CYBERCASE: ${SELFHOSTED_TOKEN:?SELFHOSTED_TOKEN is required}
+
+  llm:
+    profiles: [ local-models ]
+    image: vllm/vllm-openai:v0.28.0
+    container_name: cybercase-llm
+    restart: always
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    environment:
+      VLLM_API_KEY: ${SELFHOSTED_TOKEN:-}
+      HF_HOME: /root/.cache/huggingface
+    volumes:
+      - ${LOCAL_MODEL_CACHE:-./local_model_cache}:/root/.cache/huggingface
+    command:
+      - google/gemma-4-26B-A4B-it
+      - --revision
+      - 4d7ae4984b7db7de8f8457170b3f1a419ee76d52
+      - --served-model-name
+      - google/gemma-4-26b-a4b-it
+      - --max-model-len
+      - "131072"
+      - --gpu-memory-utilization
+      - ${LOCAL_LLM_GPU_SHARE:-0.80}
+      - --reasoning-parser
+      - gemma4
+      - --limit-mm-per-prompt
+      - '{"image": 0, "video": 0, "audio": 0}'
+
+  ocr:
+    profiles: [ local-models ]
+    image: vllm/vllm-openai:v0.28.0
+    container_name: cybercase-ocr
+    restart: always
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    environment:
+      VLLM_API_KEY: ${SELFHOSTED_TOKEN:-}
+      HF_HOME: /root/.cache/huggingface
+    volumes:
+      - ${LOCAL_MODEL_CACHE:-./local_model_cache}:/root/.cache/huggingface
+    command:
+      - typhoon-ai/typhoon-ocr1.5-2b
+      - --revision
+      - 15b381a2d62569e6736f9c085859dff68e48608d
+      - --served-model-name
+      - typhoon-ocr
+      - --max-model-len
+      - "49152"
+      - --gpu-memory-utilization
+      - ${LOCAL_OCR_GPU_SHARE:-0.10}
+      - --limit-mm-per-prompt
+      - '{"image": 1, "video": 0}'
