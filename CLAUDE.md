@@ -237,8 +237,9 @@ trace/                  what the analysis, chat and reports share
   claim_validation.py   structural blockers then B1-LR; saved per-Claim verdict/features/selection
   nli_model.py          pinned mDeBERTa full E/N/C vector; longest-first truncation512,
                         raw token count/truncation recorded; unavailable model leaves Claims unassessed
-  sentences.py          the sentence around a quotation: PyThaiNLP crfcut, line
-                        by line; the encoder gate splits with it too
+  sentences.py          the sentence splitter, line by line: SaT, or PyThaiNLP
+                        crfcut when SaT cannot be loaded; Source units and the
+                        sentence around a quotation use it
   bind.py               stable orchestration: resolve claim source references
                         before Judgement; check final references and
                         derive summary units afterwards
@@ -320,8 +321,8 @@ analysis/               producing an analysis of a case; routes, schemas
     contracts.py        the augmentation and applicability records, and the
                         RAG service's request and response
     retrieve.py         run the gate, then ask the RAG service when it says to
-    gate.py             picks the gate; gate_llm.py and gate_encoder.py are
-                        the gates
+    gate.py             picks the gate: gate_llm.py, or never_applicable for
+                        the ablation
     rag_client.py       the RAG service client
 chat/                   the case conversation; routes, schemas
   reply.py              routes a message: a follow-up answer or a question
@@ -413,42 +414,27 @@ composition, as `tests/test_case_followup_postgres.py` does. There is no
 ### MITRE Applicability Gate (backend)
 
 Before a case is analysed the backend decides whether ATT&CK is relevant at
-all. `MITRE_GATE_MODE` picks between three gates, which live together in
-`backend/app/analysis/technical_context/` (`gate.py` picks one):
+all. `MITRE_GATE_MODE` picks the gate in
+`backend/app/analysis/technical_context/gate.py`:
 
 | Mode | What decides | Notes |
 |------|--------------|-------|
 | `llm` (default) | one prompt over the case, each source cut to at most 4,000 characters (20,000 across all sources); `input_truncated` on the record says whether anything was cut | `technical_context/gate_llm.py`, model from `CASE_ANALYSIS_MODEL`, sent through `request_stage` like every other model call |
-| `encoder` | XLM-R over one sentence at a time | `technical_context/gate_encoder.py`; needs `torch`/`transformers`, which are **not** in `backend/requirements.txt` |
 | `never` | nothing — always SKIP | the ablation, for measuring what technical context is worth |
 
-**Shadow gate.** `MITRE_GATE_SHADOW=encoder` runs the XLM-R gate beside the LLM gate, concurrently.
-- Only the LLM gate decides.
-- The encoder's decision is stored on the analysis as `shadow_applicability` in the technical-augmentation record, so
-  the two can be compared later.
-- The shadow runs only when `MITRE_GATE_MODE=llm`.
-- If torch, transformers or the weights are missing, it records `SKIP` with `mitre_shadow_unavailable`, and the
-  analysis carries on.
-- **Where it is on.**
-  - Nowhere by default: the code default is `off`, and Compose, Railway and the tests leave it off.
-  - The default Compose setup uses the LLM gate. The encoder's weights are already in the mounted
-    `backend/models/xlmr_ladder_best`; to run the encoder or its shadow, use an explicit Compose override
-    that supplies the appropriate `MITRE_GATE_MODE` or `MITRE_GATE_SHADOW`. CPU torch and transformers remain
-    installed for the active legacy NLI recovery path.
-  - `tests/conftest.py` keeps it off whatever the local `.env` says.
+The XLM-R encoder gate and its shadow mode were removed. Their measurements stay in
+`research/mitre_gate/README.md`, and the weights in `backend/models/xlmr_ladder_best` are no
+longer loaded. A stored technical-augmentation record that carries `shadow_applicability`
+still reads: the key is dropped when the record is validated.
 
-The `encoder` gate splits its input with PyThaiNLP `crfcut` (`trace/sentences.py`, which also cuts the sentence shown around a quotation);
-every sentence is an exact substring of its source, so the encoder's `trigger_text`
-is grounded by construction. The `llm` gate does not split sentences: it reads each
-source cut to its share of the budget, and the `trigger_text` it returns is checked
-instead. `validate_mitre_applicability` keeps a RETRIEVE only if every trigger, after
-NFKC normalization, is a substring of a source the gate cited and every cited source
-holds a trigger; otherwise it records SKIP with `mitre_applicability_invalid_grounding`.
-The RAG query is not the trigger text alone: `retrieval_query` in
-`technical_context/retrieve.py` joins the triggers, falls back to the whole source bundle
-(`build_rag_query`) when there are none, and appends each answered follow-up's
-question and answer. `MITRE_GATE_MODEL_PATH` points at the encoder's weights;
-`research/mitre_gate/README.md` has the measurements.
+The `llm` gate does not split sentences: it reads each source cut to its share of the
+budget, and the `trigger_text` it returns is checked. `validate_mitre_applicability` keeps
+a RETRIEVE only if every trigger, after NFKC normalization, is a substring of a source the
+gate cited and every cited source holds a trigger; otherwise it records SKIP with
+`mitre_applicability_invalid_grounding`. The RAG query is not the trigger text alone:
+`retrieval_query` in `technical_context/retrieve.py` joins the triggers, falls back to the
+whole source bundle (`build_rag_query`) when there are none, and appends each answered
+follow-up's question and answer.
 
 ### Source units and canonical claims (backend)
 
@@ -499,7 +485,7 @@ snapshot. Reading an analysis or rendering a report makes no extraction call.
 There is no cross-analysis cache or new revision system. Historical extractor
 metadata, offsets and projection verdicts remain readable through generic records. Local model loaders,
 per-Claim inference, the provisioner and Compose sidecar/config/mount are removed;
-Torch/Transformers remain for the encoder gate and pinned Claim/Source NLI. The full
+Torch/Transformers remain for the pinned Claim/Source NLI and its source selector. The full
 contract is in [B1-LR integration](research/attribution_benchmark/B1_INTEGRATION.md).
 
 ### Historical pointer compatibility
@@ -510,8 +496,7 @@ recovery or quote matcher in new analysis binding. `nli_model.py` serves the
 Claim support check; unavailable weights leave Claims unassessed rather than
 failing the analysis. `CLAIM_NLI_PATH` and `CLAIM_SELECTOR_PATH` name the two local model
 folders, `models/nli_mdeberta` and `models/source_selector_mpnet`. Every local model lives in
-`backend/models/`, which Compose mounts at `/app/models`: those two, the encoder
-`models/xlmr_ladder_best`, and the caches `models/hf` (`HF_HOME`: the SaT segmenter and the XLM-R
+`backend/models/`, which Compose mounts at `/app/models`: those two and the caches `models/hf` (`HF_HOME`: the SaT segmenter and the XLM-R
 tokenizer it uses) and `models/tiktoken` (`TIKTOKEN_CACHE_DIR`), so nothing is downloaded again
 when a container is recreated. Provisioning is explicit and no model
 is downloaded by an analysis request. Test fixtures replace the verifier to
@@ -554,7 +539,7 @@ The frontend loads and generates reports through the case-scoped report endpoint
 
 ## Secrets & Environment
 - **Doppler** is used for secrets management (replaces `.env` files in deployed environments); local dev can use `.env` files
-- Backend runtime and online migrations read `POSTGRES_*`, or `DATABASE_URL`, which wins when set. The analysis's technical-context step reads `RAG_SERVICE_URL`; every backend model call reads `OPENROUTER_CYBERCASE`; OCR reads `TYPHOON_API_KEY`; a session cookie needs a `JWT_SECRET_KEY` of at least 32 characters. A chat answer never calls the RAG service. A reply that closes a round runs the analysis, and the analysis's technical-context step may call it. `CASE_ANALYSIS_MODEL` selects the model for every backend model call — the preflight, Main Case Analysis, its chat answers, and the LLM MITRE applicability gate; it accepts a registry alias or full OpenRouter ID and defaults to `google/gemma-4-26b-a4b-it`. The backend calls OpenRouter unless `CASE_ANALYSIS_SERVER=vllm`, which sends the same Messages API calls to a self-hosted vLLM server at `OPENROUTER_MESSAGES_URL`: thinking is then `chat_template_kwargs.enable_thinking` (on when the stage has a budget, with no budget enforced) and no `provider` routing is sent; there is no provider fallback (`docker-compose.selfhosted.yml`, `deploy/selfhosted/README.md`). `CASE_ANALYSIS_WARMUP_SECONDS` (0 by default) lets a `vllm` call wait that long for a server that is starting, counting HTTP 503 and a refused connection as starting, and `run_case_analysis` wakes the server through its `/health` before it calls `advance_case`. `DOCUMENT_RECOGNITION_WARMUP_SECONDS` (0 by default) does the same for OCR, before its ordinary retries count. `CASE_ANALYSIS_PROVIDERS` (comma-separated OpenRouter endpoint tags, e.g. `parasail/fp8,coreweave/fp8`) pins every backend model call to those endpoints in that order with `allow_fallbacks: false`; empty lets OpenRouter route, and the tags must serve the configured model. `CORE_LLM_PROVIDER` belongs to the RAG service alone. `MITRE_GATE_MODE` and `MITRE_GATE_MODEL_PATH` select the applicability gate, and `MITRE_GATE_SHADOW` runs the encoder beside it
+- Backend runtime and online migrations read `POSTGRES_*`, or `DATABASE_URL`, which wins when set. The analysis's technical-context step reads `RAG_SERVICE_URL`; every backend model call reads `OPENROUTER_CYBERCASE`; OCR reads `TYPHOON_API_KEY`; a session cookie needs a `JWT_SECRET_KEY` of at least 32 characters. A chat answer never calls the RAG service. A reply that closes a round runs the analysis, and the analysis's technical-context step may call it. `CASE_ANALYSIS_MODEL` selects the model for every backend model call — the preflight, Main Case Analysis, its chat answers, and the LLM MITRE applicability gate; it accepts a registry alias or full OpenRouter ID and defaults to `google/gemma-4-26b-a4b-it`. The backend calls OpenRouter unless `CASE_ANALYSIS_SERVER=vllm`, which sends the same Messages API calls to a self-hosted vLLM server at `OPENROUTER_MESSAGES_URL`: thinking is then `chat_template_kwargs.enable_thinking` (on when the stage has a budget, with no budget enforced) and no `provider` routing is sent; there is no provider fallback (`docker-compose.selfhosted.yml`, `deploy/selfhosted/README.md`). `CASE_ANALYSIS_WARMUP_SECONDS` (0 by default) lets a `vllm` call wait that long for a server that is starting, counting HTTP 503 and a refused connection as starting, and `run_case_analysis` wakes the server through its `/health` before it calls `advance_case`. `DOCUMENT_RECOGNITION_WARMUP_SECONDS` (0 by default) does the same for OCR, before its ordinary retries count. `CASE_ANALYSIS_PROVIDERS` (comma-separated OpenRouter endpoint tags, e.g. `parasail/fp8,coreweave/fp8`) pins every backend model call to those endpoints in that order with `allow_fallbacks: false`; empty lets OpenRouter route, and the tags must serve the configured model. `CORE_LLM_PROVIDER` belongs to the RAG service alone. `MITRE_GATE_MODE` selects the applicability gate, `llm` or `never`
 - RAG service reads `OPENROUTER_CYBERCASE` (or `ANTHROPIC_API_KEY` when `CORE_LLM_PROVIDER=anthropic`), `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`, `QDRANT_URL`/`QDRANT_API_KEY`, and `THANOY_API_URL`/`THANOY_API_KEY` for the legal lookup. `OPENROUTER_API_KEY` is read only by the RAGAS evaluation
 - Default Compose forwards the OpenRouter key. Selecting Anthropic requires an explicit environment override supplying `ANTHROPIC_API_KEY`; the provider implementation remains available. The RAG image includes its model registry and legal-reference client without requiring a source bind mount.
 - Deployment targets **Railway** platform via GitHub Actions in `.github/workflows/deploy.yml`

@@ -8,11 +8,6 @@ from app.trace import claim_validation
 
 
 @pytest.fixture(autouse=True)
-def no_shadow_gate(monkeypatch):
-    monkeypatch.setattr(settings, "mitre_gate_shadow", "off")
-
-
-@pytest.fixture(autouse=True)
 def openrouter_server(monkeypatch):
     monkeypatch.setattr(settings, "case_analysis_server", "openrouter")
 
