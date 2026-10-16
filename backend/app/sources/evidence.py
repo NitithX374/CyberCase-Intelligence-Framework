@@ -8,9 +8,9 @@ from dataclasses import asdict, dataclass
 from app.sources.bundle import CaseSourceItem
 from app.sources.markup import source_tables
 from app.trace.quotes import MAX_QUOTE_CHARS
-from app.trace.sentences import sentence_spans
+from app.trace.sentences import segmenter_identity, sentence_spans
 
-EVIDENCE_VERSION = "evidence_units_v3"
+EVIDENCE_VERSION = "evidence_units_v4"
 UNIT_PATTERN = re.compile(
     r"(?P<source>[^:]{1,160}):U(?P<number>[0-9]{3,})-(?P<revision>[a-f0-9]{16})"
 )
@@ -26,7 +26,8 @@ class EvidenceUnit:
 
 
 def evidence_revision(text: str) -> str:
-    return hashlib.sha256(f"{EVIDENCE_VERSION}\0{text}".encode()).hexdigest()[:16]
+    tagged = f"{EVIDENCE_VERSION}\0{segmenter_identity()}\0{text}"
+    return hashlib.sha256(tagged.encode()).hexdigest()[:16]
 
 
 def evidence_units(source: CaseSourceItem) -> tuple[EvidenceUnit, ...]:

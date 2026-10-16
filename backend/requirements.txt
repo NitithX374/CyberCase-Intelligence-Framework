@@ -20,11 +20,12 @@ tiktoken>=0.8.0
 pyjwt>=2.8.0
 email-validator>=2.2.0
 
-# Thai sentence segmentation: the sentence shown around each quotation and the
-# MITRE applicability gate.
-# wtpsplit provides the robust SaT neural sentence segmenter;
-# pythainlp and python-crfsuite provide fallbacks.
-wtpsplit>=2.1.0
+# Thai sentence segmentation: Source units, the sentence shown around each
+# quotation and the MITRE applicability gate.
+# wtpsplit provides the SaT neural sentence segmenter. It is pinned because unit
+# identifiers name its version; pythainlp and python-crfsuite provide the crfcut
+# fallback used when SaT cannot be loaded.
+wtpsplit==2.2.2
 pythainlp>=5.0.0
 python-crfsuite>=0.9.11
 
