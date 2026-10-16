@@ -294,7 +294,6 @@ export interface components {
             unverified_citations?: components["schemas"]["CaseUnverifiedCitation"][];
             invalid_evidence?: components["schemas"]["CaseInvalidEvidence"][];
             semantic_grounding?: components["schemas"]["CaseClaimGrounding"] | null;
-            reasoning_summary?: string | null;
         };
         CaseAnalysisGap: {
             gap_id: string;
@@ -375,11 +374,6 @@ export interface components {
             truncated?: boolean | null;
             duration_ms: number;
         };
-        CaseClaimSpan: {
-            claim_id: string;
-            start: number;
-            end: number;
-        };
         CaseCreate: {
             title: string;
         };
@@ -395,13 +389,10 @@ export interface components {
             claims: number;
             citations_claimed: number;
             citations_verified: number;
-            citations_pointed: number;
             citations_unfound: number;
             claims_without_citation: number;
             claims_duplicated: number;
             citations_duplicated: number;
-            citations_marked: number;
-            citations_meaning_pointed: number;
             evidence_ids_claimed: number;
             evidence_ids_resolved: number;
             evidence_ids_invalid: number;
@@ -409,11 +400,6 @@ export interface components {
             claims_with_direct_evidence: number;
             claims_with_recovered_evidence: number;
             claims_without_resolved_evidence: number;
-            meaning_pointer_eligible: number;
-            meaning_pointer_attempted: number;
-            meaning_pointer_unavailable: number;
-            meaning_pointer_unavailable_reason?: string | null;
-            meaning_pointer_skipped: number;
             claims_semantically_supported: number;
             claims_semantically_not_supported: number;
             claims_semantically_unassessed: number;
@@ -437,10 +423,6 @@ export interface components {
             description: string;
             claim_ids?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
-            projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;
-            field_spans?: {
-                [key: string]: components["schemas"]["CaseClaimSpan"];
-            };
         };
         CaseInvalidEvidence: {
             source_id: string;
@@ -454,17 +436,6 @@ export interface components {
             role?: string | null;
             claim_ids?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
-            projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;
-            field_spans?: {
-                [key: string]: components["schemas"]["CaseClaimSpan"];
-            };
-        };
-        CaseMeaningPassage: {
-            source_text: string;
-            start: number;
-            end: number;
-            entailment: number;
-            model: string;
         };
         CaseMitreAssociation: {
             association_id: string;
@@ -475,26 +446,11 @@ export interface components {
             status: "candidate_only";
             support_role: "external_technical_context";
         };
-        CaseNearPassage: {
-            source_text: string;
-            differences?: components["schemas"]["CaseQuoteDifference"][];
-            occurrences: number;
-        };
-        CaseProjectionGrounding: {
-            verdict: "supported" | "not_supported" | "unassessed";
-            reason: string;
-            model?: string | null;
-            entailment?: number | null;
-        };
         CaseQuoteContext: {
             before: string;
             after: string;
             cut_before: boolean;
             cut_after: boolean;
-        };
-        CaseQuoteDifference: {
-            written: string;
-            source: string;
         };
         CaseRead: {
             id: string;
@@ -537,11 +493,6 @@ export interface components {
             report: components["schemas"]["CaseReportContent"];
             created_at: string;
         };
-        CaseReviewFlag: {
-            kind: "meaning_mark";
-            verdict: "rule_warning";
-            detail: string;
-        };
         CaseSourceCitation: {
             source_id: string;
             exact_quote: string;
@@ -553,8 +504,6 @@ export interface components {
             filename?: string | null;
             page_numbers?: number[];
             context?: components["schemas"]["CaseQuoteContext"] | null;
-            tolerated_differences?: components["schemas"]["CaseQuoteDifference"][];
-            review_flags?: components["schemas"]["CaseReviewFlag"][];
         };
         CaseSourceCreate: {
             exact_text: string;
@@ -593,18 +542,11 @@ export interface components {
             event: string;
             claim_ids?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
-            projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;
-            field_spans?: {
-                [key: string]: components["schemas"]["CaseClaimSpan"];
-            };
         };
         CaseUnverifiedCitation: {
             source_id: string;
             role: "supporting" | "contradicting";
-            written_quote: string;
             evidence_unit_id?: string | null;
-            near_passage?: components["schemas"]["CaseNearPassage"] | null;
-            meaning_passage?: components["schemas"]["CaseMeaningPassage"] | null;
         };
         CaseUpdate: {
             title: string;
@@ -612,27 +554,12 @@ export interface components {
         CaseViewExtraction: {
             method: string;
             model: string;
-            revision?: string | null;
-            library_version?: string | null;
-            device?: string | null;
-            threshold?: number | null;
-            quantization?: string | null;
-            runtime_revision?: string | null;
-            field_resolution_issues?: components["schemas"]["CaseViewFieldIssue"][];
             input_claim_ids: string[];
             excluded_claim_ids: string[];
             duration_ms: number;
             status: "completed" | "failed" | "skipped";
             warning?: string | null;
             items_dropped: number;
-        };
-        CaseViewFieldIssue: {
-            view: "party" | "timeline_event" | "impact";
-            record_index: number;
-            field: "name" | "role" | "time" | "event" | "description";
-            text: string;
-            reason: "unresolved" | "ambiguous";
-            claim_id: string;
         };
         ChatAnswerUnit: {
             text: string;
@@ -691,7 +618,6 @@ export interface components {
             event: string;
             references?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
-            projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;
         };
         ReportFinding: {
             ordinal: number;
@@ -704,12 +630,7 @@ export interface components {
             contradicting_quotes?: string[];
             supporting_contexts?: (components["schemas"]["ReportQuoteContext"] | null)[];
             contradicting_contexts?: (components["schemas"]["ReportQuoteContext"] | null)[];
-            supporting_tolerated?: components["schemas"]["ReportPlace"][][];
-            contradicting_tolerated?: components["schemas"]["ReportPlace"][][];
-            supporting_marked?: components["schemas"]["ReportMark"][][];
-            contradicting_marked?: components["schemas"]["ReportMark"][][];
             unverified_quotes?: components["schemas"]["ReportUnverifiedQuote"][];
-            reasoning_summary?: string | null;
             source_check?: "not_supported" | null;
         };
         ReportGap: {
@@ -723,11 +644,6 @@ export interface components {
             description: string;
             references?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
-            projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;
-        };
-        ReportMark: {
-            marks: string;
-            place: "ignored" | "edge";
         };
         ReportParty: {
             name: string;
@@ -735,11 +651,6 @@ export interface components {
             claim_context?: string[];
             references?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
-            projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;
-        };
-        ReportPlace: {
-            written: string;
-            source: string;
         };
         ReportQuoteContext: {
             before: string;
@@ -767,10 +678,7 @@ export interface components {
             references?: string[];
         };
         ReportUnverifiedQuote: {
-            written_quote: string;
             evidence_unit_id?: string | null;
-            places?: components["schemas"]["ReportPlace"][];
-            meaning_passage?: string | null;
         };
         UserRead: {
             id: string;

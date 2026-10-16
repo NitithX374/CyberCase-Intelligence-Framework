@@ -4,10 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { analysisPath } from "@/lib/casePaths";
 import { groupCaseFindings, claimTypeLabels } from "./overview";
-import type { CaseFinding, QuotePlace } from "@/features/analysis/types";
+import type { CaseFinding } from "@/features/analysis/types";
 import type { SourceMessageRef } from "@/features/citations/types";
 import { Icon } from "@/components/icons";
-import { DisclosurePanel, DisclosureToggle } from "@/components/Disclosure";
 import { SourceCitationChip } from "@/features/citations/SourceCitationChip";
 import { groupSourceRefs } from "@/features/citations/groupSourceRefs";
 import { FindingTraceability } from "./FindingTraceability";
@@ -69,8 +68,6 @@ function FindingRow({
   number: number;
   showClaimType?: boolean;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const detailsId = `finding-${finding.id}-details`;
   const isSupported = finding.traceability.semanticSupport === "supported";
 
   const isUnknown = finding.claimType === "unknown" || finding.epistemicStatus === "unknown";
@@ -152,87 +149,24 @@ function FindingRow({
             {techniqueId}
           </Link>
         ))}
-        {finding.reasoningSummary && (
-          <DisclosureToggle
-            label="Reasoning"
-            isOpen={isOpen}
-            onToggle={() => setIsOpen((open) => !open)}
-            controls={detailsId}
-            className="ml-auto"
-          />
-        )}
       </div>
-
-      {finding.reasoningSummary && isOpen && (
-        <DisclosurePanel
-          id={detailsId}
-          className="mt-3 rounded-lg border border-line bg-surface-nested p-3.5 text-[13px] leading-relaxed text-ink-secondary"
-        >
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted mb-1">
-            Reasoning & Analysis
-          </div>
-          {finding.reasoningSummary}
-        </DisclosurePanel>
-      )}
 
       {finding.epistemicStatus === "not_confirmed" && finding.unverifiedQuotes.length > 0 && (
         <div className="mt-3 space-y-2 rounded-lg border border-unresolved/20 bg-unresolved/5 p-3.5 text-sm">
-          {finding.unverifiedQuotes.map((item, index) => {
-            const key = `passage-${finding.id}-${index}`;
-            const passage = item.passage;
-            const meaning = item.meaningPassage;
-            return (
-              <div key={key} className="text-sm leading-6 text-ink-secondary">
-                <p className="font-medium text-unresolved">
-                  {item.evidenceUnitId
-                    ? "The source unit reference could not be resolved."
-                    : "Not found word for word in the source."}
-                </p>
-                {item.places.map((place, placeIndex) => (
-                  <p key={placeIndex} className="text-xs text-ink-muted mt-0.5">
-                    {placeText(place)}
-                  </p>
-                ))}
-                {passage && (
-                  <button
-                    type="button"
-                    aria-haspopup="dialog"
-                    onClick={(event) =>
-                      sourceActions.onSelectSource(passage, event.currentTarget, key)
-                    }
-                    className="mt-1 text-xs font-medium text-ink underline underline-offset-2 hover:text-ink-secondary inline-block"
-                  >
-                    Show in source
-                  </button>
-                )}
-                {meaning && (
-                  <p className="mt-1 text-xs">
-                    {meaning.quoteLabel}{" "}
-                    <button
-                      type="button"
-                      aria-haspopup="dialog"
-                      onClick={(event) =>
-                        sourceActions.onSelectSource(meaning, event.currentTarget, `${key}-meaning`)
-                      }
-                      className="font-medium text-ink underline underline-offset-2 hover:text-ink-secondary"
-                    >
-                      Show in source
-                    </button>
-                  </p>
-                )}
-              </div>
-            );
-          })}
+          {finding.unverifiedQuotes.map((item, index) => (
+            <p
+              key={`passage-${finding.id}-${index}`}
+              className="text-sm leading-6 font-medium text-unresolved"
+            >
+              {item.evidenceUnitId
+                ? "The source unit reference could not be resolved."
+                : "Not found word for word in the source."}
+            </p>
+          ))}
         </div>
       )}
     </article>
   );
-}
-
-function placeText({ written, source }: QuotePlace): string {
-  if (written && source) return `The analysis quotes «${written}»; the source says «${source}»`;
-  if (written) return `The analysis adds «${written}»`;
-  return `The source has «${source}», which the analysis leaves out`;
 }
 
 function groupsHolding(findings: CaseFinding[], findingId: string | null | undefined): string[] {

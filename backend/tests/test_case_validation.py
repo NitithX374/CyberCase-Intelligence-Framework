@@ -11,7 +11,12 @@ from app.sources.ingestion.contracts import DocumentPage, ExtractionMethod, Inge
 from app.sources.ingestion.provenance import bind_exact_page_spans
 from app.sources.service import document_provenance
 from app.trace.bind import resolve_case_trace
-from app.trace.claims import CaseAnalysisClaim, CaseAnalysisGap, CaseSourceCitation
+from app.trace.claims import (
+    CaseAnalysisClaim,
+    CaseAnalysisGap,
+    CaseProviderClaim,
+    CaseSourceCitation,
+)
 from app.trace.quotes import find_document_locator
 from app.trace.trace import CaseAnalysisTrace, CaseProviderAnalysis
 
@@ -81,7 +86,9 @@ def test_exact_page_spans_are_contiguous_and_fail_closed_for_repeated_or_edited_
     assert pages[0]["end_offset"] == pages[1]["start_offset"]
     assert "text_sha256" not in pages[0]
     doc = {"document_id": "d1", "filename": "case.pdf", "page_spans": pages}
-    locator = find_document_locator(doc, content, [content.index("page\n\nsecond")], len("page\n\nsecond"))
+    locator = find_document_locator(
+        doc, content, [content.index("page\n\nsecond")], len("page\n\nsecond")
+    )
     assert locator is not None
     assert locator[2] == (1, 2)
 
@@ -422,30 +429,34 @@ def test_case_evidence_citation_normalizes_partial_document_locators():
     assert citation_complete.page_numbers == [1, 2]
 
 
-def test_claim_reasoning_summary_empty_and_whitespace_normalized():
-    claim_empty = CaseAnalysisClaim.model_validate(
+@pytest.mark.parametrize("written", ["", "   "])
+def test_claim_reasoning_summary_empty_and_whitespace_normalized(written):
+    claim = CaseProviderClaim.model_validate(
         {
             "claim_id": "A-01",
             "claim_type": "reported",
             "text": "Valid factual claim text",
             "epistemic_status": "reported",
             "supporting_source_ids": ["s1"],
-            "reasoning_summary": "",
+            "reasoning_summary": written,
         }
     )
-    assert claim_empty.reasoning_summary is None
+    assert claim.reasoning_summary is None
 
-    claim_whitespace = CaseAnalysisClaim.model_validate(
+
+def test_a_stored_claim_with_a_reasoning_summary_reads_without_it():
+    claim = CaseAnalysisClaim.model_validate(
         {
-            "claim_id": "A-02",
+            "claim_id": "A-01",
             "claim_type": "reported",
             "text": "Valid factual claim text",
             "epistemic_status": "reported",
             "supporting_source_ids": ["s1"],
-            "reasoning_summary": "   ",
+            "reasoning_summary": "Written by an earlier reader.",
         }
     )
-    assert claim_whitespace.reasoning_summary is None
+    assert claim.text == "Valid factual claim text"
+    assert "reasoning_summary" not in claim.model_dump()
 
 
 def test_claim_malformed_raw_citations_dropped_without_failing_claim():

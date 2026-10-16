@@ -8,9 +8,6 @@ export interface SourceMessageRef {
   pageNumbers: number[];
   sourcePages: SourcePage[];
   question: string | null;
-  quoteLabel?: string;
-  toleratedNotes?: string[];
-  reviewNotes?: string[];
   pointerState?: SourcePointerState;
   start?: number | null;
   end?: number | null;
@@ -25,7 +22,6 @@ export interface CitedSourcePassage {
   pointerState: SourcePointerState;
   start: number | null;
   end: number | null;
-  notes: string[];
 }
 
 export interface QuoteContext {

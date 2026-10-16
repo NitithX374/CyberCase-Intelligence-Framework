@@ -18,7 +18,6 @@ from app.models.source import CaseSource
 from app.reports.contracts import CaseReportInput
 from app.reports.display import (
     CHECKLIST_TOPICS,
-    EPISTEMIC_STATUS_LABELS,
     SOURCE_KINDS,
     build_case_report_content,
     thai_date,
@@ -33,13 +32,7 @@ from app.reports.render import (
 from app.reports.schemas import CaseReportContent, ReportQuoteContext
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.bind import resolve_case_trace
-from app.trace.citations import (
-    CaseMeaningPassage,
-    CaseNearPassage,
-    CaseQuoteDifference,
-    CaseReviewFlag,
-    CaseUnverifiedCitation,
-)
+from app.trace.citations import CaseUnverifiedCitation
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
@@ -49,7 +42,6 @@ from app.trace.claims import (
 )
 from app.trace.trace import (
     CaseAnalysisTrace,
-    CaseGroundingReport,
     CaseImpactItem,
     CaseInvolvedParty,
     CaseMitreAssociation,
@@ -541,91 +533,52 @@ def test_a_report_stored_before_the_source_check_existed_validates_and_prints_no
     assert CHECK_WARNING not in render_case_report_html(stored, ISSUE)
 
 
-TOLERATED_LINE = "พบในเอกสารเมื่อไม่นับรูปแบบ"
+RETIRED_LINES = (
+    "พบในเอกสารเมื่อไม่นับรูปแบบ",
+    "ตรวจ: ต้นฉบับ",
+    "ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ",
+    "ผลวิเคราะห์ยกมาว่า",
+    "หาจากความหมาย",
+    "เหตุผลเชิงวิเคราะห์",
+    "ข้อมูลนี้ไม่ได้รับการสนับสนุนจากข้อสังเกตที่เชื่อมไว้",
+)
 
 
-def _input_with_tolerated(
-    supporting: list[tuple[str, str]], contradicting: list[tuple[str, str]] | None = None
-) -> CaseReportInput:
-    report_input = _input()
-    trace = report_input.analysis_trace
-    claim = trace.claims[0]
-    cited = claim.supporting_citations[0]
-
-    def with_differences(pairs: list[tuple[str, str]]) -> CaseSourceCitation:
-        return cited.model_copy(
-            update={
-                "tolerated_differences": [
-                    CaseQuoteDifference(written=written, source=source) for written, source in pairs
-                ]
-            }
-        )
-
-    claim = claim.model_copy(
-        update={
-            "supporting_citations": [with_differences(supporting)],
-            "contradicting_citations": (
-                [with_differences(contradicting)] if contradicting is not None else []
-            ),
+def test_a_report_stored_with_retired_quote_notes_validates_and_prints_none_of_them() -> None:
+    written = _stored(_input()).model_dump(mode="json")
+    [finding] = written["findings"]
+    finding["supporting_tolerated"] = [[{"written": "apple", "source": "Apple"}]]
+    finding["contradicting_tolerated"] = []
+    finding["supporting_marked"] = [[{"marks": "~", "place": "edge"}]]
+    finding["contradicting_marked"] = []
+    finding["reasoning_summary"] = "เหตุผลเดิม"
+    finding["unverified_quotes"] = [
+        {
+            "written_quote": "ข้อความที่ไม่มีในต้นฉบับ",
+            "evidence_unit_id": None,
+            "places": [{"written": "198.51.100.24", "source": "198.51.100.23"}],
+            "meaning_passage": "ข้อความที่หาจากความหมาย",
         }
-    )
-    return report_input.model_copy(
-        update={"analysis_trace": trace.model_copy(update={"claims": [claim]})}
-    )
-
-
-def test_a_new_report_stores_what_the_locator_tolerated_beside_each_quote() -> None:
-    report = _stored(
-        _input_with_tolerated([("apple", "Apple"), ("", "-")], [("resign", "re-sign")])
-    )
-
-    [finding] = report.findings
-    assert [[(p.written, p.source) for p in places] for places in finding.supporting_tolerated] == [
-        [("apple", "Apple"), ("", "-")]
     ]
-    assert [
-        [(p.written, p.source) for p in places] for places in finding.contradicting_tolerated
-    ] == [[("resign", "re-sign")]]
-
-
-def test_a_tolerated_quote_is_printed_with_a_plain_line_per_difference() -> None:
-    html = render_case_report_html(
-        _stored(_input_with_tolerated([("apple", "Apple"), ("", "-"), ("5,000", "")])), ISSUE
-    )
-
-    assert f"{TOLERATED_LINE} — ข้อความวิเคราะห์เขียน «apple» เอกสารเขียน «Apple»" in html
-    assert f"{TOLERATED_LINE} — เอกสารมี «-» ที่ข้อความวิเคราะห์ตัดออก" in html
-    assert f"{TOLERATED_LINE} — ข้อความวิเคราะห์เติม «5,000»" in html
-    assert html.index("ข้อความจากหลักฐาน:") < html.index(TOLERATED_LINE)
-    assert "badge" not in html.split("<main>")[1].split("</main>")[0]
-
-
-def test_the_line_of_a_contradicting_quote_follows_that_quote() -> None:
-    html = render_case_report_html(
-        _stored(_input_with_tolerated([], [("resign", "re-sign")])), ISSUE
-    )
-
-    assert html.count(TOLERATED_LINE) == 1
-    assert html.index("ข้อความที่ขัดแย้ง:") < html.index(TOLERATED_LINE)
-
-
-def test_a_quote_the_locator_tolerated_nothing_in_prints_no_line() -> None:
-    html = render_case_report_html(_stored(_input()), ISSUE)
-
-    assert TOLERATED_LINE not in html
-
-
-def test_a_report_stored_before_tolerated_differences_validates_and_prints_no_line() -> None:
-    written = _stored(_input_with_tolerated([("apple", "Apple")])).model_dump(mode="json")
-    for finding in written["findings"]:
-        del finding["supporting_tolerated"], finding["contradicting_tolerated"]
 
     stored = CaseReportContent.model_validate(written)
     html = render_case_report_html(stored, ISSUE)
 
-    assert stored.findings[0].supporting_tolerated == []
-    assert TOLERATED_LINE not in html
     assert "ข้อความจากหลักฐาน:" in html
+    assert "ไม่สามารถระบุตำแหน่งหลักฐานที่อ้างอิงได้" in html
+    assert not any(line in html for line in RETIRED_LINES)
+    assert "ข้อความที่ไม่มีในต้นฉบับ" not in html
+
+
+def test_a_report_stored_with_projection_verdicts_validates_and_prints_none() -> None:
+    written = _stored(_input()).model_dump(mode="json")
+    for party in written["parties"]:
+        party["projection_grounding"] = {"verdict": "not_supported", "reason": "lr_not_supported"}
+
+    stored = CaseReportContent.model_validate(written)
+
+    assert stored.parties
+    assert not any(line in render_case_report_html(stored, ISSUE) for line in RETIRED_LINES)
 
 
 def test_a_report_stored_before_quote_contexts_still_prints() -> None:
@@ -651,52 +604,23 @@ def _input_with_unverified(*items: CaseUnverifiedCitation) -> CaseReportInput:
     )
 
 
-def test_an_unverified_quote_is_printed_with_each_place_the_source_differs() -> None:
-    source_id = _input().source_bundle.sources[0].source_id
-    near = CaseNearPassage(
-        source_text="พบการใช้ PowerShell.exe เชื่อมต่อไปยัง 198.51.100.23",
-        differences=[
-            CaseQuoteDifference(written="198.51.100.24", source="198.51.100.23"),
-            CaseQuoteDifference(written="ทันที", source=""),
-            CaseQuoteDifference(written="", source="PowerShell.exe"),
-        ],
-    )
-    written = "พบการใช้ เชื่อมต่อไปยัง 198.51.100.24 ทันที"
-    html = render_case_report_html(
-        _stored(
-            _input_with_unverified(
-                CaseUnverifiedCitation(
-                    source_id=source_id,
-                    role="supporting",
-                    written_quote=written,
-                    near_passage=near,
-                )
-            )
-        ),
-        ISSUE,
-    )
-
-    assert f"ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ:</span> “{written}”" in html
-    assert "ผลวิเคราะห์ยกมาว่า «198.51.100.24» ต้นฉบับเขียน «198.51.100.23»" in html
-    assert "ผลวิเคราะห์เติม «ทันที»" in html
-    assert "ต้นฉบับมี «PowerShell.exe» ที่ผลวิเคราะห์ตัดออก" in html
-
-
-def test_an_unverified_quote_with_no_near_passage_prints_only_that_it_was_not_found() -> None:
+def test_an_unresolved_unit_is_printed_as_a_location_that_could_not_be_found() -> None:
     source_id = _input().source_bundle.sources[0].source_id
     report = _stored(
         _input_with_unverified(
             CaseUnverifiedCitation(
-                source_id=source_id, role="supporting", written_quote="ข้อความที่ไม่มีในต้นฉบับ"
+                source_id=source_id,
+                role="supporting",
+                evidence_unit_id=f"{source_id}:U009-0000000000000000",
             )
         )
     )
     html = render_case_report_html(report, ISSUE)
 
-    assert report.findings[0].unverified_quotes[0].places == []
-    assert "ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ" in html
-    assert "ผลวิเคราะห์ยกมาว่า" not in html
-    assert "ผลวิเคราะห์เติม" not in html
+    assert [quote.evidence_unit_id for quote in report.findings[0].unverified_quotes] == [
+        f"{source_id}:U009-0000000000000000"
+    ]
+    assert "ไม่สามารถระบุตำแหน่งหลักฐานที่อ้างอิงได้" in html
 
 
 def test_a_quote_that_is_its_whole_sentence_is_printed_plain() -> None:
@@ -1178,266 +1102,44 @@ def test_an_empty_list_of_units_prints_the_summary_as_before() -> None:
     assert "สรุป [A-01]" in html
 
 
-EDGE_LINE = "ตรวจ: ต้นฉบับมีเครื่องหมาย"
-IGNORED_LINE = "ตรวจ: ต้นฉบับกับ quote ต่างกันที่เครื่องหมาย"
-
-
-def _input_with_flags(
-    supporting: list[str], contradicting: list[str] | None = None
-) -> CaseReportInput:
+def test_an_analysis_stored_with_retired_fields_makes_a_report_without_them() -> None:
     report_input = _input()
-    trace = report_input.analysis_trace
-    claim = trace.claims[0]
-    cited = claim.supporting_citations[0]
-
-    def with_flags(details: list[str]) -> CaseSourceCitation:
-        return cited.model_copy(
-            update={
-                "review_flags": [
-                    CaseReviewFlag(kind="meaning_mark", verdict="rule_warning", detail=detail)
-                    for detail in details
-                ]
-            }
-        )
-
-    claim = claim.model_copy(
-        update={
-            "supporting_citations": [with_flags(supporting)],
-            "contradicting_citations": (
-                [with_flags(contradicting)] if contradicting is not None else []
-            ),
+    written = report_input.analysis_trace.model_dump(mode="json")
+    [claim] = written["claims"]
+    claim["reasoning_summary"] = "เหตุผลเดิม"
+    claim["supporting_citations"][0]["tolerated_differences"] = [
+        {"written": "apple", "source": "Apple"}
+    ]
+    claim["supporting_citations"][0]["review_flags"] = [
+        {"kind": "meaning_mark", "verdict": "rule_warning", "detail": "~ edge"}
+    ]
+    claim["unverified_citations"] = [
+        {
+            "source_id": report_input.source_bundle.sources[0].source_id,
+            "role": "supporting",
+            "written_quote": "ข้อความที่ไม่มีในต้นฉบับ",
+            "near_passage": None,
+            "meaning_passage": {
+                "source_text": "ข้อความที่หาจากความหมาย",
+                "start": 0,
+                "end": 10,
+                "entailment": 0.97,
+                "model": "fake",
+            },
         }
-    )
-    return report_input.model_copy(
-        update={"analysis_trace": trace.model_copy(update={"claims": [claim]})}
-    )
-
-
-def test_a_new_report_stores_the_marks_to_review_beside_each_quote() -> None:
-    report = _stored(_input_with_flags(["? edge", "~ % ignored"], ["< ignored"]))
-
-    [finding] = report.findings
-    assert [[(m.marks, m.place) for m in marks] for marks in finding.supporting_marked] == [
-        [("?", "edge"), ("~ %", "ignored")]
     ]
-    assert [[(m.marks, m.place) for m in marks] for marks in finding.contradicting_marked] == [
-        [("<", "ignored")]
-    ]
-
-
-def test_a_flagged_quote_is_printed_with_a_plain_line_for_each_reason() -> None:
-    html = render_case_report_html(_stored(_input_with_flags(["? edge", "~ % ignored"])), ISSUE)
-
-    assert f"{EDGE_LINE} ? ที่ quote ไม่ได้รวมไว้" in html
-    assert f"{IGNORED_LINE} ~ % ซึ่งอาจเปลี่ยนความหมาย" in html
-    assert html.index("ข้อความจากหลักฐาน:") < html.index(EDGE_LINE) < html.index(IGNORED_LINE)
-    assert "badge" not in html.split("<main>")[1].split("</main>")[0]
-
-
-def test_the_line_of_a_contradicting_quote_follows_that_quote_too() -> None:
-    html = render_case_report_html(_stored(_input_with_flags([], ["% edge"])), ISSUE)
-
-    assert html.count(EDGE_LINE) == 1
-    assert html.index("ข้อความที่ขัดแย้ง:") < html.index(EDGE_LINE)
-
-
-def test_a_quote_with_no_flag_prints_no_review_line() -> None:
-    html = render_case_report_html(_stored(_input()), ISSUE)
-
-    assert EDGE_LINE not in html
-    assert IGNORED_LINE not in html
-
-
-def test_a_flag_does_not_change_the_status_or_the_sources_of_a_finding() -> None:
-    flagged = _stored(_input_with_flags(["? edge"])).findings[0]
-    plain = _stored(_input()).findings[0]
-
-    assert flagged.status == plain.status
-    assert flagged.source_labels == plain.source_labels
-    assert flagged.supporting_quotes == plain.supporting_quotes
-
-
-def test_a_report_stored_before_the_flags_validates_and_prints_no_line() -> None:
-    written = _stored(_input_with_flags(["? edge"])).model_dump(mode="json")
-    for finding in written["findings"]:
-        del finding["supporting_marked"], finding["contradicting_marked"]
-
-    stored = CaseReportContent.model_validate(written)
-    html = render_case_report_html(stored, ISSUE)
-
-    assert stored.findings[0].supporting_marked == []
-    assert EDGE_LINE not in html
-    assert "ข้อความจากหลักฐาน:" in html
-
-
-def test_an_analysis_stored_before_the_flags_existed_makes_a_report_with_none() -> None:
-    [finding] = build_case_report_content(_input()).findings
-
-    assert finding.supporting_marked == [[]]
-    assert finding.contradicting_marked == []
-
-
-MEANING_LINE = "ข้อความในต้นฉบับที่อาจเกี่ยวข้อง (หาจากความหมาย ยังไม่ยืนยัน):"
-MEANING_TEXT = "ต้นฉบับระบุว่าเครื่องถูกควบคุมจากระยะไกลเมื่อคืนนี้"
-
-
-def _not_confirmed_with_meaning(
-    *, status: str = "not_confirmed", text: str = MEANING_TEXT, grounding: dict | None = None
-) -> CaseReportInput:
-    report_input = _input_with_unverified(
-        CaseUnverifiedCitation(
-            source_id=_input().source_bundle.sources[0].source_id,
-            role="supporting",
-            written_quote="ข้อความที่ไม่มีในต้นฉบับ",
-            meaning_passage=CaseMeaningPassage(
-                source_text=text, start=0, end=len(text), entailment=0.97, model="fake"
-            ),
-        )
-    )
-    trace = report_input.analysis_trace
-    claim = trace.claims[0].model_copy(
-        update={"epistemic_status": status, "supporting_citations": []}
-    )
-    update: dict = {"claims": [claim]}
-    if grounding is not None:
-        update["grounding"] = CaseGroundingReport(**grounding)
-    return report_input.model_copy(update={"analysis_trace": trace.model_copy(update=update)})
-
-
-def test_a_not_confirmed_claim_prints_the_passage_found_by_meaning_under_its_unverified_quote() -> (
-    None
-):
-    report = _stored(_not_confirmed_with_meaning())
-    html = render_case_report_html(report, ISSUE)
-
-    [quote] = report.findings[0].unverified_quotes
-    assert quote.meaning_passage == MEANING_TEXT
-    assert f"{MEANING_LINE}</span> “{MEANING_TEXT}”" in html
-    assert html.index("ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ") < html.index(MEANING_LINE)
-    assert "badge" not in html.split("<main>")[1].split("</main>")[0]
-
-
-def test_the_report_shows_no_score_for_the_passage() -> None:
-    report = _stored(_not_confirmed_with_meaning())
-    html = render_case_report_html(report, ISSUE)
-
-    assert "0.97" not in html
-    assert "entailment" not in html
-    assert "fake" not in html
-    assert "entailment" not in report.model_dump_json()
-
-
-def test_the_passage_is_printed_as_readable_text() -> None:
-    marked = "ต้นฉบับระบุว่า <page_number>3</page_number>เครื่องถูกควบคุม\nจากระยะไกลเมื่อคืนนี้"
-
-    html = render_case_report_html(_stored(_not_confirmed_with_meaning(text=marked)), ISSUE)
-
-    assert "“ต้นฉบับระบุว่า เครื่องถูกควบคุม จากระยะไกลเมื่อคืนนี้”" in html
-    assert "page_number" not in html
-
-
-def test_a_passage_is_escaped_in_the_report() -> None:
-    html = render_case_report_html(
-        _stored(_not_confirmed_with_meaning(text="<script>alert(1)</script> ต้นฉบับ")), ISSUE
-    )
-
-    assert "<script>alert(1)</script>" not in html
-    assert "&lt;script&gt;alert(1)&lt;/script&gt; ต้นฉบับ" in html
-
-
-def test_a_claim_that_is_not_not_confirmed_prints_no_passage() -> None:
-    report = _stored(_not_confirmed_with_meaning(status="reported"))
-    html = render_case_report_html(report, ISSUE)
-
-    assert report.findings[0].unverified_quotes[0].meaning_passage is None
-    assert MEANING_LINE not in html
-    assert (
-        MEANING_TEXT not in html.split('id="evidence_to_examine"')[0].split("ข้อความที่ไม่มีในต้นฉบับ")[-1]
-    )
-
-
-def test_the_passage_is_only_in_the_claims_own_unverified_quote() -> None:
-    report = _stored(_not_confirmed_with_meaning())
-    finding = report.findings[0]
-    dumped = json.loads(report.model_dump_json())
-
-    assert finding.supporting_quotes == []
-    assert finding.status == EPISTEMIC_STATUS_LABELS["not_confirmed"]
-    assert json.dumps(dumped, ensure_ascii=False).count(MEANING_TEXT) == 1
-    assert MEANING_TEXT not in report.summary
-    assert all(MEANING_TEXT not in unit.text for unit in report.summary_units)
-
-
-def test_a_report_stored_before_the_passage_existed_validates_and_prints_nothing_new() -> None:
-    written = _stored(_not_confirmed_with_meaning()).model_dump(mode="json")
-    for finding in written["findings"]:
-        for quote in finding["unverified_quotes"]:
-            del quote["meaning_passage"]
-
-    stored = CaseReportContent.model_validate(written)
-    html = render_case_report_html(stored, ISSUE)
-
-    assert stored.findings[0].unverified_quotes[0].meaning_passage is None
-    assert MEANING_LINE not in html
-    assert "ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ" in html
-
-
-def test_an_analysis_stored_before_the_passage_makes_a_report_with_none() -> None:
-    source_id = _input().source_bundle.sources[0].source_id
-    report = _stored(
-        _input_with_unverified(
-            CaseUnverifiedCitation(source_id=source_id, role="supporting", written_quote="ไม่มี")
-        )
-    )
-
-    assert report.findings[0].unverified_quotes[0].meaning_passage is None
-
-
-UNAVAILABLE_GROUNDING = {
-    "meaning_pointer_eligible": 3,
-    "meaning_pointer_unavailable": 3,
-    "meaning_pointer_unavailable_reason": "weights_missing",
-}
-
-
-def test_the_report_says_when_the_meaning_pointer_could_not_run() -> None:
-    report = _stored(_not_confirmed_with_meaning(grounding=UNAVAILABLE_GROUNDING))
-
-    [note] = [item for item in report.limitations if "จากความหมาย" in item]
-    assert "ใช้ไม่ได้ในการวิเคราะห์นี้" in note
-    assert "ไม่พบไฟล์น้ำหนักของโมเดล" in note
-    assert "3 รายการ" in note
-    assert "weights_missing" not in note
-    assert note in render_case_report_html(report, ISSUE)
-
-
-@pytest.mark.parametrize(
-    ("reason", "said"),
-    [
-        ("libraries_missing", "ไม่ได้ติดตั้งไลบรารีที่โมเดลต้องใช้"),
-        ("weights_hash_mismatch", "ไฟล์น้ำหนักของโมเดลไม่ตรงกับรุ่นที่กำหนด"),
-        ("label_mapping_mismatch", "ลำดับป้ายผลของโมเดลไม่ตรงกับที่คาดไว้"),
-        ("load_failed:OSError", "โมเดลโหลดหรือทำงานไม่สำเร็จ"),
-        ("failed:RuntimeError", "โมเดลโหลดหรือทำงานไม่สำเร็จ"),
-    ],
-)
-def test_each_reason_the_pointer_could_not_run_is_said_in_plain_words(reason, said) -> None:
-    grounding = {**UNAVAILABLE_GROUNDING, "meaning_pointer_unavailable_reason": reason}
-
-    report = _stored(_not_confirmed_with_meaning(grounding=grounding))
-
-    assert any(said in item for item in report.limitations)
-
-
-def test_a_pointer_that_ran_adds_no_limitation() -> None:
-    grounding = {
-        "meaning_pointer_eligible": 2,
-        "meaning_pointer_attempted": 2,
-        "citations_meaning_pointed": 1,
+    written["grounding"] = {
+        **(written.get("grounding") or {}),
+        "citations_pointed": 0,
+        "meaning_pointer_unavailable": 3,
+        "meaning_pointer_unavailable_reason": "weights_missing",
     }
 
-    report = _stored(_not_confirmed_with_meaning(grounding=grounding))
-    plain = _stored(_not_confirmed_with_meaning())
+    trace = CaseAnalysisTrace.model_validate(written)
+    report = build_case_report_content(report_input.model_copy(update={"analysis_trace": trace}))
+    html = render_case_report_html(report, ISSUE)
 
-    assert report.limitations == plain.limitations
+    assert "reasoning_summary" not in trace.claims[0].model_dump()
+    assert "tolerated_differences" not in trace.claims[0].supporting_citations[0].model_dump()
+    assert not any(line in html for line in RETIRED_LINES)
     assert not any("จากความหมาย" in item for item in report.limitations)

@@ -24,9 +24,11 @@ from app.trace.citations import (
 from app.trace.citations import (
     CaseSourceCitation as CaseSourceCitation,
 )
+from app.trace.retired import without_retired
 
 MAX_CLARIFICATION_QUESTION_CHARS = 300
 MAX_RESOLVED_EVIDENCE_REFERENCES = 64 * 64
+RETIRED_CLAIM_FIELDS = frozenset({"reasoning_summary"})
 
 
 CaseClaimType = Literal["reported", "analytical_inference", "unknown"]
@@ -211,7 +213,11 @@ class CaseAnalysisClaim(CaseClaimFields):
     )
     invalid_evidence: list[CaseInvalidEvidence] = Field(default_factory=list)
     semantic_grounding: CaseClaimGrounding | None = None
-    reasoning_summary: ReasoningSummary = Field(default=None, max_length=1_000)
+
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_fields(cls, data: object) -> object:
+        return without_retired(data, RETIRED_CLAIM_FIELDS)
 
     @model_validator(mode="before")
     @classmethod
@@ -236,13 +242,10 @@ class CaseAnalysisClaim(CaseClaimFields):
 
 CLAIM_FIELDS_HIDDEN_FROM_MODELS = {
     "semantic_grounding": True,
-    "reasoning_summary": True,
     "supporting_source_ids": True,
     "contradicting_source_ids": True,
     "invalid_evidence": True,
     "unverified_citations": True,
-    "supporting_citations": {"__all__": {"tolerated_differences", "review_flags"}},
-    "contradicting_citations": {"__all__": {"tolerated_differences", "review_flags"}},
 }
 
 CLAIM_FIELDS_FOR_JUDGEMENT = {

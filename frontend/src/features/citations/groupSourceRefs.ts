@@ -10,7 +10,6 @@ export function citedSourcePassages(source: SourceMessageRef): CitedSourcePassag
       pointerState: source.pointerState ?? "legacy",
       start: source.start ?? null,
       end: source.end ?? null,
-      notes: [...(source.toleratedNotes ?? []), ...(source.reviewNotes ?? [])],
     },
   ];
 }
@@ -26,12 +25,7 @@ export function groupSourceRefs(sources: SourceMessageRef[]): SourceMessageRef[]
     for (const passage of citedSourcePassages(source)) {
       const location = JSON.stringify([passage.start, passage.end, passage.quote]);
       const previous = group.passages.get(location);
-      group.passages.set(
-        location,
-        previous
-          ? { ...previous, notes: [...new Set([...previous.notes, ...passage.notes])] }
-          : passage,
-      );
+      if (!previous) group.passages.set(location, passage);
     }
     groups.set(key, group);
   }

@@ -3,13 +3,7 @@ from __future__ import annotations
 from typing import Literal
 
 from app.reports.contracts import CaseReportInput
-from app.reports.schemas import (
-    ReportFinding,
-    ReportMark,
-    ReportPlace,
-    ReportQuoteContext,
-    ReportUnverifiedQuote,
-)
+from app.reports.schemas import ReportFinding, ReportQuoteContext, ReportUnverifiedQuote
 from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation
 
 EPISTEMIC_STATUS_LABELS = {
@@ -94,12 +88,7 @@ def report_findings(
                 contradicting_quotes=quotes(claim.contradicting_citations),
                 supporting_contexts=quote_contexts(claim.supporting_citations),
                 contradicting_contexts=quote_contexts(claim.contradicting_citations),
-                supporting_tolerated=tolerated_places(claim.supporting_citations),
-                contradicting_tolerated=tolerated_places(claim.contradicting_citations),
-                supporting_marked=marked_places(claim.supporting_citations),
-                contradicting_marked=marked_places(claim.contradicting_citations),
                 unverified_quotes=unverified_quotes(claim),
-                reasoning_summary=claim.reasoning_summary,
                 source_check=source_check(claim),
             )
         )
@@ -119,43 +108,8 @@ def quotes(citations: list[CaseSourceCitation]) -> list[str]:
 
 def unverified_quotes(claim: CaseAnalysisClaim) -> list[ReportUnverifiedQuote]:
     return [
-        ReportUnverifiedQuote(
-            written_quote=item.written_quote,
-            evidence_unit_id=item.evidence_unit_id,
-            places=[
-                ReportPlace(written=difference.written, source=difference.source)
-                for difference in (item.near_passage.differences if item.near_passage else [])
-            ],
-            meaning_passage=(
-                item.meaning_passage.source_text
-                if item.meaning_passage and claim.epistemic_status == "not_confirmed"
-                else None
-            ),
-        )
+        ReportUnverifiedQuote(evidence_unit_id=item.evidence_unit_id)
         for item in claim.unverified_citations
-    ]
-
-
-def tolerated_places(citations: list[CaseSourceCitation]) -> list[list[ReportPlace]]:
-    return [
-        [
-            ReportPlace(written=difference.written, source=difference.source)
-            for difference in citation.tolerated_differences
-        ]
-        for citation in citations
-        if citation.exact_quote.strip()
-    ]
-
-
-def marked_places(citations: list[CaseSourceCitation]) -> list[list[ReportMark]]:
-    return [
-        [
-            ReportMark(marks=" ".join(words[:-1]), place=words[-1])
-            for words in (flag.detail.split() for flag in citation.review_flags)
-            if len(words) > 1 and words[-1] in ("ignored", "edge")
-        ]
-        for citation in citations
-        if citation.exact_quote.strip()
     ]
 
 

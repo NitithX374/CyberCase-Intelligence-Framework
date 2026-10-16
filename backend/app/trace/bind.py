@@ -170,7 +170,7 @@ def resolve_claim(
     )
     unverified: list[CaseUnverifiedCitation] = []
     for item in [
-        *(item.model_copy(update={"meaning_passage": None}) for item in claim.unverified_citations),
+        *claim.unverified_citations,
         *supporting_unverified,
         *contradicting_unverified,
     ]:

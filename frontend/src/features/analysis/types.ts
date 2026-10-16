@@ -14,7 +14,6 @@ export interface CaseFinding {
   text: string;
   claimType: ClaimType;
   epistemicStatus: EpistemicStatus;
-  reasoningSummary: string | null;
   traceability: FindingTraceabilityData;
   supportingSources: SourceMessageRef[];
   contradictingSources: SourceMessageRef[];
@@ -22,16 +21,8 @@ export interface CaseFinding {
   unverifiedQuotes: UnverifiedQuote[];
 }
 
-export interface QuotePlace {
-  written: string;
-  source: string;
-}
-
 export interface UnverifiedQuote {
   evidenceUnitId?: string | null;
-  places: QuotePlace[];
-  passage: SourceMessageRef | null;
-  meaningPassage: SourceMessageRef | null;
 }
 
 export interface CaseGap {

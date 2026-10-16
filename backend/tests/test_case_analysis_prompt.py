@@ -53,9 +53,7 @@ def test_the_gap_instructions_state_the_question_limit(prompt) -> None:
     assert f"at most {MAX_CLARIFICATION_QUESTION_CHARS} characters" in " ".join(prompt().split())
 
 
-@pytest.mark.parametrize(
-    "prompt", [case_assessment_prompt, lambda: CASE_JUDGEMENT_SYSTEM_PROMPT]
-)
+@pytest.mark.parametrize("prompt", [case_assessment_prompt, lambda: CASE_JUDGEMENT_SYSTEM_PROMPT])
 def test_the_gap_instructions_keep_the_topic_in_words(prompt) -> None:
     assert "It is never the gap_key." in " ".join(prompt().split())
 
@@ -78,10 +76,7 @@ def test_reader_prompt_enforces_complete_evidence_attribution() -> None:
         in prompt
     )
     # 4. unsupported specificity must be removed/generalized
-    assert (
-        "keep the claim at the less-specific wording actually supported by those units"
-        in prompt
-    )
+    assert "keep the claim at the less-specific wording actually supported by those units" in prompt
     # 5. final evidence-completeness check
     assert "Final evidence-completeness check:" in prompt
     assert (
