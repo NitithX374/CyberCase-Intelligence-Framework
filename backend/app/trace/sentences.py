@@ -3,15 +3,12 @@ from __future__ import annotations
 import logging
 import threading
 from bisect import bisect_right
-from collections.abc import Sequence
-from dataclasses import dataclass
 from functools import cache, cached_property
 from importlib.metadata import version
 from typing import Any
 
 from pythainlp.tokenize import sent_tokenize
 
-from app.sources.bundle import CaseSourceItem
 from app.trace.citations import MAX_CONTEXT_CHARS, CaseQuoteContext
 
 MIN_SENTENCE_CHARS = 25
@@ -69,12 +66,6 @@ def tokenize_sentences(segment_text: str) -> list[str]:
     return segmenter.split(segment_text, threshold=SAT_THRESHOLD)
 
 
-@dataclass(frozen=True)
-class Sentence:
-    source_id: str
-    text: str
-
-
 def split_text(text: str) -> list[str]:
     return [text[start:end] for start, end in sentence_spans(text)]
 
@@ -117,14 +108,6 @@ def line_sentences(text: str, start: int, end: int) -> list[tuple[int, int]]:
 def stripped(text: str, start: int, end: int) -> tuple[int, int]:
     piece = text[start:end]
     return start + len(piece) - len(piece.lstrip()), end - len(piece) + len(piece.rstrip())
-
-
-def split_sources(sources: Sequence[CaseSourceItem]) -> list[Sentence]:
-    return [
-        Sentence(source_id=source.source_id, text=text)
-        for source in sources
-        for text in split_text(source.text)
-    ]
 
 
 class SentenceIndex:
@@ -184,13 +167,11 @@ def quote_context(index: SentenceIndex, quote: str) -> CaseQuoteContext | None:
 
 __all__ = [
     "MIN_SENTENCE_CHARS",
-    "Sentence",
     "SentenceIndex",
     "get_sat_segmenter",
     "quote_context",
     "segmenter_identity",
     "sentence_spans",
-    "split_sources",
     "split_text",
     "tokenize_sentences",
 ]

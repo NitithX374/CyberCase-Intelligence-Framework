@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from app.sources.bundle import CaseSourceItem
 from app.trace import sentences
-from app.trace.sentences import get_sat_segmenter, split_sources, split_text, tokenize_sentences
+from app.trace.sentences import get_sat_segmenter, split_text, tokenize_sentences
 
 THAI_REPORT = """เมื่อวันที่ 4 พฤศจิกายน 2563 ผู้เสียหายเข้าแจ้งความ
 ตรวจพบ PowerShell.exe เชื่อมต่อออกไปยังไอพี 198.51.100.23 เมื่อเวลา 03.00 น.
@@ -41,19 +40,6 @@ def test_english_is_split_too():
 def test_blank_material_yields_nothing():
     assert split_text("") == []
     assert split_text("   \n\n  ") == []
-
-
-def test_each_sentence_carries_the_source_it_came_from():
-    sources = (
-        CaseSourceItem(source_id="S1", source_kind="narrative", text=THAI_REPORT),
-        CaseSourceItem(source_id="S2", source_kind="followup_answer", text="เครื่องถูกเข้ารหัสทั้งหมด"),
-    )
-    sentences = split_sources(sources)
-
-    assert {item.source_id for item in sentences} == {"S1", "S2"}
-    by_id = {source.source_id: source.text for source in sources}
-    for sentence in sentences:
-        assert sentence.text in by_id[sentence.source_id]
 
 
 LONG_THAI_PARAGRAPH = (
