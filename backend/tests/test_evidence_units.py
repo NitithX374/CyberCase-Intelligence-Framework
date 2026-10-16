@@ -100,7 +100,7 @@ def test_nested_table_stays_with_its_outer_row():
     assert "".join(unit.text for unit in units) == text
 
 
-@pytest.mark.parametrize("version", ["evidence_units_v1", "evidence_units_v2"])
+@pytest.mark.parametrize("version", ["evidence_units_v1", "evidence_units_v2", "evidence_units_v3"])
 def test_segmentation_version_makes_old_unit_ids_stale(version):
     import hashlib
 
@@ -109,3 +109,18 @@ def test_segmentation_version_makes_old_unit_ids_stale(version):
     assert old_revision != evidence_revision(text)
     index = EvidenceIndex((CaseSourceItem("S1", "narrative", text),))
     assert index.resolve("S1", f"S1:U001-{old_revision}") == (None, "stale_id")
+
+
+def test_a_segmenter_change_makes_issued_unit_ids_stale(monkeypatch):
+    from app.sources import evidence
+
+    source = CaseSourceItem("S1", "narrative", "John reported the incident. Jane received it.")
+    monkeypatch.setattr(evidence, "segmenter_identity", lambda: "sat:first")
+    issued = evidence_units(source)
+    monkeypatch.setattr(evidence, "segmenter_identity", lambda: "crfcut:second")
+    index = EvidenceIndex((source,))
+
+    assert issued
+    assert [index.resolve("S1", unit.unit_id) for unit in issued] == [(None, "stale_id")] * len(
+        issued
+    )

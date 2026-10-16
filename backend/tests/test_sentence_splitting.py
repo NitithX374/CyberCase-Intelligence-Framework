@@ -77,6 +77,30 @@ def test_the_thai_segmenter_is_asked_for_a_threshold_below_its_default(monkeypat
     assert asked == [{"threshold": 0.025}]
 
 
+def test_a_sat_failure_is_raised_rather_than_split_by_the_fallback(monkeypatch):
+    class Segmenter:
+        def split(self, text, **options):
+            raise RuntimeError("SaT failed")
+
+    monkeypatch.setattr(sentences, "get_sat_segmenter", lambda: Segmenter())
+
+    with pytest.raises(RuntimeError, match="SaT failed"):
+        tokenize_sentences("ผู้เสียหายโอนเงิน")
+
+
+def test_the_segmenter_identity_names_what_splits_the_text(monkeypatch):
+    monkeypatch.setattr(sentences, "package_version", lambda name: f"{name}-version")
+    monkeypatch.setattr(sentences, "get_sat_segmenter", lambda: object())
+    sat = sentences.segmenter_identity()
+    monkeypatch.setattr(sentences, "get_sat_segmenter", lambda: None)
+    fallback = sentences.segmenter_identity()
+
+    assert sat == (
+        f"sat:sat-3l-sm@{sentences.SAT_REVISION}:threshold=0.025:wtpsplit=wtpsplit-version"
+    )
+    assert fallback == "crfcut:pythainlp=pythainlp-version"
+
+
 def test_a_long_thai_paragraph_is_cut_into_sentences_rather_than_kept_whole():
     if get_sat_segmenter() is None:
         pytest.skip("the SaT segmenter is not available")
