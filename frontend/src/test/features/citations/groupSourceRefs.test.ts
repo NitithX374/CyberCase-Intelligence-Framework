@@ -39,13 +39,9 @@ describe("Grouped Finding Source passages", () => {
     expect(groups[0].passages?.map((item) => item.start)).toEqual([0, 40]);
   });
 
-  it("deduplicates the same span while retaining its review notes", () => {
-    const groups = groupSourceRefs([
-      source({ reviewNotes: ["Review the amount."] }),
-      source({ toleratedNotes: ["Formatting differs."] }),
-    ]);
+  it("deduplicates the same span", () => {
+    const groups = groupSourceRefs([source(), source()]);
     expect(groups[0].passages).toHaveLength(1);
-    expect(groups[0].passages?.[0].notes).toEqual(["Review the amount.", "Formatting differs."]);
   });
 
   it("never merges different Sources or pages, even with identical filenames and text", () => {

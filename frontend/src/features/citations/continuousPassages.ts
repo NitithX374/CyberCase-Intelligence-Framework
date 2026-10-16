@@ -32,7 +32,6 @@ export function continuousPassages(source: SourceMessageRef): CitedSourcePassage
           after: passage.context?.after ?? "",
           cutAfter: passage.context?.cutAfter ?? false,
         },
-        notes: [...new Set([...previous.notes, ...passage.notes])],
       };
     } else {
       result.push(passage);

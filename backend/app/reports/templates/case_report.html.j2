@@ -77,7 +77,6 @@
     .formal .minor { display: block; font-size: 9pt; color: #3f3f46; }
     .quote { margin-top: 3pt; font-size: 9.5pt; color: #27272a; }
     .quote-label { font-weight: 700; }
-    .quote-place { margin-top: 1pt; padding-left: 1.5em; font-size: 9.5pt; color: #27272a; }
 
     ol.numbered { margin: 0; padding: 0; list-style: none; }
     ol.numbered > li { display: flex; gap: 6pt; margin: 0 0 4pt; }
@@ -141,10 +140,6 @@
         "mixed": "ข้อความที่อ้างบางส่วนไม่พบในเอกสาร",
         "no_claim": "ไม่ได้เชื่อมกับข้อสังเกตใด",
       } %}
-      {% set projection_notes = {
-        "not_supported": "ข้อมูลนี้ไม่ได้รับการสนับสนุนจากข้อสังเกตที่เชื่อมไว้",
-        "unassessed": "ยังไม่ได้ประเมินความสอดคล้องของข้อมูลนี้กับข้อสังเกตที่เชื่อมไว้",
-      } %}
       <section id="case_summary">
         <h2>1. สรุปข้อเท็จจริงของคดี</h2>
         {% set sub = namespace(n=1) %}
@@ -173,7 +168,7 @@
               <tr>
                 <td class="n">{{ loop.index }}</td>
                 <td>{{ party.name }}{% if party.support in support_notes %}<div class="quote">{{ support_notes[party.support] }}</div>{% endif %}</td>
-                <td>{{ party.role if party.role is not none else 'ไม่ได้สกัดบทบาท โปรดตรวจข้อค้นพบที่เชื่อมโยง' }}{% if party.projection_grounding and party.projection_grounding.verdict in projection_notes %}<div class="quote">{{ projection_notes[party.projection_grounding.verdict] }}</div>{% endif %}{% for context in party.claim_context %}<div class="quote">{{ context }}</div>{% endfor %}</td>
+                <td>{{ party.role if party.role is not none else 'ไม่ได้สกัดบทบาท โปรดตรวจข้อค้นพบที่เชื่อมโยง' }}{% for context in party.claim_context %}<div class="quote">{{ context }}</div>{% endfor %}</td>
                 <td class="ref">{{ party.references | join(", ") or "-" }}</td>
               </tr>
               {% endfor %}
@@ -193,7 +188,7 @@
               <tr>
                 <td class="n">{{ loop.index }}</td>
                 <td>{{ event.time if event.time is not none else 'ไม่ได้สกัดวันหรือเวลา' }}</td>
-                <td>{{ event.event | clean_report_text }}{% if event.support in support_notes %}<div class="quote">{{ support_notes[event.support] }}</div>{% endif %}{% if event.projection_grounding and event.projection_grounding.verdict in projection_notes %}<div class="quote">{{ projection_notes[event.projection_grounding.verdict] }}</div>{% endif %}</td>
+                <td>{{ event.event | clean_report_text }}{% if event.support in support_notes %}<div class="quote">{{ support_notes[event.support] }}</div>{% endif %}</td>
                 <td class="ref">{{ event.references | join(", ") or "-" }}</td>
               </tr>
               {% endfor %}
@@ -212,7 +207,7 @@
               {% for impact in report.impacts %}
               <tr>
                 <td class="n">{{ loop.index }}</td>
-                <td>{{ impact.description | clean_report_text }}{% if impact.support in support_notes %}<div class="quote">{{ support_notes[impact.support] }}</div>{% endif %}{% if impact.projection_grounding and impact.projection_grounding.verdict in projection_notes %}<div class="quote">{{ projection_notes[impact.projection_grounding.verdict] }}</div>{% endif %}</td>
+                <td>{{ impact.description | clean_report_text }}{% if impact.support in support_notes %}<div class="quote">{{ support_notes[impact.support] }}</div>{% endif %}</td>
                 <td class="ref">{{ impact.references | join(", ") or "-" }}</td>
               </tr>
               {% endfor %}
@@ -246,42 +241,13 @@
                   {{ finding.text | clean_report_text }}
                   {% for quote in finding.supporting_quotes | quoted(finding.supporting_contexts) %}
                     <div class="quote"><span class="quote-label">ข้อความจากหลักฐาน:</span> {{ quote }}</div>
-                    {% if loop.index0 < finding.supporting_tolerated | length %}
-                      {% for place in finding.supporting_tolerated[loop.index0] %}
-                        <div class="quote-place">พบในเอกสารเมื่อไม่นับรูปแบบ — {% if place.written and place.source %}ข้อความวิเคราะห์เขียน «{{ place.written }}» เอกสารเขียน «{{ place.source }}»{% elif place.written %}ข้อความวิเคราะห์เติม «{{ place.written }}»{% else %}เอกสารมี «{{ place.source }}» ที่ข้อความวิเคราะห์ตัดออก{% endif %}</div>
-                      {% endfor %}
-                    {% endif %}
-                    {% if loop.index0 < finding.supporting_marked | length %}
-                      {% for mark in finding.supporting_marked[loop.index0] %}
-                        <div class="quote-place">{% if mark.place == "edge" %}ตรวจ: ต้นฉบับมีเครื่องหมาย {{ mark.marks }} ที่ quote ไม่ได้รวมไว้{% else %}ตรวจ: ต้นฉบับกับ quote ต่างกันที่เครื่องหมาย {{ mark.marks }} ซึ่งอาจเปลี่ยนความหมาย{% endif %}</div>
-                      {% endfor %}
-                    {% endif %}
                   {% endfor %}
                   {% for quote in finding.contradicting_quotes | quoted(finding.contradicting_contexts) %}
                     <div class="quote"><span class="quote-label">ข้อความที่ขัดแย้ง:</span> {{ quote }}</div>
-                    {% if loop.index0 < finding.contradicting_tolerated | length %}
-                      {% for place in finding.contradicting_tolerated[loop.index0] %}
-                        <div class="quote-place">พบในเอกสารเมื่อไม่นับรูปแบบ — {% if place.written and place.source %}ข้อความวิเคราะห์เขียน «{{ place.written }}» เอกสารเขียน «{{ place.source }}»{% elif place.written %}ข้อความวิเคราะห์เติม «{{ place.written }}»{% else %}เอกสารมี «{{ place.source }}» ที่ข้อความวิเคราะห์ตัดออก{% endif %}</div>
-                      {% endfor %}
-                    {% endif %}
-                    {% if loop.index0 < finding.contradicting_marked | length %}
-                      {% for mark in finding.contradicting_marked[loop.index0] %}
-                        <div class="quote-place">{% if mark.place == "edge" %}ตรวจ: ต้นฉบับมีเครื่องหมาย {{ mark.marks }} ที่ quote ไม่ได้รวมไว้{% else %}ตรวจ: ต้นฉบับกับ quote ต่างกันที่เครื่องหมาย {{ mark.marks }} ซึ่งอาจเปลี่ยนความหมาย{% endif %}</div>
-                      {% endfor %}
-                    {% endif %}
                   {% endfor %}
                   {% for item in finding.unverified_quotes %}
-                    {% if item.evidence_unit_id %}<div class="quote"><span class="quote-label">ไม่สามารถระบุตำแหน่งหลักฐานที่อ้างอิงได้</span></div>{% else %}<div class="quote"><span class="quote-label">ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ:</span> “{{ item.written_quote }}”</div>{% endif %}
-                    {% for place in item.places %}
-                      <div class="quote-place">{% if place.written and place.source %}ผลวิเคราะห์ยกมาว่า «{{ place.written }}» ต้นฉบับเขียน «{{ place.source }}»{% elif place.written %}ผลวิเคราะห์เติม «{{ place.written }}»{% else %}ต้นฉบับมี «{{ place.source }}» ที่ผลวิเคราะห์ตัดออก{% endif %}</div>
-                    {% endfor %}
-                    {% if item.meaning_passage %}
-                      <div class="quote-place"><span class="quote-label">ข้อความในต้นฉบับที่อาจเกี่ยวข้อง (หาจากความหมาย ยังไม่ยืนยัน):</span> “{{ item.meaning_passage | readable | trim }}”</div>
-                    {% endif %}
+                    <div class="quote"><span class="quote-label">ไม่สามารถระบุตำแหน่งหลักฐานที่อ้างอิงได้</span></div>
                   {% endfor %}
-                  {% if finding.reasoning_summary %}
-                    <div class="quote"><span class="quote-label">เหตุผลเชิงวิเคราะห์:</span> {{ finding.reasoning_summary | clean_report_text }}</div>
-                  {% endif %}
                 </td>
                 <td>
                   {{ finding.status }}

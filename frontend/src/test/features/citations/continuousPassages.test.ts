@@ -9,7 +9,6 @@ function passage(quote: string, start: number, pointerState: "direct" | "recover
     end: start + Array.from(quote).length,
     pointerState,
     context: null,
-    notes: [],
   } satisfies CitedSourcePassage;
 }
 

@@ -16,7 +16,6 @@ function finding(
     text: `Original finding ${id}`,
     claimType,
     epistemicStatus,
-    reasoningSummary: null,
     traceability: {
       semanticSupport: "unassessed",
     },
@@ -122,129 +121,30 @@ describe("Grouped case findings", () => {
     );
   });
 
-  const passage = {
-    id: "narrative-1",
-    label: "Case narrative #1",
-    displayContent: "The transfer happened on 17 March 2026 at noon.",
-    exactQuote: "The transfer happened on 17 March 2026",
-    quoteContext: null,
-    filename: null,
-    pageNumbers: [],
-    sourcePages: [],
-    question: null,
-    quoteLabel: "Nearest passage",
-  };
-  const unverified = {
-    places: [
-      { written: "11", source: "17" },
-      { written: "quickly", source: "" },
-      { written: "", source: "at noon" },
-    ],
-    passage,
-    meaningPassage: null,
-  };
-
-  it("says where a not-confirmed finding's quote differs from the source and opens the passage", () => {
-    const onSelectSource = vi.fn();
+  it("says a not-confirmed finding's quote was not found, with no places or passage link", () => {
     render(
       <CaseFindingsSection
         caseId={caseId}
         findings={[
           {
             ...finding("transfer", "reported", "not_confirmed"),
-            unverifiedQuotes: [unverified, { places: [], passage: null, meaningPassage: null }],
+            unverifiedQuotes: [{}, {}],
           },
         ]}
-        onSelectSource={onSelectSource}
+        onSelectSource={vi.fn()}
       />,
     );
     const article = screen.getByRole("article");
 
     expect(within(article).getAllByText("Not found word for word in the source.")).toHaveLength(2);
-    expect(article).toHaveTextContent("The analysis quotes «11»; the source says «17»");
-    expect(article).toHaveTextContent("The analysis adds «quickly»");
-    expect(article).toHaveTextContent("The source has «at noon», which the analysis leaves out");
-    const buttons = within(article).getAllByRole("button", { name: "Show in source" });
-    expect(buttons).toHaveLength(1);
-    fireEvent.click(buttons[0]);
-    expect(onSelectSource).toHaveBeenCalledWith(passage, buttons[0], "passage-transfer-0");
-  });
-
-  const meaningPassage = {
-    ...passage,
-    id: "narrative-1",
-    exactQuote: "The attackers encrypted the file server on Monday night.",
-    quoteLabel: "A passage in the source that may be related (found by meaning, not confirmed)",
-  };
-
-  it("points a quote the words cannot place at the passage found by meaning, and says how it was found", () => {
-    const onSelectSource = vi.fn();
-    render(
-      <CaseFindingsSection
-        caseId={caseId}
-        findings={[
-          {
-            ...finding("encrypted", "reported", "not_confirmed"),
-            unverifiedQuotes: [{ places: [], passage: null, meaningPassage }],
-          },
-        ]}
-        onSelectSource={onSelectSource}
-      />,
-    );
-    const article = screen.getByRole("article");
-
-    expect(article).toHaveTextContent(
-      "A passage in the source that may be related (found by meaning, not confirmed)",
-    );
-    const button = within(article).getByRole("button", { name: "Show in source" });
-    fireEvent.click(button);
-    expect(onSelectSource).toHaveBeenCalledWith(
-      meaningPassage,
-      button,
-      "passage-encrypted-0-meaning",
-    );
-  });
-
-  it("draws no badge, icon or score for the passage", () => {
-    const { container } = render(
-      <CaseFindingsSection
-        caseId={caseId}
-        findings={[
-          {
-            ...finding("encrypted", "reported", "not_confirmed"),
-            unverifiedQuotes: [{ places: [], passage: null, meaningPassage }],
-          },
-        ]}
-        onSelectSource={vi.fn()}
-      />,
-    );
-
-    expect(container.querySelector("svg, img")).toBeNull();
-    expect(container.textContent).not.toMatch(/\d\.\d|%|score/i);
-  });
-
-  it("says nothing about a meaning passage under a finding that stayed reported", () => {
-    render(
-      <CaseFindingsSection
-        caseId={caseId}
-        findings={[
-          {
-            ...finding("transfer"),
-            unverifiedQuotes: [{ ...unverified, passage: null, meaningPassage }],
-          },
-        ]}
-        onSelectSource={vi.fn()}
-      />,
-    );
-
-    expect(screen.queryByText(/found by meaning/)).not.toBeInTheDocument();
+    expect(within(article).queryByRole("button", { name: "Show in source" })).toBeNull();
   });
 
   it("says nothing about unverified quotes under a finding that stayed reported", () => {
     render(
       <CaseFindingsSection
         caseId={caseId}
-        findings={[{ ...finding("transfer"), unverifiedQuotes: [unverified] }]}
+        findings={[{ ...finding("transfer"), unverifiedQuotes: [{}] }]}
         onSelectSource={vi.fn()}
       />,
     );
@@ -330,14 +230,7 @@ it("explains an unresolved evidence ID without claiming a quote mismatch", () =>
       findings={[
         {
           ...finding("A-01", "reported", "not_confirmed"),
-          unverifiedQuotes: [
-            {
-              evidenceUnitId: "unknown-id",
-              places: [],
-              passage: null,
-              meaningPassage: null,
-            },
-          ],
+          unverifiedQuotes: [{ evidenceUnitId: "unknown-id" }],
         },
       ]}
       onSelectSource={vi.fn()}

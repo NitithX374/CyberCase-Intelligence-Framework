@@ -30,7 +30,7 @@ export function SourcePassages({ sourceRef }: { sourceRef: SourceMessageRef }) {
             ? thai
               ? `ข้อความ Source ${index + 1} จาก ${passages.length}`
               : `Source passage ${index + 1} of ${passages.length}`
-            : (sourceRef.quoteLabel ?? "Quoted");
+            : "Quoted";
         return (
           <section key={index} className="rounded-xl border border-line bg-surface-nested p-4">
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
@@ -52,11 +52,6 @@ export function SourcePassages({ sourceRef }: { sourceRef: SourceMessageRef }) {
             <p className="mt-2 text-xs text-ink-muted">
               {(thai ? THAI_POINTER_LABELS : POINTER_LABELS)[cited.pointerState]}
             </p>
-            {cited.notes.map((note, noteIndex) => (
-              <p key={noteIndex} className="mt-2 text-xs text-ink-muted [overflow-wrap:anywhere]">
-                {note}
-              </p>
-            ))}
           </section>
         );
       })}

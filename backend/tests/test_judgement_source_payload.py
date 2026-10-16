@@ -33,7 +33,6 @@ def reading() -> CaseProviderReading:
                 ],
                 contradicting_source_ids=["S3"],
                 contradicting_citations=[citation("S3", "The loss was disputed.")],
-                reasoning_summary="Private verifier explanation.",
             )
         ],
     )

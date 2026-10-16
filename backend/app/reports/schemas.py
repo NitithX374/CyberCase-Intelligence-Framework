@@ -4,9 +4,22 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.trace.trace import CaseProjectionGrounding, SupportStatus
+from app.trace.retired import without_retired
+from app.trace.trace import SupportStatus
+
+RETIRED_VIEW_ROW_FIELDS = frozenset({"projection_grounding"})
+RETIRED_UNVERIFIED_QUOTE_FIELDS = frozenset({"written_quote", "places", "meaning_passage"})
+RETIRED_FINDING_FIELDS = frozenset(
+    {
+        "supporting_tolerated",
+        "contradicting_tolerated",
+        "supporting_marked",
+        "contradicting_marked",
+        "reasoning_summary",
+    }
+)
 
 
 class ReportRow(BaseModel):
@@ -19,7 +32,11 @@ class ReportParty(ReportRow):
     claim_context: list[str] = Field(default_factory=list)
     references: list[str] = Field(default_factory=list)
     support: SupportStatus | None = None
-    projection_grounding: CaseProjectionGrounding | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_fields(cls, data: object) -> object:
+        return without_retired(data, RETIRED_VIEW_ROW_FIELDS)
 
 
 class ReportEvent(ReportRow):
@@ -27,14 +44,22 @@ class ReportEvent(ReportRow):
     event: str
     references: list[str] = Field(default_factory=list)
     support: SupportStatus | None = None
-    projection_grounding: CaseProjectionGrounding | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_fields(cls, data: object) -> object:
+        return without_retired(data, RETIRED_VIEW_ROW_FIELDS)
 
 
 class ReportImpact(ReportRow):
     description: str
     references: list[str] = Field(default_factory=list)
     support: SupportStatus | None = None
-    projection_grounding: CaseProjectionGrounding | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_fields(cls, data: object) -> object:
+        return without_retired(data, RETIRED_VIEW_ROW_FIELDS)
 
 
 class ReportSummaryUnit(ReportRow):
@@ -50,21 +75,13 @@ class ReportQuoteContext(ReportRow):
     cut_after: bool = False
 
 
-class ReportPlace(ReportRow):
-    written: str = ""
-    source: str = ""
-
-
-class ReportMark(ReportRow):
-    marks: str
-    place: Literal["ignored", "edge"]
-
-
 class ReportUnverifiedQuote(ReportRow):
-    written_quote: str
     evidence_unit_id: str | None = None
-    places: list[ReportPlace] = Field(default_factory=list)
-    meaning_passage: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_fields(cls, data: object) -> object:
+        return without_retired(data, RETIRED_UNVERIFIED_QUOTE_FIELDS)
 
 
 class ReportFinding(ReportRow):
@@ -78,13 +95,13 @@ class ReportFinding(ReportRow):
     contradicting_quotes: list[str] = Field(default_factory=list)
     supporting_contexts: list[ReportQuoteContext | None] = Field(default_factory=list)
     contradicting_contexts: list[ReportQuoteContext | None] = Field(default_factory=list)
-    supporting_tolerated: list[list[ReportPlace]] = Field(default_factory=list)
-    contradicting_tolerated: list[list[ReportPlace]] = Field(default_factory=list)
-    supporting_marked: list[list[ReportMark]] = Field(default_factory=list)
-    contradicting_marked: list[list[ReportMark]] = Field(default_factory=list)
     unverified_quotes: list[ReportUnverifiedQuote] = Field(default_factory=list)
-    reasoning_summary: str | None = None
     source_check: Literal["not_supported"] | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_fields(cls, data: object) -> object:
+        return without_retired(data, RETIRED_FINDING_FIELDS)
 
 
 class ReportTechnique(ReportRow):
@@ -159,9 +176,7 @@ __all__ = [
     "ReportFinding",
     "ReportGap",
     "ReportImpact",
-    "ReportMark",
     "ReportParty",
-    "ReportPlace",
     "ReportQuoteContext",
     "ReportSource",
     "ReportSummaryUnit",

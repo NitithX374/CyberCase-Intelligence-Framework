@@ -115,7 +115,6 @@ def test_source_id_lists_are_derived_uniquely_from_selected_citations():
     [claim] = reading_from(CaseProviderReadingReply.model_validate(payload)).claims
     assert claim.supporting_source_ids == ["S1"]
     assert claim.contradicting_source_ids == ["S2"]
-    assert claim.reasoning_summary is None
     assert claim.supporting_citations[0].exact_quote == ""
     assert claim.supporting_citations[0].start is None
 

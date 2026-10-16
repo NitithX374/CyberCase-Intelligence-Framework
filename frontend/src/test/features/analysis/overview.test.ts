@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type {
-  CaseAnalysisResultRead,
-  CaseMeaningPassage,
-  CaseSourceCitation,
-} from "@/lib/api/types";
+import type { CaseAnalysisResultRead, CaseSourceCitation } from "@/lib/api/types";
 import {
   analysisResult,
   claim,
@@ -68,29 +64,20 @@ describe("Case overview projection", () => {
       { id: "A-01", text: "Company A suspended the account." },
     ]);
   });
-  it("preserves the semantic verdict and linked claim text independently of binding", () => {
-    const grounding = { verdict: "not_supported", reason: "neutral" } as const;
+  it("keeps the linked claim text of a bound party and gives it no line", () => {
     const overview = buildCaseOverview(
       analysisResult({
         trace_json: trace({
           claims: [claim("John sent an email.")],
           involved_parties: [
-            {
-              name: "John",
-              role: "Attacker",
-              claim_ids: ["A-01"],
-              support: "bound",
-              projection_grounding: grounding,
-            },
+            { name: "John", role: "Attacker", claim_ids: ["A-01"], support: "bound" },
           ],
         }),
       }),
       [narrativeSource("John sent an email.")],
     );
     expect(overview.parties[0].linkedClaims).toEqual([{ id: "A-01", text: "John sent an email." }]);
-    expect(overview.parties[0].supportNote).toBe(
-      "The linked findings do not support this description.",
-    );
+    expect(overview.parties[0].supportNote).toBeNull();
   });
   const supported = (summary: string) =>
     analysisResult({
@@ -228,156 +215,6 @@ describe("Case overview projection", () => {
     expect(source).toMatchObject({ id: sourceId, label: "Case narrative #1", exactQuote: quote });
   });
 
-  it("carries what the locator tolerated onto the quotation, in the language of the analysis", () => {
-    const citation: CaseSourceCitation = {
-      source_id: sourceId,
-      exact_quote: quote,
-      tolerated_differences: [{ written: "apple", source: "Apple" }],
-    };
-    const english = buildCaseOverview(result(quote, citation), [narrativeSource(quote)]);
-    const thai = buildCaseOverview(
-      analysisResult({
-        summary: "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน",
-        trace_json: trace({
-          summary: "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน",
-          claims: [claim(quote, sourceId, { supporting_citations: [citation] })],
-        }),
-      }),
-      [narrativeSource(quote)],
-    );
-
-    expect(english.findings[0].supportingSources[0].toleratedNotes).toEqual([
-      "Found in the source when formatting is ignored. The analysis wrote «apple»; the source says «Apple».",
-    ]);
-    expect(thai.findings[0].supportingSources[0].toleratedNotes).toEqual([
-      "พบในเอกสารเมื่อไม่นับรูปแบบ — ข้อความวิเคราะห์เขียน «apple» เอกสารเขียน «Apple»",
-    ]);
-  });
-
-  it("carries the marks to check onto the quotation, in the language of the analysis", () => {
-    const citation: CaseSourceCitation = {
-      source_id: sourceId,
-      exact_quote: quote,
-      review_flags: [{ kind: "meaning_mark", verdict: "rule_warning", detail: "? edge" }],
-    };
-    const english = buildCaseOverview(result(quote, citation), [narrativeSource(quote)]);
-    const thai = buildCaseOverview(
-      analysisResult({
-        summary: "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน",
-        trace_json: trace({
-          summary: "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน",
-          claims: [claim(quote, sourceId, { supporting_citations: [citation] })],
-        }),
-      }),
-      [narrativeSource(quote)],
-    );
-
-    expect(english.findings[0].supportingSources[0].reviewNotes).toEqual([
-      "Check: the source has the mark ? next to the quote, which the quote leaves out.",
-    ]);
-    expect(thai.findings[0].supportingSources[0].reviewNotes).toEqual([
-      "ตรวจ: ต้นฉบับมีเครื่องหมาย ? ที่ quote ไม่ได้รวมไว้",
-    ]);
-  });
-
-  it("gives a quotation with no flag no mark line, and a flag changes no status", () => {
-    const overview = buildCaseOverview(result(quote, { source_id: sourceId, exact_quote: quote }), [
-      narrativeSource(quote),
-    ]);
-    const flagged = buildCaseOverview(
-      result(quote, {
-        source_id: sourceId,
-        exact_quote: quote,
-        review_flags: [{ kind: "meaning_mark", verdict: "rule_warning", detail: "? edge" }],
-      }),
-      [narrativeSource(quote)],
-    );
-
-    expect(overview.findings[0].supportingSources[0].reviewNotes).toBeUndefined();
-    expect(flagged.findings[0].epistemicStatus).toBe(overview.findings[0].epistemicStatus);
-    expect(flagged.findings[0].supportingSources).toHaveLength(
-      overview.findings[0].supportingSources.length,
-    );
-  });
-
-  const unlocated = (summary: string, meaning: CaseMeaningPassage | null) =>
-    analysisResult({
-      summary,
-      trace_json: trace({
-        summary,
-        claims: [
-          claim("A file share was encrypted overnight.", sourceId, {
-            epistemic_status: "not_confirmed",
-            supporting_citations: [],
-            unverified_citations: [
-              {
-                source_id: sourceId,
-                role: "supporting",
-                written_quote: "Something else entirely.",
-                near_passage: null,
-                ...(meaning ? { meaning_passage: meaning } : {}),
-              },
-            ],
-          }),
-        ],
-      }),
-    });
-  const found = {
-    source_text: quote,
-    start: 0,
-    end: quote.length,
-    entailment: 0.97,
-    model: "mdeberta",
-  };
-
-  it("carries the passage found by meaning onto the unverified quote, in the language of the analysis", () => {
-    const english = buildCaseOverview(unlocated("A share was encrypted.", found), [
-      narrativeSource(quote),
-    ]);
-    const thai = buildCaseOverview(unlocated("ไฟล์ถูกเข้ารหัสในช่วงกลางคืน", found), [
-      narrativeSource(quote),
-    ]);
-
-    const [fromEnglish] = english.findings[0].unverifiedQuotes;
-    const [fromThai] = thai.findings[0].unverifiedQuotes;
-    expect(fromEnglish.meaningPassage).toMatchObject({
-      exactQuote: quote,
-      quoteLabel: "A passage in the source that may be related (found by meaning, not confirmed)",
-    });
-    expect(fromThai.meaningPassage?.quoteLabel).toBe(
-      "ข้อความในต้นฉบับที่อาจเกี่ยวข้อง (หาจากความหมาย ยังไม่ยืนยัน)",
-    );
-    expect(english.findings[0].epistemicStatus).toBe("not_confirmed");
-    expect(
-      english.findings[0].supportingSources.every((source) => source.exactQuote === null),
-    ).toBe(true);
-  });
-
-  it("has no meaning passage when the analysis found none, or was stored before", () => {
-    const none = buildCaseOverview(unlocated("A share was encrypted.", null), [
-      narrativeSource(quote),
-    ]);
-
-    expect(none.findings[0].unverifiedQuotes[0].meaningPassage).toBeNull();
-  });
-
-  it("never shows the score of a meaning passage", () => {
-    const overview = buildCaseOverview(unlocated("A share was encrypted.", found), [
-      narrativeSource(quote),
-    ]);
-
-    expect(JSON.stringify(overview)).not.toContain("0.97");
-    expect(JSON.stringify(overview)).not.toContain("entailment");
-  });
-
-  it("gives a quotation found as written no tolerated line", () => {
-    const overview = buildCaseOverview(result(quote, { source_id: sourceId, exact_quote: quote }), [
-      narrativeSource(quote),
-    ]);
-
-    expect(overview.findings[0].supportingSources[0].toleratedNotes).toBeUndefined();
-  });
-
   it("shows the pages the stored citation names", () => {
     const documentQuote = "Defendant was seen at the scene.";
     const overview = buildCaseOverview(result(documentQuote, pagedCitation(documentQuote, [1])), [
@@ -497,7 +334,7 @@ describe("Case overview projection", () => {
     expect(overview.impacts[0].inferred).toBe(true);
   });
 
-  it("carries each unverified quote with its places and a way to the nearest passage", () => {
+  it("carries each unverified quote with the unit reference it could not resolve", () => {
     const text = "The transfer happened on 17 March 2026 at noon.";
     const base = result(text, { source_id: sourceId, exact_quote: text });
     const analysis: CaseAnalysisResultRead = {
@@ -513,39 +350,19 @@ describe("Case overview projection", () => {
               {
                 source_id: sourceId,
                 role: "supporting" as const,
-                written_quote: "The transfer happened on 11 March 2026",
-                near_passage: {
-                  source_text: "The transfer happened on 17 March 2026",
-                  differences: [{ written: "11", source: "17" }],
-                  occurrences: 1,
-                },
+                evidence_unit_id: `${sourceId}:U009-0000000000000000`,
               },
-              {
-                source_id: "missing",
-                role: "supporting" as const,
-                written_quote: "Something else",
-                near_passage: null,
-              },
+              { source_id: "missing", role: "supporting" as const },
             ],
           },
         ],
       },
     };
 
-    const [first, second] = buildCaseOverview(analysis, [narrativeSource(text)]).findings[0]
+    const quotes = buildCaseOverview(analysis, [narrativeSource(text)]).findings[0]
       .unverifiedQuotes;
 
-    expect(first.places).toEqual([{ written: "11", source: "17" }]);
-    expect(first.passage).toMatchObject({
-      id: sourceId,
-      exactQuote: "The transfer happened on 17 March 2026",
-      quoteLabel: "Nearest passage",
-    });
-    expect(second).toEqual({
-      places: [],
-      passage: null,
-      meaningPassage: null,
-    });
+    expect(quotes).toEqual([{ evidenceUnitId: `${sourceId}:U009-0000000000000000` }, {}]);
   });
 
   it("links each finding to the ATT&CK techniques associated with it", () => {

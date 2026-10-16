@@ -4,15 +4,14 @@ import type {
   CaseSourceRead,
   CaseSummaryUnit,
 } from "@/lib/api/types";
-import { claimRefs, parseCaseSources, passageRef } from "@/features/citations/sourceRefs";
+import { claimRefs, parseCaseSources } from "@/features/citations/sourceRefs";
 import {
   checkedSources,
   isUnconfirmed,
   unconfirmedStatuses,
 } from "@/features/citations/unconfirmed";
-import { hasThai } from "@/lib/language";
 import { analysisFollowups } from "./analysisRecord";
-import { projectionNote, supportNote } from "./supportNote";
+import { supportNote } from "./supportNote";
 import { noteLetter, summaryClosings } from "./summaryClosings";
 import { findingTraceabilityData } from "./findingTraceabilityData";
 import type {
@@ -97,13 +96,12 @@ export function buildCaseOverview(
   const associations = trace.mitre_associations ?? [];
   const incidentSummary = trace.summary || result.summary || "Case summary not provided.";
   const findings: CaseFinding[] = trace.claims.map((claim) => {
-    const cited = claimRefs(claim, sources, incidentSummary);
+    const cited = claimRefs(claim, sources);
     return {
       id: claim.claim_id,
       text: claim.text,
       claimType: claim.claim_type,
       epistemicStatus: claim.epistemic_status,
-      reasoningSummary: claim.reasoning_summary ?? null,
       traceability: findingTraceabilityData(claim),
       supportingSources: cited.supporting,
       contradictingSources: cited.contradicting,
@@ -112,21 +110,6 @@ export function buildCaseOverview(
         .map((association) => association.technique_id),
       unverifiedQuotes: (claim.unverified_citations ?? []).map((item) => ({
         ...(item.evidence_unit_id ? { evidenceUnitId: item.evidence_unit_id } : {}),
-        places: (item.near_passage?.differences ?? []).map(({ written, source }) => ({
-          written,
-          source,
-        })),
-        passage: item.near_passage
-          ? passageRef(sources, item.source_id, item.near_passage.source_text)
-          : null,
-        meaningPassage: item.meaning_passage
-          ? passageRef(
-              sources,
-              item.source_id,
-              item.meaning_passage.source_text,
-              meaningLine(incidentSummary),
-            )
-          : null,
       })),
     };
   });
@@ -154,39 +137,24 @@ export function buildCaseOverview(
         return finding ? [{ id: finding.id, text: finding.text }] : [];
       }),
     })),
-    parties: (trace.involved_parties ?? []).map(
-      ({ name, role, claim_ids, support, projection_grounding }) => ({
-        name,
-        role: role ?? null,
-        ...backing(claim_ids),
-        supportNote: projectionNote(support, projection_grounding, incidentSummary),
-      }),
-    ),
-    timeline: (trace.timeline ?? []).map(
-      ({ time, event, claim_ids, support, projection_grounding }) => ({
-        time: time ?? null,
-        event,
-        ...backing(claim_ids),
-        supportNote: projectionNote(support, projection_grounding, incidentSummary),
-      }),
-    ),
-    impacts: (trace.impacts ?? []).map(
-      ({ description, claim_ids, support, projection_grounding }) => ({
-        description,
-        ...backing(claim_ids),
-        supportNote: projectionNote(support, projection_grounding, incidentSummary),
-      }),
-    ),
+    parties: (trace.involved_parties ?? []).map(({ name, role, claim_ids, support }) => ({
+      name,
+      role: role ?? null,
+      ...backing(claim_ids),
+      supportNote: supportNote(support, incidentSummary),
+    })),
+    timeline: (trace.timeline ?? []).map(({ time, event, claim_ids, support }) => ({
+      time: time ?? null,
+      event,
+      ...backing(claim_ids),
+      supportNote: supportNote(support, incidentSummary),
+    })),
+    impacts: (trace.impacts ?? []).map(({ description, claim_ids, support }) => ({
+      description,
+      ...backing(claim_ids),
+      supportNote: supportNote(support, incidentSummary),
+    })),
   };
-}
-
-const MEANING_LINES = {
-  thai: "ข้อความในต้นฉบับที่อาจเกี่ยวข้อง (หาจากความหมาย ยังไม่ยืนยัน)",
-  english: "A passage in the source that may be related (found by meaning, not confirmed)",
-};
-
-function meaningLine(writtenText: string): string {
-  return hasThai(writtenText) ? MEANING_LINES.thai : MEANING_LINES.english;
 }
 
 export function findingNumbers(

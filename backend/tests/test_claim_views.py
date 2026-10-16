@@ -47,10 +47,6 @@ async def test_batch_extracts_three_views_from_claims_only(monkeypatch):
     assert [row.name for row in result.parties] == ["Alice", "Company A"]
     assert result.timeline[0].time == "12 May 2026"
     assert result.impacts[0].claim_ids == ["A-02"]
-    assert all(
-        not row.field_spans and row.projection_grounding is None
-        for row in [*result.parties, *result.timeline, *result.impacts]
-    )
     assert result.extraction.method == "llm"
     assert result.extraction.status == "completed"
 
@@ -217,5 +213,4 @@ async def test_resolvable_claim_links_do_not_create_a_semantic_role_verdict(monk
         [claim("John sent an email.")], config=AnalysisPipelineConfig()
     )
     assert result.parties[0].support == "bound"
-    assert result.parties[0].projection_grounding is None
-    assert result.parties[0].field_spans == {}
+    assert set(result.parties[0].model_dump()) == {"name", "role", "claim_ids", "support"}

@@ -5,8 +5,6 @@ from collections.abc import Mapping
 MAX_SUPPORTED_DOCUMENT_PAGES = 500
 MAX_PAGE_SPANS_PER_QUOTE = 8
 MAX_QUOTE_CHARS = 2_000
-MAX_POINTER_PLACES = 3
-MAX_TOLERATED_DIFFERENCES = 8
 
 
 def find_document_locator(
@@ -83,10 +81,8 @@ def quote_occurrences(content: str, quote: str) -> list[int]:
 
 __all__ = [
     "MAX_PAGE_SPANS_PER_QUOTE",
-    "MAX_POINTER_PLACES",
     "MAX_QUOTE_CHARS",
     "MAX_SUPPORTED_DOCUMENT_PAGES",
-    "MAX_TOLERATED_DIFFERENCES",
     "find_document_locator",
     "quote_occurrences",
     "validate_page_spans",
