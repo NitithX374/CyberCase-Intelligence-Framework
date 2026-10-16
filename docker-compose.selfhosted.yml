@@ -17,6 +17,8 @@
 #
 # with SELFHOSTED_LLM_URL=http://llm:8000, SELFHOSTED_OCR_URL=http://ocr:8000 and
 # LOCAL_MODEL_CACHE set to a folder with about 60 GB free. See deploy/selfhosted/README.md.
+# This profile has not been run yet. Its vLLM flags match deploy/selfhosted/modal_app.py,
+# apart from each server's share of the GPU; change both together.
 # ──────────────────────────────────────────────────────────────────────────────
 
 services:
@@ -65,6 +67,8 @@ services:
       - google/gemma-4-26b-a4b-it
       - --max-model-len
       - "131072"
+      - --max-num-seqs
+      - "16"
       - --gpu-memory-utilization
       - ${LOCAL_LLM_GPU_SHARE:-0.80}
       - --reasoning-parser
@@ -98,6 +102,8 @@ services:
       - typhoon-ocr
       - --max-model-len
       - "49152"
+      - --max-num-seqs
+      - "8"
       - --gpu-memory-utilization
       - ${LOCAL_OCR_GPU_SHARE:-0.10}
       - --limit-mm-per-prompt
