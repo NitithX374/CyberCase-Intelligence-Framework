@@ -214,6 +214,25 @@ reflect that load, not a single analysis. Ten articles cannot show a quality dif
 show that on this server the grammar did not bring back the whitespace runaway the hosted
 providers had. The run used $0.81 of credits.
 
+### The whole system on these servers
+
+One fictional case went through the app's own API, with both servers asleep at the start: a
+phishing email that led to ransomware, and a one-page PDF. The backend ran this branch's code with
+the override.
+
+| Step | Result |
+|---|---|
+| Upload the PDF | 162 s, waiting through the OCR server's cold start; the text was read correctly |
+| Analysis | the `warmup` step took 353 s while the A100 started, then assess took 20 s and asked one question (how much was lost) |
+| Answer the question with "unknown" | the analysis finished in 170 s: 14 claims, views completed, the server recorded as `vllm` |
+| MITRE gate | RETRIEVE, on the case's technical sentences |
+| RAG service | failed before any model call: the Neo4j Aura host no longer resolves (`DNS name does not exist`), so retrieval fails on OpenRouter too, and the RAG service has not called these servers yet |
+| Chat question | answered in 21 s |
+| Report | generated |
+
+The run took 12 minutes, the two cold starts included. An earlier attempt failed at the upload
+because the L4 took 6.5 minutes to start; OCR now waits like the LLM does.
+
 `modal container stop` is not a reliable way to stop paying: within the scaledown window the
 autoscaler replaced the stopped container with a new one. `modal app stop` ends it; deploy again
 to bring it back.
