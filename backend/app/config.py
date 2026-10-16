@@ -104,6 +104,7 @@ class DocumentIngestionConfig(BaseModel):
     document_recognition_timeout_seconds: float = Field(default=90.0, gt=0)
     document_recognition_max_retries: int = Field(default=3, ge=1, le=10)
     document_recognition_retry_delay_seconds: float = Field(default=2.0, ge=0.5, le=30.0)
+    document_recognition_warmup_seconds: int = Field(default=0, ge=0)
     typhoon_api_key: str = ""
     typhoon_ocr_base_url: str = "https://api.opentyphoon.ai/v1"
     typhoon_ocr_model: str = "typhoon-ocr"

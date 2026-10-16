@@ -111,15 +111,16 @@ Modal stops workloads that would cost more than the spend limit (modal.com/docs/
    docker compose -f docker-compose.yml -f docker-compose.selfhosted.yml up -d backend rag-service
    ```
 
-A server with no container answers HTTP 503 while one starts, which took about 4.5 minutes. With
-the override the backend waits for it:
+A server with no container answers HTTP 503 while one starts. That took 4.5 minutes, and once 6.5
+minutes when Modal took longer to find an L4. With the override the backend waits for it:
 
 - Before an analysis it checks the server's `/health`, and while the server is starting the
   progress list shows "Starting the model server" with its time.
 - Every model call counts a 503 or a refused connection as a server that is starting, and waits
-  for up to `CASE_ANALYSIS_WARMUP_SECONDS` (420 in the override). A chat question asked while the
+  for up to `CASE_ANALYSIS_WARMUP_SECONDS` (900 in the override). A chat question asked while the
   server sleeps waits the same way, with only "Answering…" showing.
-- OCR waits through its retries: 6 attempts, 10 s apart and doubling, about 5 minutes.
+- OCR does the same for up to `DOCUMENT_RECOGNITION_WARMUP_SECONDS` (600 in the override), which
+  keeps an upload under the browser's 15 minute upload limit.
 
 To skip the wait during a demo, keep one container running and put it back afterwards. A new
 deploy also puts it back.

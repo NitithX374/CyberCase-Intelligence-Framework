@@ -9,7 +9,7 @@
 # SELFHOSTED_TOKEN is sent as the bearer token to both: a Modal proxy token
 # (wk-....ws-....) for the Modal servers, or any string for the local ones.
 # A server that is asleep takes minutes to start; the backend waits for it up to
-# CASE_ANALYSIS_WARMUP_SECONDS, and OCR through its retries.
+# CASE_ANALYSIS_WARMUP_SECONDS, and OCR up to DOCUMENT_RECOGNITION_WARMUP_SECONDS.
 #
 # The local servers need an NVIDIA GPU with about 80 GB of memory:
 #
@@ -23,10 +23,9 @@ services:
   backend:
     environment:
       CASE_ANALYSIS_SERVER: vllm
-      CASE_ANALYSIS_WARMUP_SECONDS: ${CASE_ANALYSIS_WARMUP_SECONDS:-420}
+      CASE_ANALYSIS_WARMUP_SECONDS: ${CASE_ANALYSIS_WARMUP_SECONDS:-900}
       CASE_ANALYSIS_PROVIDERS: ""
-      DOCUMENT_RECOGNITION_MAX_RETRIES: ${DOCUMENT_RECOGNITION_MAX_RETRIES:-6}
-      DOCUMENT_RECOGNITION_RETRY_DELAY_SECONDS: ${DOCUMENT_RECOGNITION_RETRY_DELAY_SECONDS:-10}
+      DOCUMENT_RECOGNITION_WARMUP_SECONDS: ${DOCUMENT_RECOGNITION_WARMUP_SECONDS:-600}
       OPENROUTER_MESSAGES_URL: ${SELFHOSTED_LLM_URL:?SELFHOSTED_LLM_URL is required}/v1/messages
       OPENROUTER_CYBERCASE: ${SELFHOSTED_TOKEN:?SELFHOSTED_TOKEN is required}
       TYPHOON_OCR_BASE_URL: ${SELFHOSTED_OCR_URL:?SELFHOSTED_OCR_URL is required}/v1

@@ -140,6 +140,71 @@ async def test_transient_http_exhaustion_preserves_provider_error_and_cause(stat
     assert delays == [2, 4]
 
 
+def warming_recognizer(client: httpx.AsyncClient) -> TyphoonDocumentRecognizer:
+    return TyphoonDocumentRecognizer(
+        TyphoonRecognizerConfig(
+            api_key="test-key",
+            base_url="https://ocr.test/v1",
+            model="typhoon-ocr",
+            timeout_seconds=10,
+            target_image_dimension=1800,
+            max_retries=3,
+            retry_delay_seconds=2,
+            warmup_seconds=600,
+        ),
+        client=client,
+    )
+
+
+async def test_a_server_that_is_starting_is_waited_for_without_spending_retries(delays):
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        if len(calls) == 2:
+            raise httpx.ConnectError("connection refused", request=request)
+        return httpx.Response(503 if len(calls) < 5 else 200, json={"text": "ต้นฉบับ"})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        result = await warming_recognizer(client).post([])
+
+    assert result == {"text": "ต้นฉบับ"}
+    assert len(calls) == 5
+    assert delays == [5.0] * 4
+
+
+async def test_the_wait_for_a_starting_server_ends_at_its_limit(monkeypatch, delays):
+    clock = iter(range(0, 10_000, 400))
+    monkeypatch.setattr("app.sources.ingestion.recognition.time.monotonic", lambda: next(clock))
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        return httpx.Response(503)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        with pytest.raises(RecognitionProviderError, match="returned HTTP 503"):
+            await warming_recognizer(client).post([])
+
+    assert delays == [5.0, 2, 4]
+    assert len(calls) == 4
+
+
+async def test_only_a_503_or_a_refused_connection_counts_as_starting(delays):
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        return httpx.Response(502)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        with pytest.raises(RecognitionProviderError, match="returned HTTP 502"):
+            await warming_recognizer(client).post([])
+
+    assert len(calls) == 3
+    assert delays == [2, 4]
+
+
 @pytest.mark.parametrize("status", [400, 401, 403, 404])
 async def test_terminal_http_failure_is_not_retried(status, delays):
     calls = []

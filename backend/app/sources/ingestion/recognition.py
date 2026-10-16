@@ -2,6 +2,7 @@ import asyncio
 import logging
 import re
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -19,6 +20,8 @@ from app.sources.ingestion.contracts import (
 logger = logging.getLogger(__name__)
 
 TRANSIENT_STATUSES = (408, 429, 500, 502, 503, 504)
+SERVER_STARTING_STATUS = 503
+WARMUP_RETRY_DELAY_SECONDS = 5.0
 
 
 @dataclass(frozen=True)
@@ -53,6 +56,7 @@ class TyphoonRecognizerConfig:
     target_image_dimension: int
     max_retries: int = 3
     retry_delay_seconds: float = 2.0
+    warmup_seconds: float = 0.0
 
 
 def prepare_messages(image_bytes: bytes, target_image_dimension: int):
@@ -151,12 +155,24 @@ class TyphoonDocumentRecognizer:
         client = self._get_client()
 
         max_attempts = max(1, self._config.max_retries)
-        for attempt in range(1, max_attempts + 1):
+        warm_until = time.monotonic() + self._config.warmup_seconds
+        waiting = False
+        attempt = 1
+        while True:
             try:
                 response = await client.post(endpoint, headers=headers, json=payload)
                 response.raise_for_status()
                 return response.json()
             except (httpx.RequestError, httpx.HTTPStatusError, ValueError) as error:
+                if server_starting(error) and time.monotonic() < warm_until:
+                    if not waiting:
+                        logger.info(
+                            "Typhoon OCR server is starting; waiting up to %d s",
+                            self._config.warmup_seconds,
+                        )
+                        waiting = True
+                    await asyncio.sleep(WARMUP_RETRY_DELAY_SECONDS)
+                    continue
                 failure, retry_reason, retryable = recognition_failure(error, max_attempts)
                 if not retryable or attempt == max_attempts:
                     raise failure from error
@@ -169,7 +185,16 @@ class TyphoonDocumentRecognizer:
                     delay,
                 )
                 await asyncio.sleep(delay)
-        raise RuntimeError("Typhoon OCR retry loop ended without a result or failure")
+                attempt += 1
+
+
+def server_starting(error: Exception) -> bool:
+    if isinstance(error, httpx.ConnectError):
+        return True
+    return (
+        isinstance(error, httpx.HTTPStatusError)
+        and error.response.status_code == SERVER_STARTING_STATUS
+    )
 
 
 def recognition_failure(error: Exception, max_attempts: int) -> tuple[Exception, str, bool]:
