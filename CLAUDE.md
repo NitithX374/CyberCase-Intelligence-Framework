@@ -237,8 +237,11 @@ trace/                  what the analysis, chat and reports share
   claim_validation.py   structural blockers then B1-LR; saved per-Claim verdict/features/selection
   nli_model.py          pinned mDeBERTa full E/N/C vector; longest-first truncation512,
                         raw token count/truncation recorded; unavailable model leaves Claims unassessed
-  sentences.py          the sentence around a quotation: PyThaiNLP crfcut, line
-                        by line; the encoder gate splits with it too
+  sentences.py          the sentence splitter, line by line: SaT at a pinned
+                        revision, or PyThaiNLP crfcut when SaT cannot be
+                        loaded; Source units, the sentence around a quotation
+                        and the encoder gate use it, and segmenter_identity
+                        names the one in use
   bind.py               stable orchestration: resolve claim source references
                         before Judgement; check final references and
                         derive summary units afterwards
@@ -437,7 +440,7 @@ all. `MITRE_GATE_MODE` picks between three gates, which live together in
     installed for the active legacy NLI recovery path.
   - `tests/conftest.py` keeps it off whatever the local `.env` says.
 
-The `encoder` gate splits its input with PyThaiNLP `crfcut` (`trace/sentences.py`, which also cuts the sentence shown around a quotation);
+The `encoder` gate splits its input with the splitter in `trace/sentences.py` (SaT, or PyThaiNLP `crfcut` when SaT cannot be loaded), which also cuts the sentence shown around a quotation;
 every sentence is an exact substring of its source, so the encoder's `trigger_text`
 is grounded by construction. The `llm` gate does not split sentences: it reads each
 source cut to its share of the budget, and the `trigger_text` it returns is checked
@@ -452,7 +455,7 @@ question and answer. `MITRE_GATE_MODEL_PATH` points at the encoder's weights;
 
 ### Source units and canonical claims (backend)
 
-`sources/evidence.py` partitions every source at analysis time, reusing sentence spans and preserving all separators. Each frozen `EvidenceUnit(unit_id, source_id, start, end, text)` satisfies `text == source.text[start:end]`; ordered units reconstruct the source exactly. Canonical IDs have the form `source_id:U001-<16 hex characters>`, derived from the segmentation version and full source text. Reading receives all native sources and answered QA text together using local IDs such as `U001`, with unchanged Source identity and document/quality metadata. `analysis/reading_sources.py` captures revisions before Reading and expands its selections to canonical IDs before binding; offsets and hashes are omitted from the compact model payload. `trace/evidence_binding.py` checks source ownership, existence, syntax, stale hashes and duplicates before reproducing original text. Stored traces keep canonical IDs. On the direct path, citation `exact_quote` is backend-produced text with offsets, document identity and page locator when available. New analyses accept source-unit IDs only; historical stored quote/pointer fields remain readable.
+`sources/evidence.py` partitions every source at analysis time, reusing sentence spans and preserving all separators. Each frozen `EvidenceUnit(unit_id, source_id, start, end, text)` satisfies `text == source.text[start:end]`; ordered units reconstruct the source exactly. Canonical IDs have the form `source_id:U001-<16 hex characters>`. The hex part hashes the segmentation version (`evidence_units_v4`), the identity of the segmenter in use (`segmenter_identity`: the SaT model with its pinned revision, threshold and wtpsplit version, or the PyThaiNLP version for the crfcut fallback) and the full source text, so a segmenter change makes every earlier ID resolve to `stale_id` instead of naming other text. The splitter is chosen once per process: SaT, or crfcut for every source when SaT cannot be loaded. A SaT error on one line is raised; that line is never split by crfcut instead. Reading receives all native sources and answered QA text together using local IDs such as `U001`, with unchanged Source identity and document/quality metadata. `analysis/reading_sources.py` captures revisions before Reading and expands its selections to canonical IDs before binding; offsets and hashes are omitted from the compact model payload. `trace/evidence_binding.py` checks source ownership, existence, syntax, stale hashes and duplicates before reproducing original text. Stored traces keep canonical IDs. On the direct path, citation `exact_quote` is backend-produced text with offsets, document identity and page locator when available. New analyses accept source-unit IDs only; historical stored quote/pointer fields remain readable.
 
 The dedicated Reader contract contains `version` and `claims` only. Each claim contains its ID, type, text, epistemic status and supporting/contradicting unit citations. The backend derives source-ID lists and citation locations; the Reader cannot generate copied quotations, reasoning summaries, metadata or separate parties/timeline/impacts. `reported` covers attributed or qualified source assertions; `unknown` describes uncertainty explicitly stated in a source. Higher-level inference belongs to Judgement. Removing duplicated structured facts also removes projection-specific NLI verification. Historical views and saved verdicts remain readable for existing records but are never input authority for Judgement or chat. `support=bound` means linked claims have resolved supporting citations, not semantic or factual confirmation. The single-call `CaseProviderAnalysis` contract remains solely for the existing experimental baseline, separate from the production Reader.
 
