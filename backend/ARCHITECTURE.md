@@ -296,8 +296,10 @@ analysis too when there is one. The model returns units, each with a basis
 rests on and exact quotes. `chat/compose.py` builds the request and invokes the
 model; `chat/answer_contract.py` defines its reply. `chat/grounding.py` keeps only
 claim ids of that analysis, cites each claim with the citations the analysis
-stored without binding them again, verifies the model's own quotes against the
-original Source text, and derives their locations. `chat/answer.py` stores the units on the message;
+stored without binding them again, leaves out a stored citation whose source is
+gone from the case or no longer holds the quote at its offsets, verifies the
+model's own quotes against the original Source text, and derives their
+locations. `chat/answer.py` stores the units on the message;
 a unit whose citation fails keeps its text
 without the citation. The log line `Chat answer grounding` counts cited and
 uncited case facts per answer.

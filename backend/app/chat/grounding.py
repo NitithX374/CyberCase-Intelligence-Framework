@@ -63,9 +63,13 @@ def answer_from(
     followups: Sequence[CaseFollowupExchange],
     language: ResponseLanguage,
 ) -> CaseAnalysisOutput:
-    claims = {claim.claim_id: claim for claim in trace.claims} if trace is not None else {}
     registry: dict[str, CaseSourceItem] = {source.source_id: source for source in sources.sources}
     registry.update({item.source_id: item for item in followup_registry_items(followups)})
+    claims = (
+        {claim.claim_id: still_held(claim, registry) for claim in trace.claims}
+        if trace is not None
+        else {}
+    )
     drafts = []
     for item in reply.units:
         draft = drafted_unit(item, claims, registry)
@@ -93,6 +97,30 @@ def answer_from(
     return CaseAnalysisOutput(
         answer=answer, trace=answer_trace, units=units, suggestion=reply.suggestion
     )
+
+
+def still_held(
+    claim: CaseAnalysisClaim, registry: Mapping[str, CaseSourceItem]
+) -> CaseAnalysisClaim:
+    return claim.model_copy(
+        update={
+            "supporting_citations": [
+                citation for citation in claim.supporting_citations if holds(citation, registry)
+            ],
+            "contradicting_citations": [
+                citation for citation in claim.contradicting_citations if holds(citation, registry)
+            ],
+        }
+    )
+
+
+def holds(citation: CaseSourceCitation, registry: Mapping[str, CaseSourceItem]) -> bool:
+    source = registry.get(citation.source_id)
+    if source is None or not citation.exact_quote:
+        return False
+    if citation.start is None or citation.end is None:
+        return citation.exact_quote in source.text
+    return source.text[citation.start : citation.end] == citation.exact_quote
 
 
 def drafted_unit(
