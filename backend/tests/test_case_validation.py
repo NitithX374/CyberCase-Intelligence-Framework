@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -6,7 +7,12 @@ import app.models  # noqa: F401
 from app.models.analysis_result import CaseAnalysisResult
 from app.models.case import Case
 from app.models.source import CaseSource
-from app.sources.bundle import CaseSourceBundle, CaseSourceItem, case_source_bundle_for_analysis
+from app.sources.bundle import (
+    CaseSourceBundle,
+    CaseSourceItem,
+    case_source_bundle_for_analysis,
+    case_source_bundle_from_case,
+)
 from app.sources.evidence import evidence_units
 from app.sources.ingestion.contracts import DocumentPage, ExtractionMethod, IngestedDocument
 from app.sources.ingestion.provenance import bind_exact_page_spans
@@ -378,3 +384,26 @@ def test_a_recorded_source_that_no_longer_exists_is_an_error():
         case_source_bundle_for_analysis(
             case, CaseAnalysisResult(source_revision=1), ["00000000-0000-0000-0000-00000000000d"]
         )
+
+
+def test_a_report_still_reads_a_source_its_analysis_read_after_it_was_turned_off():
+    read = narrative("00000000-0000-0000-0000-000000000001")
+    read.deactivated_at = datetime(2026, 10, 17, tzinfo=UTC)
+    case = Case(source_revision=4, sources=[read])
+
+    bundle = case_source_bundle_for_analysis(
+        case, CaseAnalysisResult(source_revision=3), [str(read.id)]
+    )
+
+    assert [source.source_id for source in bundle.sources] == [str(read.id)]
+
+
+def test_the_case_reads_only_the_sources_that_are_on():
+    on = narrative("00000000-0000-0000-0000-000000000001")
+    off = narrative("00000000-0000-0000-0000-000000000002")
+    off.deactivated_at = datetime(2026, 10, 17, tzinfo=UTC)
+    case = Case(source_revision=2, sources=[on, off])
+
+    bundle = case_source_bundle_from_case(case)
+
+    assert [source.source_id for source in bundle.sources] == [str(on.id)]

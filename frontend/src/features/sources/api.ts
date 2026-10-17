@@ -1,5 +1,10 @@
 import { caseUrl, getBlob, http, UPLOAD_REQUEST_TIMEOUT_MS } from "@/lib/api/http";
-import type { CaseDocumentRead, CaseSourceCreate, CaseSourceRead } from "@/lib/api/types";
+import type {
+  CaseDocumentRead,
+  CaseSourceCreate,
+  CaseSourceRead,
+  CaseSourceUpdate,
+} from "@/lib/api/types";
 
 export async function uploadCaseDocument(caseId: string, file: File): Promise<CaseDocumentRead> {
   const body = new FormData();
@@ -31,6 +36,14 @@ export async function addCaseSource(
   request: CaseSourceCreate,
 ): Promise<CaseSourceRead> {
   return (await http.post<CaseSourceRead>(caseUrl(caseId, "sources"), request)).data;
+}
+
+export async function updateCaseSource(
+  caseId: string,
+  sourceId: string,
+  request: CaseSourceUpdate,
+): Promise<CaseSourceRead> {
+  return (await http.patch<CaseSourceRead>(caseUrl(caseId, "sources", sourceId), request)).data;
 }
 
 export async function retryCaseDocumentExtraction(

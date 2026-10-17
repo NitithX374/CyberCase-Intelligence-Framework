@@ -55,10 +55,18 @@ class CaseSourceRead(BaseModel):
     provenance_json: dict[str, object] = Field(default_factory=dict)
     source_metadata_json: dict[str, object] = Field(default_factory=dict)
     created_at: datetime
+    deactivated_at: datetime | None = None
+
+
+class CaseSourceUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    active: bool
 
 
 __all__ = [
     "CaseDocumentRead",
     "CaseSourceCreate",
     "CaseSourceRead",
+    "CaseSourceUpdate",
 ]

@@ -59,6 +59,7 @@ class CaseSource(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    deactivated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     case: Mapped[Case] = relationship("Case", back_populates="sources")
     document: Mapped[CaseDocument | None] = relationship(back_populates="sources")

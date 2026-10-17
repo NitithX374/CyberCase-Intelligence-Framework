@@ -207,6 +207,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cases/{case_id}/sources/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["update_case_source_api_v1_cases__case_id__sources__source_id__patch"];
+        trace?: never;
+    };
     "/api/v1/cases/{case_id}/analysis": {
         parameters: {
             query?: never;
@@ -480,6 +496,10 @@ export interface components {
                 [key: string]: unknown;
             };
             created_at: string;
+            deactivated_at?: string | null;
+        };
+        CaseSourceUpdate: {
+            active: boolean;
         };
         CaseSummaryUnit: {
             text: string;
@@ -1109,6 +1129,40 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseSourceRead"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_case_source_api_v1_cases__case_id__sources__source_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseSourceUpdate"];
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

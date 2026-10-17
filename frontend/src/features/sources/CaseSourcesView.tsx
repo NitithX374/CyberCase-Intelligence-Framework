@@ -29,8 +29,10 @@ interface CaseSourcesViewProps {
   uploadingFilename?: string | null;
   isAddingNarrative: boolean;
   isRetryingDocument?: boolean;
+  isSwitchingSource?: boolean;
   onUploadDocument: (file: File) => void;
   onRetryDocument?: (documentId: string) => Promise<void>;
+  onSetSourceActive?: (sourceId: string, active: boolean) => Promise<void>;
   onAddNarrative: (submission: NarrativeSubmission) => Promise<boolean>;
   analysis?: SourcesAnalysis;
 }
@@ -45,8 +47,10 @@ export function CaseSourcesView({
   uploadingFilename,
   isAddingNarrative,
   isRetryingDocument,
+  isSwitchingSource,
   onUploadDocument,
   onRetryDocument,
+  onSetSourceActive,
   onAddNarrative,
   analysis,
 }: CaseSourcesViewProps) {
@@ -66,6 +70,12 @@ export function CaseSourcesView({
   };
   const openNarrative = () => setIsNarrativeOpen(true);
   const pickFile = () => fileInputRef.current?.click();
+  const switchSource = onSetSourceActive
+    ? (sourceId: string, active: boolean) => {
+        setSelectedId(selected?.id ?? null);
+        return onSetSourceActive(sourceId, active);
+      }
+    : undefined;
 
   return (
     <div
@@ -96,6 +106,9 @@ export function CaseSourcesView({
             onModeChange={setPreviewMode}
             onRetryDocument={onRetryDocument}
             isRetryingDocument={isRetryingDocument}
+            onSetSourceActive={switchSource}
+            isSwitchingSource={isSwitchingSource}
+            isAnalysing={analysis?.isRunning ?? false}
           />
         </div>
       )}

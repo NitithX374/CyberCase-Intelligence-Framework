@@ -28,6 +28,7 @@ from app.main import app
 from app.models.case import Case
 from app.models.document import CaseDocument
 from app.models.source import CaseSource
+from app.sources.bundle import WITH_SOURCES, analysable_bundle
 from app.sources.ingestion.contracts import DocumentPage, ExtractionMethod, IngestedDocument
 from app.sources.service import SourceError, SourceService, weight_in_payload
 from app.trace.trace import CaseAnalysisTrace
@@ -110,6 +111,30 @@ async def add_document(factory, case_id, user_id, text: str):
         return await SourceService(db).add_document(
             case_id=case_id, user_id=user_id, ingested=document(text), content=b"bytes"
         )
+
+
+async def readings(factory, case_id) -> list[tuple[str, bool]]:
+    async with factory() as db:
+        rows = await db.scalars(
+            select(CaseSource).where(CaseSource.case_id == case_id).order_by(CaseSource.created_at)
+        )
+        return [(row.exact_text, row.deactivated_at is None) for row in rows]
+
+
+async def source_ids(factory, case_id) -> list[str]:
+    async with factory() as db:
+        rows = await db.scalars(
+            select(CaseSource.id)
+            .where(CaseSource.case_id == case_id)
+            .order_by(CaseSource.created_at)
+        )
+        return [str(row) for row in rows]
+
+
+async def read_bundle(factory, case_id):
+    async with factory() as db:
+        case = await db.scalar(select(Case).options(*WITH_SOURCES).where(Case.id == case_id))
+        return analysable_bundle(case)
 
 
 @asynccontextmanager
@@ -347,24 +372,34 @@ async def test_a_streamed_second_analysis_gets_the_refusal_as_an_error_event(mon
         assert "analysis_in_progress" in second.text
 
 
-async def test_a_document_is_read_again_and_its_source_takes_the_new_text(monkeypatch):
+async def test_a_document_read_again_is_a_new_source_and_its_earlier_reading_is_off(monkeypatch):
     reader = ReadAgain("Text read again from the page images.")
     monkeypatch.setattr(source_routes, "build_document_ingestion_service", lambda: reader)
     async with isolated_database() as factory:
         case_id, user_id, _ = await seeded_case(factory, trace=None, with_source=False)
         stored_document = await add_document(factory, case_id, user_id, SENTENCE)
+        [earlier] = await source_ids(factory, case_id)
         async with signed_in(factory, user_id) as client:
             reply = await client.post(f"/cases/{case_id}/documents/{stored_document.id}/reingest")
 
         assert reply.status_code == 200
         body = reply.json()
+        assert body["id"] != earlier
+        assert body["document_id"] == str(stored_document.id)
         assert body["exact_text"] == "Text read again from the page images."
+        assert body["deactivated_at"] is None
         assert body["filename"] == "case.pdf"
         assert body["mime_type"] == "application/pdf"
         assert body["provenance_json"]["extraction_method"] == "document_recognition"
         assert reader.read == [(b"bytes", "case.pdf")]
         assert reader.closed
-        assert await stored(factory, case_id) == (1, 1, 3)
+        assert await stored(factory, case_id) == (2, 1, 3)
+        assert await readings(factory, case_id) == [
+            (SENTENCE, False),
+            ("Text read again from the page images.", True),
+        ]
+        bundle = await read_bundle(factory, case_id)
+        assert [source.source_id for source in bundle.sources] == [body["id"]]
 
 
 async def test_reading_a_document_again_does_not_count_its_old_text_as_well(monkeypatch):
@@ -378,7 +413,7 @@ async def test_reading_a_document_again_does_not_count_its_old_text_as_well(monk
             reply = await client.post(f"/cases/{case_id}/documents/{stored_document.id}/reingest")
 
         assert reply.status_code == 200
-        assert await stored(factory, case_id) == (1, 1, 3)
+        assert await stored(factory, case_id) == (2, 1, 3)
 
 
 async def test_a_document_that_is_not_in_the_case_is_not_read_again(monkeypatch):
@@ -398,3 +433,141 @@ async def test_a_document_that_is_not_in_the_case_is_not_read_again(monkeypatch)
         assert reply.json()["detail"]["code"] == "document_not_found"
         assert built == []
         assert await stored(factory, case_id) == (0, 0, 1)
+
+
+async def test_a_turned_off_source_is_left_out_of_the_analysis_until_it_is_turned_on():
+    async with isolated_database() as factory:
+        case_id, user_id, _ = await seeded_case(factory, trace=None, with_source=False)
+        first = await add_text(factory, case_id, user_id, SENTENCE)
+        second = await add_text(factory, case_id, user_id, "The VPN logs were kept.")
+        async with signed_in(factory, user_id) as client:
+            off = await client.patch(f"/cases/{case_id}/sources/{first.id}", json={"active": False})
+            bundle_while_off = await read_bundle(factory, case_id)
+            listed = await client.get(f"/cases/{case_id}/sources")
+            on = await client.patch(f"/cases/{case_id}/sources/{first.id}", json={"active": True})
+            bundle_after = await read_bundle(factory, case_id)
+
+        assert off.status_code == 200
+        assert off.json()["deactivated_at"] is not None
+        assert [source.source_id for source in bundle_while_off.sources] == [str(second.id)]
+        assert [row["deactivated_at"] is None for row in listed.json()] == [False, True]
+        assert on.status_code == 200
+        assert on.json()["deactivated_at"] is None
+        assert [source.source_id for source in bundle_after.sources] == [
+            str(first.id),
+            str(second.id),
+        ]
+        assert await stored(factory, case_id) == (2, 0, 5)
+
+
+async def test_turning_a_source_off_twice_changes_the_case_once():
+    async with isolated_database() as factory:
+        case_id, user_id, _ = await seeded_case(factory, trace=None, with_source=False)
+        source = await add_text(factory, case_id, user_id, SENTENCE)
+        async with signed_in(factory, user_id) as client:
+            for _ in range(2):
+                reply = await client.patch(
+                    f"/cases/{case_id}/sources/{source.id}", json={"active": False}
+                )
+                assert reply.status_code == 200
+
+        assert await stored(factory, case_id) == (1, 0, 3)
+
+
+async def test_a_case_with_every_source_turned_off_has_nothing_to_analyse():
+    async with isolated_database() as factory:
+        case_id, user_id, _ = await seeded_case(factory, trace=None, with_source=False)
+        source = await add_text(factory, case_id, user_id, SENTENCE)
+        async with signed_in(factory, user_id) as client:
+            await client.patch(f"/cases/{case_id}/sources/{source.id}", json={"active": False})
+
+        with pytest.raises(SourceError) as refused:
+            await read_bundle(factory, case_id)
+
+        assert refused.value.code == "case_sources_missing"
+
+
+async def test_only_the_sources_that_are_on_count_against_the_budget(monkeypatch):
+    text = (SENTENCE * 5).strip()
+    monkeypatch.setattr(source_service, "SOURCE_TOKEN_BUDGET", weight_in_payload(text))
+    async with isolated_database() as factory:
+        case_id, user_id, _ = await seeded_case(factory, trace=None, with_source=False)
+        first = await add_text(factory, case_id, user_id, text)
+        async with signed_in(factory, user_id) as client:
+            await client.patch(f"/cases/{case_id}/sources/{first.id}", json={"active": False})
+            added = await client.post(f"/cases/{case_id}/sources", json={"exact_text": text})
+            back_on = await client.patch(
+                f"/cases/{case_id}/sources/{first.id}", json={"active": True}
+            )
+
+        assert added.status_code == 201
+        assert back_on.status_code == 413
+        assert back_on.json()["detail"]["code"] == "source_too_large"
+        assert await readings(factory, case_id) == [(text, False), (text, True)]
+
+
+async def test_a_source_is_not_turned_on_or_off_while_the_case_is_analysed():
+    async with isolated_database() as factory:
+        case_id, user_id, _ = await seeded_case(factory, trace=None, with_source=False)
+        source = await add_text(factory, case_id, user_id, SENTENCE)
+        async with signed_in(factory, user_id) as client:
+            with analysing(case_id):
+                busy = await client.patch(
+                    f"/cases/{case_id}/sources/{source.id}", json={"active": False}
+                )
+
+        assert busy.status_code == 409
+        assert busy.json()["detail"]["code"] == "analysis_in_progress"
+        assert await readings(factory, case_id) == [(SENTENCE.strip(), True)]
+
+
+async def test_a_source_that_is_not_in_the_case_is_not_found():
+    async with isolated_database() as factory:
+        case_id, user_id, _ = await seeded_case(factory, trace=None, with_source=False)
+        async with signed_in(factory, user_id) as client:
+            reply = await client.patch(
+                f"/cases/{case_id}/sources/{uuid4()}", json={"active": False}
+            )
+
+        assert reply.status_code == 404
+        assert reply.json()["detail"]["code"] == "source_not_found"
+
+
+async def test_an_earlier_reading_of_a_document_cannot_be_turned_on(monkeypatch):
+    monkeypatch.setattr(
+        source_routes, "build_document_ingestion_service", lambda: ReadAgain("Read again.")
+    )
+    async with isolated_database() as factory:
+        case_id, user_id, _ = await seeded_case(factory, trace=None, with_source=False)
+        stored_document = await add_document(factory, case_id, user_id, SENTENCE)
+        [earlier] = await source_ids(factory, case_id)
+        async with signed_in(factory, user_id) as client:
+            await client.post(f"/cases/{case_id}/documents/{stored_document.id}/reingest")
+            refused = await client.patch(
+                f"/cases/{case_id}/sources/{earlier}", json={"active": True}
+            )
+
+        assert refused.status_code == 409
+        assert refused.json()["detail"]["code"] == "source_replaced"
+        assert await readings(factory, case_id) == [(SENTENCE, False), ("Read again.", True)]
+
+
+async def test_a_turned_off_document_is_not_read_again(monkeypatch):
+    built: list[ReadAgain] = []
+
+    def build() -> ReadAgain:
+        built.append(ReadAgain(SENTENCE))
+        return built[-1]
+
+    monkeypatch.setattr(source_routes, "build_document_ingestion_service", build)
+    async with isolated_database() as factory:
+        case_id, user_id, _ = await seeded_case(factory, trace=None, with_source=False)
+        stored_document = await add_document(factory, case_id, user_id, SENTENCE)
+        [source_id] = await source_ids(factory, case_id)
+        async with signed_in(factory, user_id) as client:
+            await client.patch(f"/cases/{case_id}/sources/{source_id}", json={"active": False})
+            refused = await client.post(f"/cases/{case_id}/documents/{stored_document.id}/reingest")
+
+        assert refused.status_code == 409
+        assert refused.json()["detail"]["code"] == "source_inactive"
+        assert built == []

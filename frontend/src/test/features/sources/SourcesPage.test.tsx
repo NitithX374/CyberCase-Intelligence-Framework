@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { refusal } from "@/test/httpErrors";
@@ -27,6 +27,7 @@ const state = vi.hoisted(() => ({
   upload: vi.fn(),
   push: vi.fn(),
   runAnalysis: vi.fn(),
+  update: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -51,12 +52,17 @@ vi.mock("@/features/analysis/useRunCaseAnalysis", () => ({
 vi.mock("@/features/chat/useCaseChat", () => ({
   useCaseChatQuery: () => ({ data: { case_id: caseId, messages: [] }, isLoading: false }),
 }));
+vi.mock("@/features/sources/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/sources/api")>()),
+  updateCaseSource: state.update,
+}));
 vi.mock("@/features/sources/queries", () => ({
   useCaseSources: () =>
     state.sourcesFailed
       ? { data: undefined, isLoading: false, isLoadingError: true, refetch: state.refetchSources }
       : { data: state.sources, isLoading: false },
   useUploadCaseDocument: () => ({ isPending: false, mutateAsync: state.upload }),
+  refreshAfterSourceChange: () => Promise.resolve(),
 }));
 
 function renderPage() {
@@ -76,9 +82,34 @@ beforeEach(() => {
   state.upload.mockReset();
   state.push.mockClear();
   state.runAnalysis.mockClear();
+  state.update.mockReset();
 });
 
 describe("SourcesPage", () => {
+  it("turns a source off through the API", async () => {
+    state.sources = [narrative];
+    state.update.mockResolvedValue({ ...narrative, deactivated_at: "2026-10-17T02:00:00Z" });
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Turn off" }));
+
+    await waitFor(() =>
+      expect(state.update).toHaveBeenCalledWith(caseId, "source-1", { active: false }),
+    );
+  });
+
+  it("says in Thai when a source cannot be turned back on within the budget", async () => {
+    state.sources = [{ ...narrative, deactivated_at: "2026-10-17T02:00:00Z" }];
+    state.update.mockRejectedValue(
+      refusal(413, "source_too_large", "The case sources would exceed what the analysis can read"),
+    );
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Turn on" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.querySelector("#meaningful-error-message")).toHaveTextContent("แบ่งไฟล์");
+  });
   it("starts the analysis and opens the analysis page when Analyze is pressed", () => {
     state.sources = [narrative];
     state.freshness = "missing";

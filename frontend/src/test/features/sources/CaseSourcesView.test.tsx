@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
@@ -162,6 +162,132 @@ describe("CaseSourcesView", () => {
       screen.getByRole("heading", { level: 3, name: "Follow-up answers" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Sources 3" })).toBeInTheDocument();
+  });
+
+  it("lists each file once, by its latest reading, and the turned-off sources apart", () => {
+    const earlier = {
+      ...documentSource(document, "First reading"),
+      id: "reading-1",
+      deactivated_at: "2026-10-17T01:00:00Z",
+    };
+    const latest = {
+      ...documentSource(document, "Second reading"),
+      id: "reading-2",
+      created_at: "2026-10-17T01:00:00Z",
+    };
+    renderSources({
+      sources: [earlier, latest, caseSource({ deactivated_at: "2026-10-17T02:00:00Z" })],
+    });
+
+    const files = screen.getByRole("heading", { level: 3, name: "Files" }).parentElement!;
+    const off = screen.getByRole("heading", { level: 3, name: "Turned off" }).parentElement!;
+    expect(within(files).getAllByRole("button")).toHaveLength(1);
+    expect(within(off).getAllByRole("button")).toHaveLength(1);
+    expect(
+      screen.queryByRole("heading", { level: 3, name: "Case narrative" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(within(files).getByRole("button"));
+    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
+    expect(screen.getByText("Second reading")).toBeInTheDocument();
+    expect(screen.queryByText("First reading")).not.toBeInTheDocument();
+  });
+
+  it("turns the selected source off from its preview", () => {
+    const onSetSourceActive = vi.fn().mockResolvedValue(undefined);
+    renderSources({ sources: [caseSource()], onSetSourceActive });
+
+    expect(
+      screen.queryByText("This source is turned off. The next analysis will not read it."),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Turn off" }));
+
+    expect(onSetSourceActive).toHaveBeenCalledWith("source-1", false);
+  });
+
+  it("keeps showing the source it turned off once the sources reload", () => {
+    const first = caseSource();
+    const second = caseSource({ id: "source-2", exact_text: "The help desk logged a call." });
+    const props: React.ComponentProps<typeof CaseSourcesView> = {
+      caseId: "case-1",
+      sources: [first, second],
+      followups: [],
+      isUploading: false,
+      isAddingNarrative: false,
+      onUploadDocument: vi.fn(),
+      onAddNarrative: vi.fn().mockResolvedValue(true),
+      onSetSourceActive: vi.fn().mockResolvedValue(undefined),
+    };
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <CaseSourcesView {...props} />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Turn off" }));
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <CaseSourcesView
+          {...props}
+          sources={[{ ...first, deactivated_at: "2026-10-17T02:00:00Z" }, second]}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      screen.getByRole("heading", { level: 2, name: /Files on the shared drive/ }),
+    ).toBeVisible();
+    expect(
+      screen.getByText("This source is turned off. The next analysis will not read it."),
+    ).toBeInTheDocument();
+  });
+
+  it("says a turned-off source is left out of the next analysis and offers to turn it on", () => {
+    const onSetSourceActive = vi.fn().mockResolvedValue(undefined);
+    renderSources({
+      sources: [caseSource({ deactivated_at: "2026-10-17T02:00:00Z" })],
+      onSetSourceActive,
+    });
+
+    expect(
+      screen.getByText("This source is turned off. The next analysis will not read it."),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Turn on" }));
+
+    expect(onSetSourceActive).toHaveBeenCalledWith("source-1", true);
+  });
+
+  it("does not offer to read a turned-off file again", () => {
+    renderSources({
+      sources: [
+        {
+          ...documentSource(document, "Received statement"),
+          deactivated_at: "2026-10-17T02:00:00Z",
+        },
+      ],
+      onRetryDocument: vi.fn().mockResolvedValue(undefined),
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
+
+    expect(screen.queryByRole("button", { name: "Retry extraction" })).not.toBeInTheDocument();
+  });
+
+  it("keeps a source switched as it is while an analysis runs", () => {
+    renderSources({
+      sources: [caseSource()],
+      onSetSourceActive: vi.fn().mockResolvedValue(undefined),
+      analysis: {
+        freshness: "current",
+        isRunning: true,
+        isWaitingForFollowup: false,
+        canAnalyze: false,
+        onAnalyze: vi.fn(),
+      },
+    });
+
+    expect(screen.getByRole("button", { name: "Turn off" })).toBeDisabled();
   });
 
   it("reads a follow-up answer beside the question it answers", () => {
