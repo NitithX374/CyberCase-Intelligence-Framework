@@ -49,7 +49,10 @@ def case_source_item(source: CaseSource) -> CaseSourceItem:
 
 
 def case_source_bundle_from_case(case: Case) -> CaseSourceBundle:
-    sources = sorted(case.sources, key=lambda source: (source.created_at, str(source.id)))
+    sources = sorted(
+        (source for source in case.sources if source.deactivated_at is None),
+        key=lambda source: (source.created_at, str(source.id)),
+    )
     return CaseSourceBundle(
         revision=case.source_revision,
         sources=tuple(case_source_item(source) for source in sources),
@@ -95,7 +98,9 @@ def analysable_bundle(case: Case) -> CaseSourceBundle:
         if not source.text.strip():
             raise SourceError("source_text_empty", "A case source has no text")
     if not bundle.sources:
-        raise SourceError("case_sources_missing", "Add a case source before running an analysis")
+        raise SourceError(
+            "case_sources_missing", "Add or turn on a case source before running an analysis"
+        )
     return bundle
 
 

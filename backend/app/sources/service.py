@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from copy import deepcopy
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import status
@@ -67,7 +68,7 @@ class SourceService:
         await self.db.flush()
         return document
 
-    async def update_document_extraction(
+    async def read_document_again(
         self,
         *,
         case_id: UUID,
@@ -79,25 +80,96 @@ class SourceService:
         refuse_while_analysing(case.id)
         if not ingested.full_text.strip():
             raise SourceError("extraction_text_empty", "Document extraction text is empty")
+        current = await self.current_reading(case.id, document_id)
+        weight = await asyncio.to_thread(weight_in_payload, ingested.full_text)
+        await self.refuse_beyond_budget(case, weight, replacing=current.id)
+        current.deactivated_at = datetime.now(UTC)
+        reading = CaseSource(
+            case_id=case.id,
+            source_kind="document",
+            document=current.document,
+            exact_text=ingested.full_text,
+            provenance_json=document_provenance(ingested),
+            source_metadata_json={"received_via": "document_reingest"},
+        )
+        self.db.add(reading)
+        case.source_revision += 1
+        await self.db.flush()
+        await self.db.refresh(reading, attribute_names=["created_at", "deactivated_at"])
+        return reading
+
+    async def current_reading(self, case_id: UUID, document_id: UUID) -> CaseSource:
+        current = await self.db.scalar(
+            select(CaseSource)
+            .options(selectinload(CaseSource.document))
+            .where(CaseSource.case_id == case_id, CaseSource.document_id == document_id)
+            .order_by(CaseSource.created_at.desc())
+            .limit(1)
+        )
+        if current is None:
+            raise SourceError(
+                "source_not_found", "Case source not found", status.HTTP_404_NOT_FOUND
+            )
+        if current.deactivated_at is not None:
+            raise SourceError(
+                "source_inactive",
+                "Turn the source on before reading the document again",
+                status.HTTP_409_CONFLICT,
+            )
+        return current
+
+    async def readable_document(
+        self, case_id: UUID, document_id: UUID, user_id: UUID | None
+    ) -> CaseDocument:
+        document = await self.document_content(case_id, document_id, user_id)
+        await self.current_reading(case_id, document_id)
+        return document
+
+    async def set_source_active(
+        self, *, case_id: UUID, user_id: UUID | None, source_id: UUID, active: bool
+    ) -> CaseSource:
+        case = await owned_case(self.db, case_id, user_id, lock=True)
+        refuse_while_analysing(case.id)
         source = await self.db.scalar(
             select(CaseSource)
             .options(selectinload(CaseSource.document))
-            .where(
-                CaseSource.case_id == case.id,
-                CaseSource.document_id == document_id,
-            )
+            .where(CaseSource.case_id == case.id, CaseSource.id == source_id)
         )
         if source is None:
             raise SourceError(
                 "source_not_found", "Case source not found", status.HTTP_404_NOT_FOUND
             )
-        weight = await asyncio.to_thread(weight_in_payload, ingested.full_text)
-        await self.refuse_beyond_budget(case, weight, replacing=source.id)
-        source.exact_text = ingested.full_text
-        source.provenance_json = document_provenance(ingested)
+        if active == (source.deactivated_at is None):
+            return source
+        if active:
+            if await self.read_again_since(source):
+                raise SourceError(
+                    "source_replaced",
+                    "The document was read again, so this reading cannot be turned on",
+                    status.HTTP_409_CONFLICT,
+                )
+            weight = await asyncio.to_thread(weight_in_payload, source.exact_text)
+            await self.refuse_beyond_budget(case, weight)
+            source.deactivated_at = None
+        else:
+            source.deactivated_at = datetime.now(UTC)
         case.source_revision += 1
         await self.db.flush()
         return source
+
+    async def read_again_since(self, source: CaseSource) -> bool:
+        if source.document_id is None:
+            return False
+        later = await self.db.scalar(
+            select(CaseSource.id)
+            .where(
+                CaseSource.case_id == source.case_id,
+                CaseSource.document_id == source.document_id,
+                CaseSource.created_at > source.created_at,
+            )
+            .limit(1)
+        )
+        return later is not None
 
     async def document_content(
         self, case_id: UUID, document_id: UUID, user_id: UUID | None
@@ -147,7 +219,9 @@ class SourceService:
     async def refuse_beyond_budget(
         self, case: Case, weight: int, replacing: UUID | None = None
     ) -> None:
-        query = select(CaseSource.exact_text).where(CaseSource.case_id == case.id)
+        query = select(CaseSource.exact_text).where(
+            CaseSource.case_id == case.id, CaseSource.deactivated_at.is_(None)
+        )
         if replacing is not None:
             query = query.where(CaseSource.id != replacing)
         stored = await self.db.scalars(query)
@@ -179,7 +253,7 @@ def refuse_while_analysing(case_id: UUID) -> None:
     if analysis_running(case_id):
         raise SourceError(
             "analysis_in_progress",
-            "The case is being analysed, so a source cannot be added now",
+            "The case is being analysed, so its sources cannot change now",
             status.HTTP_409_CONFLICT,
         )
 

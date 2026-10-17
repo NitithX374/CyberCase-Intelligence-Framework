@@ -11,7 +11,12 @@ from app.auth.guard import get_current_user
 from app.database import get_db
 from app.models.user import User
 from app.sources.ingestion.service import build_document_ingestion_service, read_limited
-from app.sources.schemas import CaseDocumentRead, CaseSourceCreate, CaseSourceRead
+from app.sources.schemas import (
+    CaseDocumentRead,
+    CaseSourceCreate,
+    CaseSourceRead,
+    CaseSourceUpdate,
+)
 from app.sources.service import SourceService
 
 router = APIRouter(prefix="/cases/{case_id}", tags=["case-sources"])
@@ -41,6 +46,20 @@ async def add_case_source(
             text=request.exact_text,
             provenance_json=request.provenance_json,
             source_metadata_json=request.source_metadata_json,
+        )
+
+
+@router.patch("/sources/{source_id}", response_model=CaseSourceRead)
+async def update_case_source(
+    case_id: UUID,
+    source_id: UUID,
+    request: CaseSourceUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    async with db.begin():
+        return await SourceService(db).set_source_active(
+            case_id=case_id, user_id=user.id, source_id=source_id, active=request.active
         )
 
 
@@ -94,14 +113,14 @@ async def reingest_case_document(
     user: User = Depends(get_current_user),
 ):
     async with db.begin():
-        document = await SourceService(db).document_content(case_id, document_id, user.id)
+        document = await SourceService(db).readable_document(case_id, document_id, user.id)
     service = build_document_ingestion_service()
     try:
         ingested = await service.ingest(document.content_bytes, document.filename)
     finally:
         await service.aclose()
     async with db.begin():
-        return await SourceService(db).update_document_extraction(
+        return await SourceService(db).read_document_again(
             case_id=case_id,
             user_id=user.id,
             document_id=document_id,

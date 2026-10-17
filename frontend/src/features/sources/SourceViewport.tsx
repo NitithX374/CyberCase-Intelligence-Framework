@@ -1,7 +1,7 @@
 "use client";
 
 import { plural } from "@/lib/format";
-import { itemTitle, type RailItem } from "./SourceRail";
+import { isTurnedOff, itemTitle, type RailItem } from "./SourceRail";
 import { FileSourcePreview, TextSourcePreview, ViewportMessage } from "./SourcePreviews";
 import { documentPages, fileKind } from "./sourcePresentation";
 
@@ -20,6 +20,9 @@ interface SourceViewportProps {
   onModeChange: (mode: PreviewMode) => void;
   onRetryDocument?: (documentId: string) => Promise<void>;
   isRetryingDocument?: boolean;
+  onSetSourceActive?: (sourceId: string, active: boolean) => Promise<void>;
+  isSwitchingSource?: boolean;
+  isAnalysing?: boolean;
 }
 
 export function SourceViewport({
@@ -29,7 +32,12 @@ export function SourceViewport({
   onModeChange,
   onRetryDocument,
   isRetryingDocument = false,
+  onSetSourceActive,
+  isSwitchingSource = false,
+  isAnalysing = false,
 }: SourceViewportProps) {
+  const source = item && item.kind !== "followup_answer" ? item.source : null;
+  const turnedOff = source !== null && isTurnedOff(source);
   const subtitle = !item
     ? null
     : item.kind === "file"
@@ -51,6 +59,18 @@ export function SourceViewport({
           {subtitle && <p className="shrink-0 text-xs text-ink-muted">{subtitle}</p>}
         </div>
 
+        {source && onSetSourceActive && (
+          <button
+            type="button"
+            onClick={() => void onSetSourceActive(source.id, turnedOff)}
+            disabled={isSwitchingSource || isAnalysing}
+            title={isAnalysing ? "Wait for the analysis to finish" : undefined}
+            className="btn-secondary h-8 px-3"
+          >
+            {turnedOff ? "Turn on" : "Turn off"}
+          </button>
+        )}
+
         {item?.kind === "file" && (
           <div
             role="tablist"
@@ -66,6 +86,12 @@ export function SourceViewport({
         )}
       </header>
 
+      {turnedOff && (
+        <p className="border-b border-line px-4 py-2 text-xs text-ink-secondary sm:px-5">
+          This source is turned off. The next analysis will not read it.
+        </p>
+      )}
+
       <div className="min-h-0 flex-1 bg-canvas">
         {!item ? (
           <ViewportMessage title="Select a source to read it." />
@@ -78,7 +104,9 @@ export function SourceViewport({
             caseId={caseId}
             item={item}
             mode={mode}
-            onRetry={onRetryDocument ? () => onRetryDocument(item.documentId) : undefined}
+            onRetry={
+              onRetryDocument && !turnedOff ? () => onRetryDocument(item.documentId) : undefined
+            }
             isRetrying={isRetryingDocument}
           />
         )}

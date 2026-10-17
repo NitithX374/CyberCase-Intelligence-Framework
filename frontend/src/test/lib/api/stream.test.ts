@@ -106,7 +106,7 @@ describe("reading the progress of work the backend is still doing", () => {
 
     expect(toUserFacingError(error)).toMatchObject({
       category: "refused",
-      message: "กรุณาเพิ่มแหล่งข้อมูลของคดีก่อนเริ่มการวิเคราะห์",
+      message: "กรุณาเพิ่มหรือเปิดแหล่งข้อมูลของคดีก่อนเริ่มการวิเคราะห์",
     });
   });
 

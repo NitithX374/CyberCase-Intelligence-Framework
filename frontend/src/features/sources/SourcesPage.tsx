@@ -52,8 +52,10 @@ export function SourcesPage() {
         uploadingFilename={actions.uploadingFilename}
         isAddingNarrative={actions.isAddingNarrative}
         isRetryingDocument={actions.isRetryingDocument}
+        isSwitchingSource={actions.isSwitchingSource}
         onUploadDocument={(file) => void actions.uploadDocument(file)}
         onRetryDocument={actions.retryDocument}
+        onSetSourceActive={actions.setSourceActive}
         onAddNarrative={actions.addNarrative}
         analysis={
           caseQuery.data

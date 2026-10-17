@@ -9,8 +9,8 @@ All application routes use `/api/v1`, one `routes.py` per feature folder (`app/a
 - `/health` — service and database health;
 - `/auth/register`, `/login`, `/logout`, `/session` — cookie session;
 - `/cases`, `/cases/{case_id}` — Case lifecycle;
-- `POST /cases/{case_id}/documents`, `GET /cases/{case_id}/documents/{document_id}/content` — document upload and the original file; there is no document list, because each document is listed through its source;
-- `/cases/{case_id}/sources` — native sources used for analysis;
+- `POST /cases/{case_id}/documents`, `GET /cases/{case_id}/documents/{document_id}/content`, `POST /cases/{case_id}/documents/{document_id}/reingest` — document upload, the original file, and reading it again as a new source; there is no document list, because each document is listed through its source;
+- `/cases/{case_id}/sources`, `PATCH /cases/{case_id}/sources/{source_id}` — native sources used for analysis, and turning one off or on;
 - `/cases/{case_id}/analysis` — read the latest validated analysis or start a request-scoped analysis;
 - `/cases/{case_id}/chat`, `/chat/messages` — Case Ask/Chat and clarification answers;
 - `/cases/{case_id}/reports` — report generation, history, HTML, and PDF.
@@ -21,13 +21,15 @@ There is no run resource. An analysis and an answer happen inside the request th
 
 ## Persistence
 
-PostgreSQL stores Cases, documents, native Case sources, analysis results, Case-owned messages, optional retrieval context, and Case reports. The SQLAlchemy models in `app/models/` are the authority for the persisted shape. `alembic/versions/0001_initial_schema.py` is the one migration that builds it, and `tests/test_database_schema_parity_alembic.py` checks that the two match.
+PostgreSQL stores Cases, documents, native Case sources, analysis results, Case-owned messages, optional retrieval context, and Case reports. The SQLAlchemy models in `app/models/` are the authority for the persisted shape. `alembic/versions/0001_initial_schema.py` builds it and `0002_source_deactivation.py` adds `case_sources.deactivated_at`; `tests/test_database_schema_parity_alembic.py` checks that the migrations and the models match.
 
 A report is built once per analysis by `app/reports/display.py` and stored as a display snapshot in `case_reports.structured_report`; the HTML and PDF are rendered from that stored copy. Its findings and Source labels, technical notices, and limitations are assembled by `findings.py`, `technical.py`, and `limitations.py` in the same folder.
 
 ## Source flow
 
 A document becomes a `CaseDocument` holding the file and a document `CaseSource` holding the text read from it; the source's `provenance_json` keeps the pages, their offsets into that text, and the warnings from reading it, and the source reads its document's `filename`, `mime_type` and `size_bytes`, which `CaseSourceRead` returns. A narrative becomes a narrative `CaseSource`. Each native source changes the Case `source_revision`.
+
+A source's text never changes once stored. Reading a document again adds its new text as a new `CaseSource` for the same document and turns the earlier reading off. A user can turn any source off or on; turning a source off or on changes `source_revision` as well. Analysis, chat and the source budget read only the sources that are on, and a report reads the sources its analysis recorded, whether or not they are on now.
 
 Clarification answers are different: they are persisted `ChatMessage` rows and loaded as `followup_history` for later analysis. They are not native Case sources and do not change `source_revision`; Reading and binding expose answered text as Evidence Units under synthetic QA identifiers.
 

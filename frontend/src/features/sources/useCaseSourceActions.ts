@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { addCaseSource, retryCaseDocumentExtraction } from "./api";
+import { addCaseSource, retryCaseDocumentExtraction, updateCaseSource } from "./api";
 import { refreshAfterSourceChange, useUploadCaseDocument } from "@/features/sources/queries";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -15,6 +15,7 @@ export function useCaseSourceActions({ caseId }: UseCaseSourceActionsOptions) {
   const [actionError, setActionError] = useState<unknown>(null);
   const [isAddingNarrative, setIsAddingNarrative] = useState(false);
   const [isRetryingDocument, setIsRetryingDocument] = useState(false);
+  const [isSwitchingSource, setIsSwitchingSource] = useState(false);
 
   const uploadDocument = useCallback(
     async (file: File) => {
@@ -44,6 +45,23 @@ export function useCaseSourceActions({ caseId }: UseCaseSourceActionsOptions) {
       }
     },
     [caseId, isRetryingDocument, queryClient],
+  );
+
+  const setSourceActive = useCallback(
+    async (sourceId: string, active: boolean) => {
+      if (!caseId || isSwitchingSource) return;
+      setActionError(null);
+      setIsSwitchingSource(true);
+      try {
+        await updateCaseSource(caseId, sourceId, { active });
+        void refreshAfterSourceChange(queryClient, caseId);
+      } catch (error) {
+        setActionError(error);
+      } finally {
+        setIsSwitchingSource(false);
+      }
+    },
+    [caseId, isSwitchingSource, queryClient],
   );
 
   const addNarrative = useCallback(
@@ -77,8 +95,10 @@ export function useCaseSourceActions({ caseId }: UseCaseSourceActionsOptions) {
     uploadingFilename: uploadMutation.isPending ? (uploadMutation.variables?.name ?? null) : null,
     isAddingNarrative,
     isRetryingDocument,
+    isSwitchingSource,
     uploadDocument,
     retryDocument,
+    setSourceActive,
     addNarrative,
   };
 }
