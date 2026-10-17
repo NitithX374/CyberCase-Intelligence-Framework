@@ -236,9 +236,7 @@ def legacy_citing(text: str, quote: str, monkeypatch):
     return cite
 
 
-async def test_a_legacy_elided_quote_that_spans_too_much_of_a_source_is_dropped_not_a_500(
-    monkeypatch, model
-):
+async def test_a_legacy_elided_quote_is_dropped_not_a_500(monkeypatch, model):
     async with isolated_database() as factory:
         case_id, user_id = await case_with_source(factory, LONG_TEXT)
         model(
@@ -255,8 +253,9 @@ async def test_a_legacy_elided_quote_that_spans_too_much_of_a_source_is_dropped_
         trace = stored.json()["trace_json"]
         assert [c["claim_id"] for c in trace["claims"]] == ["A-01"], "the claim is kept"
         assert trace["claims"][0]["supporting_citations"] == []
-        assert trace["grounding"]["citations_verified"] == 0
-        assert trace["grounding"]["citations_duplicated"] == 0
+        assert [item["reason"] for item in trace["claims"][0]["invalid_evidence"]] == [
+            "malformed_id"
+        ]
 
 
 async def test_a_trace_the_binder_cannot_store_is_a_coded_server_error(monkeypatch, model):
@@ -465,7 +464,7 @@ async def test_a_chat_answer_keeps_the_follow_up_answer_its_claim_rests_on(monke
         [answered_claim] = answer_trace["claims"]
         assert answered_claim["supporting_source_ids"] == ["QA-01"]
         assert [c["source_id"] for c in answered_claim["supporting_citations"]] == ["QA-01"]
-        assert answer_trace["grounding"]["citations_unfound"] == 0
+        assert answered_claim["invalid_evidence"] == []
 
 
 async def test_an_answer_too_long_to_store_is_a_coded_bad_gateway(monkeypatch, model):

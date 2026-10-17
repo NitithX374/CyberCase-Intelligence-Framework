@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import replace
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -248,6 +249,68 @@ def test_after_an_analysis_a_claim_is_cited_with_the_sources_behind_it(monkeypat
     assert answered.claim_ids == ["A-01"]
     assert [c.source_id for c in answered.supporting_citations] == [NARRATIVE_ID]
     assert [claim.claim_id for claim in output.trace.claims] == ["A-01"]
+
+
+STORED_CITATION = CaseSourceCitation(
+    source_id=NARRATIVE_ID,
+    evidence_unit_ids=[f"{NARRATIVE_ID}:U001-0000000000000000"],
+    pointer_state="direct",
+    start=0,
+    end=len(NARRATIVE),
+    exact_quote=NARRATIVE,
+)
+
+
+def ask_about_the_stored_citation(monkeypatch, sources: CaseSourceBundle):
+    result = stored_analysis()
+    trace = CaseAnalysisTrace.model_validate(result.trace_json)
+    claim = trace.claims[0].model_copy(update={"supporting_citations": [STORED_CITATION]})
+    result.trace_json = trace.model_copy(update={"claims": [claim]}).model_dump(mode="json")
+    output, _ = ask(
+        monkeypatch,
+        reply(unit("A caller posed as police.", claim_ids=["A-01"])),
+        result=result,
+        sources=sources,
+    )
+    [answered] = output.units
+    return answered, output.trace.claims[0]
+
+
+def test_a_claim_keeps_the_citation_its_analysis_stored_after_the_units_change(monkeypatch):
+    answered, claim = ask_about_the_stored_citation(monkeypatch, case_sources())
+
+    assert answered.supporting_citations == [STORED_CITATION]
+    assert claim.supporting_citations == [STORED_CITATION]
+
+
+def test_a_citation_whose_source_now_reads_differently_is_left_out(monkeypatch):
+    read_again = CaseSourceBundle(
+        revision=2,
+        sources=tuple(
+            replace(source, text=source.text.replace("3 March", "4 March"))
+            for source in case_sources().sources
+        ),
+    )
+
+    answered, claim = ask_about_the_stored_citation(monkeypatch, read_again)
+
+    assert answered.claim_ids == ["A-01"]
+    assert answered.supporting_citations == []
+    assert claim.supporting_citations == []
+
+
+def test_a_citation_of_a_source_the_case_no_longer_reads_is_left_out(monkeypatch):
+    without_narrative = CaseSourceBundle(
+        revision=2,
+        sources=tuple(
+            source for source in case_sources().sources if source.source_id != NARRATIVE_ID
+        ),
+    )
+
+    answered, claim = ask_about_the_stored_citation(monkeypatch, without_narrative)
+
+    assert answered.supporting_citations == []
+    assert claim.supporting_citations == []
 
 
 def test_after_an_analysis_the_model_still_reads_the_sources_and_the_gaps(monkeypatch):

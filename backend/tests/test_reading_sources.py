@@ -71,7 +71,7 @@ def test_compact_payload_preserves_every_source_character_and_stable_local_ids(t
 def test_local_unit_numbers_are_source_scoped_and_a_claim_can_select_multiple_documents():
     sources = ReadingSources(BUNDLE.sources)
     original = reply_for([citation("S1", "U001", "U002"), citation("S2", "U001")])
-    reading, grounding = bound_claims(reading_from(original, reading_sources=sources), BUNDLE)
+    reading = bound_claims(reading_from(original, reading_sources=sources), BUNDLE)
     [claim] = reading.claims
     assert claim.supporting_source_ids == ["S1", "S2"]
     assert [item.document_id for item in claim.supporting_citations] == ["D1", "D1", "D2"]
@@ -81,7 +81,7 @@ def test_local_unit_numbers_are_source_scoped_and_a_claim_can_select_multiple_do
         SECOND.text,
     ]
     assert len({item.evidence_unit_ids[0] for item in claim.supporting_citations}) == 3
-    assert grounding.evidence_ids_claimed == grounding.evidence_ids_resolved == 3
+    assert claim.invalid_evidence == []
     assert original.claims[0].supporting_citations[0].evidence_unit_ids == ["U001", "U002"]
 
 
@@ -103,24 +103,22 @@ def test_local_unit_numbers_are_source_scoped_and_a_claim_can_select_multiple_do
 def test_invalid_addresses_keep_existing_binding_diagnostics(source_id, unit_id, reason):
     sources = ReadingSources(BUNDLE.sources)
     reply = reply_for([citation(source_id, unit_id)])
-    reading, grounding = bound_claims(reading_from(reply, reading_sources=sources), BUNDLE)
+    reading = bound_claims(reading_from(reply, reading_sources=sources), BUNDLE)
     [claim] = reading.claims
     assert claim.supporting_citations == []
     assert claim.invalid_evidence[0].reason == reason
     assert claim.epistemic_status == "not_confirmed"
-    assert grounding.evidence_ids_invalid == 1
+    assert len(claim.invalid_evidence) == 1
 
 
 def test_duplicates_are_diagnosed_after_alias_decoding_including_canonical_duplicates():
     sources = ReadingSources(BUNDLE.sources)
     canonical = evidence_units(FIRST)[0].unit_id
     reply = reply_for([citation("S1", "U001", "U001", canonical), citation("S2", "U001")])
-    reading, grounding = bound_claims(reading_from(reply, reading_sources=sources), BUNDLE)
+    reading = bound_claims(reading_from(reply, reading_sources=sources), BUNDLE)
     [claim] = reading.claims
     assert len(claim.supporting_citations) == 2
     assert [item.reason for item in claim.invalid_evidence] == ["duplicate_id", "duplicate_id"]
-    assert grounding.evidence_ids_claimed == 4
-    assert grounding.evidence_ids_resolved == grounding.evidence_ids_invalid == 2
 
 
 def test_decoding_uses_the_request_revision_and_cannot_rebind_a_reply_to_changed_source_text():
@@ -128,16 +126,15 @@ def test_decoding_uses_the_request_revision_and_cannot_rebind_a_reply_to_changed
     reply = reply_for([citation("S1", "U001")])
     updated = replace(FIRST, text="John did not send an email.")
     changed = CaseSourceBundle(5, (updated, SECOND))
-    reading, grounding = bound_claims(reading_from(reply, reading_sources=request_sources), changed)
+    reading = bound_claims(reading_from(reply, reading_sources=request_sources), changed)
     assert reading.claims[0].supporting_citations == []
     assert reading.claims[0].invalid_evidence[0].reason == "stale_id"
-    assert grounding.evidence_ids_resolved == 0
 
 
 def test_canonical_historical_ids_still_resolve_without_a_transport_address_book():
     reply = reply_for([citation("S1", evidence_units(FIRST)[0].unit_id)])
-    historical, _ = bound_claims(reading_from(reply), BUNDLE)
-    decoded, _ = bound_claims(
+    historical = bound_claims(reading_from(reply), BUNDLE)
+    decoded = bound_claims(
         reading_from(reply, reading_sources=ReadingSources(BUNDLE.sources)), BUNDLE
     )
     assert historical == decoded
@@ -147,12 +144,13 @@ def test_canonical_historical_ids_still_resolve_without_a_transport_address_book
 def test_contradicting_unit_ids_are_decoded_without_changing_their_role():
     sources = ReadingSources(BUNDLE.sources)
     reply = reply_for([citation("S1", "U001")], [citation("S2", "U001")])
-    reading, grounding = bound_claims(reading_from(reply, reading_sources=sources), BUNDLE)
+    reading = bound_claims(reading_from(reply, reading_sources=sources), BUNDLE)
     assert reading.claims[0].contradicting_source_ids == ["S2"]
     assert reading.claims[0].contradicting_citations[0].evidence_unit_ids == [
         evidence_units(SECOND)[0].unit_id
     ]
-    assert grounding.evidence_ids_resolved == 2
+    [claim] = reading.claims
+    assert len(claim.supporting_citations) == len(claim.contradicting_citations) == 1
 
 
 def test_followup_answers_share_local_addressing_and_preserve_source_revision():
@@ -168,9 +166,8 @@ def test_followup_answers_share_local_addressing_and_preserve_source_revision():
         {"unit_id": "U001", "text": "John is the victim."}
     ]
     reply = reply_for([citation("QA-03", "U001")])
-    reading, grounding = bound_claims(reading_from(reply, reading_sources=sources), BUNDLE, history)
-    assert reading.claims[0].supporting_citations[0].source_id == "QA-03"
-    assert grounding.evidence_ids_resolved == 1
+    reading = bound_claims(reading_from(reply, reading_sources=sources), BUNDLE, history)
+    assert [item.source_id for item in reading.claims[0].supporting_citations] == ["QA-03"]
 
 
 def test_compact_ocr_payload_retains_provenance_and_resolved_page_location():
@@ -193,7 +190,7 @@ def test_compact_ocr_payload_retains_provenance_and_resolved_page_location():
         "warnings": ["OCR uncertainty"],
     }
     reply = reply_for([citation("S1", "U002")])
-    reading, _ = bound_claims(reading_from(reply, reading_sources=sources), bundle)
+    reading = bound_claims(reading_from(reply, reading_sources=sources), bundle)
     [resolved] = reading.claims[0].supporting_citations
     assert resolved.page_numbers == [2]
     assert resolved.exact_quote == source.text[resolved.start : resolved.end] == "Jane received it."

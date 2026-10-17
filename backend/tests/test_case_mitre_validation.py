@@ -69,7 +69,7 @@ def test_case_sources_remain_the_only_allowed_claim_source_ids():
         supporting_citations=[
             CaseSourceCitation(
                 source_id="external-mitre-source-id",
-                exact_quote="Some quote",
+                evidence_unit_ids=["external-mitre-source-id:U001-0000000000000000"],
             )
         ],
     )
@@ -82,5 +82,4 @@ def test_case_sources_remain_the_only_allowed_claim_source_ids():
 
     assert bound.claims[0].supporting_source_ids == []
     assert bound.claims[0].supporting_citations == []
-    assert bound.grounding.claims_without_citation == 1
-    assert bound.grounding.citations_unfound == 1
+    assert [entry.reason for entry in bound.claims[0].invalid_evidence] == ["unknown_source"]

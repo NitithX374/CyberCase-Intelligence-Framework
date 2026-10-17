@@ -8,7 +8,8 @@ import pytest
 
 from app.analysis.schemas import CaseAnalysisResultRead
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace.bind import resolve_case_trace
+from app.sources.evidence import evidence_units
+from app.trace.bind import bound_references, resolve_case_trace
 from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation
 from app.trace.summary import summary_closings, summary_pieces
 from app.trace.trace import CaseAnalysisTrace, CaseSummaryUnit
@@ -84,34 +85,31 @@ def test_a_summary_with_no_text_is_no_unit():
     assert summary_pieces("[A-01].") == []
 
 
-def claim(claim_id: str, source_id: str, quote: str) -> CaseAnalysisClaim:
+def claim(claim_id: str, source_id: str, unit_id: str) -> CaseAnalysisClaim:
     return CaseAnalysisClaim(
         claim_id=claim_id,
         claim_type="reported",
         text=f"Claim {claim_id}.",
         epistemic_status="reported",
         supporting_source_ids=[source_id],
-        supporting_citations=[CaseSourceCitation(source_id=source_id, exact_quote=quote)],
+        supporting_citations=[CaseSourceCitation(source_id=source_id, evidence_unit_ids=[unit_id])],
     )
 
 
 def bound_trace(summary: str) -> CaseAnalysisTrace:
-    source_id = str(uuid4())
-    bundle = CaseSourceBundle(
-        revision=1,
-        sources=(CaseSourceItem(source_id=source_id, source_kind="narrative", text=SOURCE_TEXT),),
-    )
+    source = CaseSourceItem(source_id=str(uuid4()), source_kind="narrative", text=SOURCE_TEXT)
+    encrypted, demanded = (unit.unit_id for unit in evidence_units(source))
     trace = CaseAnalysisTrace(
         analysis_mode="case_overview",
         summary=summary,
         claims=[
-            claim("A-01", source_id, "The finance share was encrypted overnight."),
-            claim("A-02", source_id, "The attacker demanded two bitcoin."),
-            claim("A-03", source_id, "The attacker demanded ten bitcoin."),
-            claim("A-04", source_id, "The backups were wiped."),
+            claim("A-01", source.source_id, encrypted),
+            claim("A-02", source.source_id, demanded),
+            claim("A-03", source.source_id, demanded.replace("U002", "U003")),
+            claim("A-04", source.source_id, demanded.replace("U002", "U004")),
         ],
     )
-    return resolve_case_trace(trace, bundle)
+    return resolve_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)))
 
 
 SUMMARY = (
@@ -150,12 +148,12 @@ def test_a_unit_resting_on_some_checked_claims_and_some_not_is_mixed():
     assert (unit.claim_ids, unit.support) == (["A-02", "A-03"], "mixed")
 
 
-def test_an_id_that_names_no_claim_is_removed_from_its_unit_and_counted():
+def test_an_id_that_names_no_claim_is_removed_from_its_unit():
     bound = bound_trace(SUMMARY)
+    named = bound_trace("One [A-01, A-77, A-78]. Two [A-99].")
 
     assert bound.summary_units[4].claim_ids == []
-    assert bound.grounding.summary_ids_unknown == 1
-    assert bound_trace("One [A-01, A-77, A-78]. Two [A-99].").grounding.summary_ids_unknown == 3
+    assert [unit.claim_ids for unit in named.summary_units] == [["A-01"], []]
 
 
 def test_the_analysis_does_not_fail_when_every_id_is_unknown():
@@ -163,7 +161,6 @@ def test_the_analysis_does_not_fail_when_every_id_is_unknown():
 
     [unit] = bound.summary_units
     assert (unit.claim_ids, unit.support) == ([], "no_claim")
-    assert bound.grounding.summary_ids_unknown == 2
 
 
 def test_the_stored_summary_keeps_its_brackets_exactly_as_written():
@@ -178,32 +175,23 @@ def test_a_summary_without_ids_is_one_unit_that_rests_on_no_claim():
     [unit] = bound.summary_units
     assert unit.text == "A share was encrypted and a ransom was asked."
     assert (unit.claim_ids, unit.support) == ([], "no_claim")
-    assert bound.grounding.summary_ids_unknown == 0
 
 
-def test_binding_a_bound_trace_again_gives_the_same_units_and_count():
-    source_id = str(uuid4())
-    bundle = CaseSourceBundle(
-        revision=1,
-        sources=(CaseSourceItem(source_id=source_id, source_kind="narrative", text=SOURCE_TEXT),),
-    )
+def test_binding_a_bound_trace_again_gives_the_same_units():
     first = bound_trace(SUMMARY)
 
-    again = resolve_case_trace(first, bundle)
+    again = bound_references(first)
 
-    assert again.summary_units != []
-    assert again.grounding.summary_ids_unknown == 1
+    assert again.summary_units == first.summary_units
 
 
 def test_a_trace_stored_before_the_units_existed_validates_with_none():
     stored = json.loads(bound_trace(SUMMARY).model_dump_json())
     del stored["summary_units"]
-    del stored["grounding"]["summary_ids_unknown"]
 
     reloaded = CaseAnalysisTrace.model_validate(stored)
 
     assert reloaded.summary_units == []
-    assert reloaded.grounding.summary_ids_unknown == 0
     assert reloaded.summary == SUMMARY
 
 
@@ -240,19 +228,17 @@ def test_the_api_read_model_carries_the_units():
     )
 
     assert read.trace_json.summary_units == bound.summary_units
-    assert read.trace_json.grounding.summary_ids_unknown == 1
 
 
 def test_a_unit_is_never_written_by_a_model():
     from app.llm.schema import structured_output_schema
-    from app.trace.trace import CaseProviderAnalysis, CaseProviderJudgement
+    from app.trace.trace import CaseProviderJudgement
 
     for schema in (
         CaseProviderJudgement.model_json_schema(),
-        structured_output_schema(CaseProviderAnalysis),
+        structured_output_schema(CaseProviderJudgement),
     ):
         assert "summary_units" not in json.dumps(schema)
-        assert "summary_ids_unknown" not in json.dumps(schema)
     assert CaseSummaryUnit.model_fields.keys() == {"text", "claim_ids", "support"}
 
 

@@ -109,7 +109,6 @@ export function claim(
     claim_type: "reported",
     text,
     epistemic_status: "reported",
-    reasoning_summary: null,
     supporting_source_ids: [citedSourceId],
     contradicting_source_ids: [],
     supporting_citations: [{ source_id: citedSourceId, exact_quote: text }],

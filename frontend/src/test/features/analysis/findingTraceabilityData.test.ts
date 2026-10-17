@@ -27,11 +27,6 @@ describe("Saved Finding Source linkage", () => {
                 : verdict === "not_supported"
                   ? "neutral"
                   : "input_too_long",
-            model: "test-nli",
-            entailment: verdict === "unassessed" ? null : verdict === "supported" ? 0.99 : 0.1,
-            threshold: 0.8,
-            duration_ms: 0,
-            selection_ms: 0,
           },
         }),
       );
@@ -53,25 +48,14 @@ describe("Saved Finding Source linkage", () => {
     expect(state).toEqual({ semanticSupport: "unassessed" });
   });
 
-  it("does not imply semantic support from NLI meaning pointers", () => {
+  it("does not imply semantic support from unresolved citations", () => {
     const state = findingTraceabilityData(
       claim("A reported transfer.", "S1", {
         supporting_citations: [],
         contradicting_citations: [direct],
         unverified_citations: [
-          {
-            source_id: "S1",
-            role: "supporting",
-            written_quote: "Not found.",
-            meaning_passage: {
-              source_text: "A related transfer.",
-              start: 0,
-              end: 19,
-              entailment: 0.99,
-              model: "test-nli",
-            },
-          },
-          { source_id: "S2", role: "contradicting", written_quote: "A conflict." },
+          { source_id: "S1", role: "supporting", evidence_unit_id: "S1:U009-0000000000000000" },
+          { source_id: "S2", role: "contradicting" },
         ],
       }),
     );

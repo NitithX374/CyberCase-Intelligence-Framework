@@ -21,9 +21,6 @@ const analysis = analysisResult({
         semantic_grounding: {
           verdict: "supported",
           reason: "lr_supported",
-          threshold: 0.5,
-          selection_ms: 0,
-          duration_ms: 0,
         },
         supporting_citations: [
           {
@@ -45,9 +42,6 @@ const analysis = analysisResult({
         semantic_grounding: {
           verdict: "not_supported",
           reason: "lr_not_supported",
-          threshold: 0.5,
-          selection_ms: 0,
-          duration_ms: 0,
         },
       }),
       claim("A legacy report has a Source link.", source.id, { claim_id: "A-04" }),

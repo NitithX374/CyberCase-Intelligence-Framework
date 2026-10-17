@@ -1,7 +1,5 @@
 import type { CaseAnalysisClaim, CaseSourceCitation, CaseSourceRead } from "@/lib/api/types";
 import { asArray } from "@/lib/parse";
-import { reviewNotes } from "./reviewNotes";
-import { toleratedNotes } from "./toleratedNotes";
 import type { CaseSourceRef, FollowupAnswer, SourceMessageRef, SourcePage } from "./types";
 
 interface ProvenancePage {
@@ -54,16 +52,10 @@ export function claimRefs(
     | "contradicting_citations"
   >,
   sources: CaseSourceRef[],
-  writtenText?: string,
 ): { supporting: SourceMessageRef[]; contradicting: SourceMessageRef[] } {
   return {
-    supporting: refs(claim.supporting_source_ids, claim.supporting_citations, sources, writtenText),
-    contradicting: refs(
-      claim.contradicting_source_ids,
-      claim.contradicting_citations,
-      sources,
-      writtenText,
-    ),
+    supporting: refs(claim.supporting_source_ids, claim.supporting_citations, sources),
+    contradicting: refs(claim.contradicting_source_ids, claim.contradicting_citations, sources),
   };
 }
 
@@ -71,41 +63,18 @@ function refs(
   ids: string[] = [],
   citations: CaseSourceCitation[] = [],
   sources: CaseSourceRef[],
-  writtenText?: string,
 ): SourceMessageRef[] {
   return ids.flatMap((id) => {
     const source = sources.find((candidate) => candidate.id === id);
     if (!source) return [];
     const cited = citations.filter((citation) => citation.source_id === id);
     return cited.length
-      ? cited.map((citation) => sourceRef(source, citation, writtenText))
+      ? cited.map((citation) => sourceRef(source, citation))
       : [sourceRef(source, null)];
   });
 }
 
-export function passageRef(
-  sources: CaseSourceRef[],
-  sourceId: string,
-  passage: string,
-  quoteLabel = "Nearest passage",
-): SourceMessageRef | null {
-  const source = sources.find((candidate) => candidate.id === sourceId);
-  if (!source) return null;
-  return {
-    ...sourceRef(source, {
-      source_id: sourceId,
-      exact_quote: passage,
-      pointer_state: "unresolved",
-    }),
-    quoteLabel,
-  };
-}
-
-function sourceRef(
-  source: CaseSourceRef,
-  citation: CaseSourceCitation | null,
-  writtenText?: string,
-): SourceMessageRef {
+function sourceRef(source: CaseSourceRef, citation: CaseSourceCitation | null): SourceMessageRef {
   const quote = citation?.exact_quote || null;
   const context = quote ? citation?.context : null;
   const pages = (citation?.page_numbers ?? []).flatMap(
@@ -138,12 +107,6 @@ function sourceRef(
           start: citation.start ?? null,
           end: citation.end ?? null,
         }
-      : {}),
-    ...(quote && writtenText !== undefined && citation?.tolerated_differences?.length
-      ? { toleratedNotes: toleratedNotes(citation.tolerated_differences, writtenText) }
-      : {}),
-    ...(quote && writtenText !== undefined && citation?.review_flags?.length
-      ? { reviewNotes: reviewNotes(citation.review_flags, writtenText) }
       : {}),
   };
 }

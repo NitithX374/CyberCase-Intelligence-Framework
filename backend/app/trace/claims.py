@@ -17,16 +17,37 @@ from pydantic import (
 from app.trace.citations import (
     CaseEvidenceReference,
     CaseInvalidEvidence,
-    CaseProviderCitation,
     CaseUnverifiedCitation,
     normalized_citation,
 )
 from app.trace.citations import (
     CaseSourceCitation as CaseSourceCitation,
 )
+from app.trace.retired import without_retired
 
 MAX_CLARIFICATION_QUESTION_CHARS = 300
 MAX_RESOLVED_EVIDENCE_REFERENCES = 64 * 64
+RETIRED_CLAIM_FIELDS = frozenset({"reasoning_summary"})
+RETIRED_VERIFIER_FIELDS = frozenset(
+    {
+        "model",
+        "label",
+        "entailment",
+        "threshold",
+        "neutral",
+        "contradiction",
+        "p_supported",
+        "selected_citation_indices",
+        "considered_citation_indices",
+        "selected_evidence_unit_ids",
+        "source_similarities",
+        "selector_threshold",
+        "selection_ms",
+        "raw_tokens",
+        "truncated",
+        "duration_ms",
+    }
+)
 
 
 CaseClaimType = Literal["reported", "analytical_inference", "unknown"]
@@ -69,18 +90,11 @@ def one_line(value: object) -> object:
     return " ".join(value.split()) if isinstance(value, str) else value
 
 
-def empty_as_none(value: object) -> object:
-    if isinstance(value, str):
-        return value.strip() or None
-    return value
-
-
 def clipped(limit: int) -> BeforeValidator:
     return BeforeValidator(lambda value: value.strip()[:limit] if isinstance(value, str) else value)
 
 
 ClaimIds = Annotated[list[str], BeforeValidator(unique_claim_ids)]
-ReasoningSummary = Annotated[str | None, BeforeValidator(empty_as_none), clipped(1_000)]
 
 
 class CaseClaimContent(BaseModel):
@@ -133,34 +147,6 @@ class CaseReadingClaim(CaseClaimContent):
     )
 
 
-class CaseProviderClaim(CaseClaimFields):
-    supporting_citations: list[CaseEvidenceReference | CaseProviderCitation] = Field(
-        default_factory=list, max_length=64
-    )
-    contradicting_citations: list[CaseEvidenceReference | CaseProviderCitation] = Field(
-        default_factory=list, max_length=64
-    )
-    reasoning_summary: ReasoningSummary = Field(default=None, max_length=1_000)
-
-    @model_validator(mode="before")
-    @classmethod
-    def select_evidence_references(cls, data: object) -> object:
-        if not isinstance(data, dict):
-            return data
-        data = dict(data)
-        for field_name in ("supporting_citations", "contradicting_citations"):
-            citations = data.get(field_name)
-            if not isinstance(citations, (list, tuple)):
-                continue
-            data[field_name] = [
-                {"source_id": item.get("source_id"), "evidence_unit_ids": item["evidence_unit_ids"]}
-                if isinstance(item, dict) and item.get("evidence_unit_ids")
-                else item
-                for item in citations
-            ]
-        return data
-
-
 class CaseClaimGrounding(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -179,24 +165,13 @@ class CaseClaimGrounding(BaseModel):
         "lr_not_supported",
         "verifier_unavailable",
     ]
-    model: str | None = Field(default=None, max_length=200)
-    label: Literal["entailment", "neutral", "contradiction"] | None = None
-    entailment: float | None = Field(default=None, ge=0, le=1)
-    threshold: float = Field(default=0.8, ge=0.5, le=1)
     method: str | None = None
     artifact_sha256: str | None = None
-    neutral: float | None = Field(default=None, ge=0, le=1)
-    contradiction: float | None = Field(default=None, ge=0, le=1)
-    p_supported: float | None = Field(default=None, ge=0, le=1)
-    selected_citation_indices: list[int] = Field(default_factory=list)
-    considered_citation_indices: list[int] = Field(default_factory=list)
-    selected_evidence_unit_ids: list[str] = Field(default_factory=list)
-    source_similarities: list[float] = Field(default_factory=list)
-    selector_threshold: float | None = None
-    selection_ms: float = Field(default=0, ge=0)
-    raw_tokens: int | None = Field(default=None, ge=0)
-    truncated: bool | None = None
-    duration_ms: float = Field(default=0, ge=0)
+
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_fields(cls, data: object) -> object:
+        return without_retired(data, RETIRED_VERIFIER_FIELDS)
 
 
 class CaseAnalysisClaim(CaseClaimFields):
@@ -211,7 +186,11 @@ class CaseAnalysisClaim(CaseClaimFields):
     )
     invalid_evidence: list[CaseInvalidEvidence] = Field(default_factory=list)
     semantic_grounding: CaseClaimGrounding | None = None
-    reasoning_summary: ReasoningSummary = Field(default=None, max_length=1_000)
+
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_fields(cls, data: object) -> object:
+        return without_retired(data, RETIRED_CLAIM_FIELDS)
 
     @model_validator(mode="before")
     @classmethod
@@ -236,13 +215,10 @@ class CaseAnalysisClaim(CaseClaimFields):
 
 CLAIM_FIELDS_HIDDEN_FROM_MODELS = {
     "semantic_grounding": True,
-    "reasoning_summary": True,
     "supporting_source_ids": True,
     "contradicting_source_ids": True,
     "invalid_evidence": True,
     "unverified_citations": True,
-    "supporting_citations": {"__all__": {"tolerated_differences", "review_flags"}},
-    "contradicting_citations": {"__all__": {"tolerated_differences", "review_flags"}},
 }
 
 CLAIM_FIELDS_FOR_JUDGEMENT = {

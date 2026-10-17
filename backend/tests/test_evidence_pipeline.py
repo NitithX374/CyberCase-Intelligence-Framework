@@ -99,7 +99,14 @@ async def test_whole_case_claims_only_reading_direct_binding_judgement_and_join(
     )
     assert final.involved_parties == final.timeline == final.impacts == []
     assert [unit.support for unit in final.summary_units] == ["bound", "bound"]
-    assert final.grounding.evidence_ids_claimed == final.grounding.evidence_ids_resolved == 5
+    assert (
+        sum(
+            len(claim.supporting_citations) + len(claim.contradicting_citations)
+            for claim in final.claims
+        )
+        == 5
+    )
+    assert all(claim.invalid_evidence == [] for claim in final.claims)
     assert CaseAnalysisTrace.model_validate_json(final.model_dump_json()) == final
 
 
@@ -135,8 +142,7 @@ def test_answered_followups_use_the_same_unit_contract_and_unanswered_ones_are_a
     from app.analysis.write import reading_from
 
     sources = ReadingSources((*bundle.sources, *followup_registry_items(history)))
-    reading, grounding = bound_claims(reading_from(reply, reading_sources=sources), bundle, history)
+    reading = bound_claims(reading_from(reply, reading_sources=sources), bundle, history)
     assert reading.claims[0].supporting_citations[0].source_id == "QA-03"
     assert reading.claims[0].supporting_citations[0].pointer_state == "direct"
-    assert grounding.sources_total == 2
     assert bundle.revision == 7

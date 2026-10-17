@@ -31,7 +31,6 @@ from app.trace.claims import (
 )
 from app.trace.trace import (
     CaseAnalysisTrace,
-    CaseGroundingReport,
     CaseProviderJudgement,
     CaseProviderReading,
     CaseProviderReadingReply,
@@ -66,13 +65,13 @@ async def write_trace(
         schema=CaseProviderReadingReply,
     )
     announce("bind")
-    reading, grounding = await checked_reading(
+    reading = await checked_reading(
         reading_from(reply, reading_sources=reading_sources), sources, followup_history
     )
     judged = usable_reading(reading)
     if not judged.claims:
         announce("verify")
-        reading, grounding = await checked_claim_support(reading, grounding)
+        reading = await checked_claim_support(reading)
         judgement = CaseProviderJudgement(
             version="case_analysis_trace_v1",
             summary=(
@@ -81,9 +80,9 @@ async def write_trace(
                 else "No finding passed the Source citation checks; no case summary was generated."
             ),
         )
-        return joined_trace(reading, judgement, technical_context, grounding)
+        return joined_trace(reading, judgement, technical_context)
     announce("verify")
-    verify_task = asyncio.create_task(checked_claim_support(reading, grounding))
+    verify_task = asyncio.create_task(checked_claim_support(reading))
     announce("views")
     view_task = asyncio.create_task(derive_claim_views(judged.claims, config=config))
     announce("judge")
@@ -98,7 +97,7 @@ async def write_trace(
     )
     tasks = (judge_task, view_task, verify_task)
     try:
-        judgement, views, (reading, grounding) = await asyncio.gather(*tasks)
+        judgement, views, reading = await asyncio.gather(*tasks)
         check_judgement_references(judgement, judged)
     except BaseException:
         for task in tasks:
@@ -113,14 +112,14 @@ async def write_trace(
             ]
         }
     )
-    return joined_trace(reading, judgement, technical_context, grounding, views=views)
+    return joined_trace(reading, judgement, technical_context, views=views)
 
 
 async def checked_reading(
     reading: CaseProviderReading,
     sources: CaseSourceBundle,
     followup_history: Sequence[CaseFollowupExchange],
-) -> tuple[CaseProviderReading, CaseGroundingReport]:
+) -> CaseProviderReading:
     try:
         return await asyncio.to_thread(bound_claims, reading, sources, followup_history)
     except ValidationError as error:
@@ -239,7 +238,6 @@ def joined_trace(
     reading: CaseProviderReading,
     judgement: CaseProviderJudgement,
     technical_context: CaseRagContextPayload | None = None,
-    grounding: CaseGroundingReport | None = None,
     *,
     views: DerivedCaseViews | None = None,
 ) -> CaseAnalysisTrace:
@@ -255,7 +253,6 @@ def joined_trace(
         retrieval_context_id=(
             technical_context.retrieval_context_id if technical_context is not None else None
         ),
-        grounding=grounding,
     )
 
 

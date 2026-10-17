@@ -6,7 +6,7 @@ from app.analysis.write import reading_from
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import evidence_units
 from app.trace.bind import resolve_case_trace
-from app.trace.claims import CaseAnalysisClaim, CaseProviderClaim, CaseSourceCitation
+from app.trace.claims import CaseAnalysisClaim, CaseReadingClaim, CaseSourceCitation
 from app.trace.trace import CaseAnalysisTrace, CaseProviderReadingReply
 
 FIRST = CaseSourceItem(
@@ -70,12 +70,7 @@ def test_valid_ids_resolve_original_spans_without_any_quote_search():
         "statement.pdf",
         [],
     )
-    assert trace.grounding.evidence_ids_claimed == trace.grounding.evidence_ids_resolved == 1
-    assert trace.grounding.evidence_ids_invalid == 0
-    assert trace.grounding.evidence_id_resolution_rate == 1.0
-    assert trace.grounding.claims_with_direct_evidence == 1
-    assert trace.grounding.claims_with_recovered_evidence == 0
-    assert trace.grounding.claims_without_resolved_evidence == 0
+    assert trace.claims[0].invalid_evidence == []
     assert FIRST.provenance["warnings"] == ["uncertain digits"]
 
 
@@ -99,13 +94,17 @@ def test_invalid_ids_do_not_become_supporting_citations(source_id, unit_id, reas
     assert item.epistemic_status == "not_confirmed"
     assert item.invalid_evidence[0].reason == reason
     assert item.invalid_evidence[0].pointer_state == "unresolved"
-    assert trace.grounding.evidence_ids_claimed == trace.grounding.evidence_ids_invalid == 1
-    assert trace.grounding.evidence_ids_resolved == 0
-    assert trace.grounding.evidence_id_resolution_rate == 0
-    assert trace.grounding.claims_without_resolved_evidence == 1
 
 
-def test_duplicate_ids_are_counted_and_never_duplicate_materialized_evidence():
+def test_a_quotation_that_names_no_unit_is_not_looked_up_in_the_source():
+    trace = resolved([{"source_id": "S1", "exact_quote": "John reported that the server"}])
+    [item] = trace.claims
+    assert item.supporting_citations == []
+    assert [entry.reason for entry in item.invalid_evidence] == ["malformed_id"]
+    assert [entry.evidence_unit_id for entry in item.unverified_citations] == [None]
+
+
+def test_duplicate_ids_never_duplicate_materialized_evidence():
     unit = evidence_units(FIRST)[0].unit_id
     trace = resolved([reference(FIRST, unit, unit), reference(FIRST, unit)])
     assert len(trace.claims[0].supporting_citations) == 1
@@ -113,10 +112,6 @@ def test_duplicate_ids_are_counted_and_never_duplicate_materialized_evidence():
         "duplicate_id",
         "duplicate_id",
     ]
-    assert trace.grounding.evidence_ids_claimed == 3
-    assert trace.grounding.evidence_ids_resolved == 1
-    assert trace.grounding.evidence_ids_invalid == 2
-    assert trace.grounding.evidence_id_resolution_rate == 1 / 3
 
 
 def test_one_claim_can_resolve_multiple_units_from_multiple_documents():
@@ -128,19 +123,18 @@ def test_one_claim_can_resolve_multiple_units_from_multiple_documents():
     assert [c.document_id for c in citations] == ["D1", "D1", "D2"]
     assert all(c.pointer_state == "direct" for c in citations)
     assert trace.claims[0].supporting_source_ids == ["S1", "S2"]
-    assert trace.grounding.evidence_ids_resolved == 3
-    assert trace.grounding.sources_cited == trace.grounding.sources_total == 2
     assert CaseAnalysisTrace.model_validate_json(trace.model_dump_json()) == trace
 
 
-def test_one_unit_can_support_different_claims_and_counts_each_reference():
+def test_one_unit_can_support_different_claims():
     trace = CaseAnalysisTrace(
         analysis_mode="case_overview",
         summary="Reported encryption.",
         claims=[claim([reference(FIRST)], "A-01"), claim([reference(FIRST)], "A-02")],
     )
     trace = resolve_case_trace(trace, BUNDLE)
-    assert trace.grounding.evidence_ids_claimed == trace.grounding.evidence_ids_resolved == 2
+    assert [len(item.supporting_citations) for item in trace.claims] == [1, 1]
+    assert [item.invalid_evidence for item in trace.claims] == [[], []]
 
 
 def test_provider_ids_survive_conversion_without_provider_generated_locations():
@@ -174,12 +168,11 @@ def test_resolved_unit_expansion_survives_trace_storage_without_truncation():
     )
     stored = CaseAnalysisTrace.model_validate_json(trace.model_dump_json())
     assert len(stored.claims[0].supporting_citations) == 65
-    assert stored.grounding.evidence_ids_resolved == 65
 
 
-def test_provider_does_not_silently_discard_excess_reference_groups():
+def test_the_reader_does_not_silently_discard_excess_reference_groups():
     with pytest.raises(ValueError, match="at most 64"):
-        CaseProviderClaim.model_validate(
+        CaseReadingClaim.model_validate(
             {
                 "claim_id": "A-01",
                 "claim_type": "reported",
@@ -199,9 +192,9 @@ def test_provider_does_not_silently_discard_excess_reference_groups():
         {"source_id": "S1"},
     ],
 )
-def test_provider_invalid_reference_shapes_fail_instead_of_disappearing(citation):
+def test_reader_invalid_reference_shapes_fail_instead_of_disappearing(citation):
     with pytest.raises(ValueError):
-        CaseProviderClaim.model_validate(
+        CaseReadingClaim.model_validate(
             {
                 "claim_id": "A-01",
                 "claim_type": "reported",
@@ -231,7 +224,6 @@ def test_invalid_references_stay_visible_alongside_valid_evidence():
     assert trace.claims[0].epistemic_status == "reported"
     assert len(trace.claims[0].supporting_citations) == 1
     assert trace.claims[0].invalid_evidence[0].reason == "malformed_id"
-    assert trace.grounding.evidence_id_resolution_rate == 0.5
 
 
 def test_repeated_document_text_uses_the_selected_offset_for_its_page():

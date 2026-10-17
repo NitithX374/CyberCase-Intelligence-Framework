@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 from typing_extensions import TypedDict
 
 from app.trace.claims import CaseAnalysisClaim, CaseAnalysisMode, CaseSourceCitation
-from app.trace.trace import CaseAnalysisTrace, CaseGroundingReport
+from app.trace.trace import CaseAnalysisTrace
 
 ChatUnitBasis = Literal["case_fact", "interpretation", "technical", "general"]
 
@@ -36,7 +36,6 @@ class MessageAnalysisTrace(BaseModel):
     analysis_mode: CaseAnalysisMode
     summary: str
     claims: list[CaseAnalysisClaim]
-    grounding: CaseGroundingReport | None = None
 
 
 class MessageMetadata(TypedDict, total=False):
@@ -54,7 +53,6 @@ def message_trace(trace: CaseAnalysisTrace) -> MessageAnalysisTrace:
         analysis_mode=trace.analysis_mode,
         summary=trace.summary,
         claims=trace.claims,
-        grounding=trace.grounding,
     )
 
 

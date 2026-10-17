@@ -119,7 +119,6 @@ def build_case_report_content(report_input: CaseReportInput) -> CaseReportConten
                 ],
                 references=references(party.claim_ids),
                 support=party.support,
-                projection_grounding=party.projection_grounding,
             )
             for party in trace.involved_parties
         ],
@@ -129,7 +128,6 @@ def build_case_report_content(report_input: CaseReportInput) -> CaseReportConten
                 event=event.event,
                 references=references(event.claim_ids),
                 support=event.support,
-                projection_grounding=event.projection_grounding,
             )
             for event in trace.timeline
         ],
@@ -138,7 +136,6 @@ def build_case_report_content(report_input: CaseReportInput) -> CaseReportConten
                 description=impact.description,
                 references=references(impact.claim_ids),
                 support=impact.support,
-                projection_grounding=impact.projection_grounding,
             )
             for impact in trace.impacts
         ],

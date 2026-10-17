@@ -23,10 +23,8 @@ from app.analysis.technical_context.retrieve import CaseMitreAugmentation
 from app.errors import CaseWorkflowError
 from app.followup.clarification import Ask, Proceed
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace.bind import bound_claims
 from app.trace.claims import CaseAnalysisClaim, CaseAssessmentTrace, CaseSourceCitation
 from app.trace.trace import CaseAnalysisTrace
-from experiments import analysis_arms
 
 
 def case_with_one_narrative(
@@ -48,37 +46,6 @@ def case_with_one_narrative(
     return bundle, CaseAnalysisTrace(
         analysis_mode="case_overview", summary=claim.text, claims=[claim]
     )
-
-
-def steps_run_by(monkeypatch, run) -> list[str]:
-    called: list[str] = []
-
-    def record(name):
-        async def step(data, so_far, **_kwargs):
-            called.append(name)
-            return so_far
-
-        return step
-
-    for name in ("retrieve_technical_context", "write_analysis", "bind_to_case"):
-        monkeypatch.setattr(pipeline_module, name, record(name))
-    monkeypatch.setattr(
-        analysis_arms, "retrieve_technical_context", record("retrieve_technical_context")
-    )
-    monkeypatch.setattr(analysis_arms, "write_analysis", record("write_analysis"))
-    monkeypatch.setattr(analysis_arms, "bind_to_case", record("bind_to_case"))
-
-    bundle, _ = case_with_one_narrative()
-    asyncio.run(run(AnalysisInput(sources=bundle)))
-    return called
-
-
-def test_the_verify_arm_runs_every_expensive_step(monkeypatch):
-    assert steps_run_by(monkeypatch, analysis_arms.verify) == [
-        "retrieve_technical_context",
-        "write_analysis",
-        "bind_to_case",
-    ]
 
 
 def test_assessment_question_short_circuits_every_expensive_step(monkeypatch):
@@ -156,14 +123,6 @@ def test_assessment_with_no_question_runs_the_full_analysis(monkeypatch):
     assert called == ["retrieve_technical_context", "write_analysis", "bind_to_case"]
 
 
-def test_the_baseline_arm_is_the_shipped_one_minus_binding(monkeypatch):
-    direct = steps_run_by(monkeypatch, analysis_arms.direct)
-    verify = steps_run_by(monkeypatch, analysis_arms.verify)
-
-    assert direct == ["retrieve_technical_context", "write_analysis"]
-    assert verify == direct + ["bind_to_case"]
-
-
 def test_a_step_left_out_means_the_model_is_given_no_technical_context():
     bundle, trace = case_with_one_narrative()
     seen = []
@@ -209,27 +168,29 @@ def test_only_retrieved_context_reaches_the_writer():
     assert AnalysisArtifacts(augmentation=skipped).technical_context is None
 
 
-def test_binding_is_what_writes_the_grounding_report():
+def test_binding_checks_the_references_and_leaves_the_claims_as_written():
     bundle, trace = case_with_one_narrative()
-    data = AnalysisInput(sources=bundle)
+    written = trace.model_copy(update={"summary": "The finance share was encrypted [A-01]."})
 
-    unbound = AnalysisArtifacts(trace=trace)
-    bound = asyncio.run(bind_to_case(data, unbound))
+    bound = asyncio.run(
+        bind_to_case(AnalysisInput(sources=bundle), AnalysisArtifacts(trace=written))
+    )
 
-    assert unbound.trace.grounding is None
-    assert bound.trace.grounding is not None
-    assert bound.trace.grounding.citations_verified == 1
+    assert bound.trace.claims == written.claims
+    assert [(unit.text, unit.claim_ids) for unit in bound.trace.summary_units] == [
+        ("The finance share was encrypted", ["A-01"])
+    ]
 
 
 def test_binding_runs_off_the_event_loop(monkeypatch):
     bound_on: list[int] = []
-    resolve = pipeline_module.resolve_case_trace
+    references = pipeline_module.bound_references
 
     def recording(*args, **kwargs):
         bound_on.append(threading.get_ident())
-        return resolve(*args, **kwargs)
+        return references(*args, **kwargs)
 
-    monkeypatch.setattr(pipeline_module, "resolve_case_trace", recording)
+    monkeypatch.setattr(pipeline_module, "bound_references", recording)
     bundle, trace = case_with_one_narrative()
 
     async def bind() -> int:
@@ -240,23 +201,6 @@ def test_binding_runs_off_the_event_loop(monkeypatch):
 
     assert len(bound_on) == 1
     assert bound_on[0] != loop_thread, "binding a large source would stall every other request"
-
-
-def test_a_trace_whose_claims_were_checked_gets_only_the_reference_checks(monkeypatch):
-    bundle, trace = case_with_one_narrative()
-    checked, grounding = bound_claims(trace, bundle)
-    checked = checked.model_copy(update={"grounding": grounding})
-
-    def checked_again(*args, **kwargs):
-        raise AssertionError("the claims of this trace were already checked")
-
-    monkeypatch.setattr(pipeline_module, "resolve_case_trace", checked_again)
-    bound = asyncio.run(
-        bind_to_case(AnalysisInput(sources=bundle), AnalysisArtifacts(trace=checked))
-    )
-
-    assert bound.trace.claims == checked.claims
-    assert bound.trace.grounding == grounding
 
 
 def test_the_analysis_needs_no_case_row_to_run():

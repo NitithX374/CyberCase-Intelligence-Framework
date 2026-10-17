@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import re
 from collections.abc import Iterable, Mapping, Sequence
-from copy import deepcopy
 from dataclasses import dataclass
 
 from fastapi import status
@@ -12,7 +11,7 @@ from app.analysis.language import ResponseLanguage
 from app.chat.answer_contract import CaseAnalysisOutput, ChatReply, ChatReplyUnit
 from app.errors import CaseAnalysisFailure
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace.bind import followup_registry_items, resolve_case_trace
+from app.trace.bind import followup_registry_items
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseFollowupExchange,
@@ -64,9 +63,13 @@ def answer_from(
     followups: Sequence[CaseFollowupExchange],
     language: ResponseLanguage,
 ) -> CaseAnalysisOutput:
-    claims = {claim.claim_id: claim for claim in trace.claims} if trace is not None else {}
     registry: dict[str, CaseSourceItem] = {source.source_id: source for source in sources.sources}
     registry.update({item.source_id: item for item in followup_registry_items(followups)})
+    claims = (
+        {claim.claim_id: still_held(claim, registry) for claim in trace.claims}
+        if trace is not None
+        else {}
+    )
     drafts = []
     for item in reply.units:
         draft = drafted_unit(item, claims, registry)
@@ -81,24 +84,43 @@ def answer_from(
         )
     selected = list(dict.fromkeys(claim_id for draft in drafts for claim_id in draft.claim_ids))
     answer_trace = (
-        resolve_case_trace(
-            CaseAnalysisTrace(
-                analysis_mode="question_answer",
-                summary=answer,
-                claims=[deepcopy(claims[claim_id]) for claim_id in selected],
-            ),
-            sources,
-            followup_history=followups,
+        CaseAnalysisTrace(
+            analysis_mode="question_answer",
+            summary=answer,
+            claims=[claims[claim_id] for claim_id in selected],
         )
         if selected
         else None
     )
-    bound = {claim.claim_id: claim for claim in answer_trace.claims} if answer_trace else {}
-    units = tuple(finished_unit(draft, bound) for draft in drafts)
+    units = tuple(finished_unit(draft, claims) for draft in drafts)
     log_grounding(drafts, units)
     return CaseAnalysisOutput(
         answer=answer, trace=answer_trace, units=units, suggestion=reply.suggestion
     )
+
+
+def still_held(
+    claim: CaseAnalysisClaim, registry: Mapping[str, CaseSourceItem]
+) -> CaseAnalysisClaim:
+    return claim.model_copy(
+        update={
+            "supporting_citations": [
+                citation for citation in claim.supporting_citations if holds(citation, registry)
+            ],
+            "contradicting_citations": [
+                citation for citation in claim.contradicting_citations if holds(citation, registry)
+            ],
+        }
+    )
+
+
+def holds(citation: CaseSourceCitation, registry: Mapping[str, CaseSourceItem]) -> bool:
+    source = registry.get(citation.source_id)
+    if source is None or not citation.exact_quote:
+        return False
+    if citation.start is None or citation.end is None:
+        return citation.exact_quote in source.text
+    return source.text[citation.start : citation.end] == citation.exact_quote
 
 
 def drafted_unit(

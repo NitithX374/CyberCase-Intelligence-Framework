@@ -1,20 +1,13 @@
 from __future__ import annotations
 
 import asyncio
-import threading
-import time
-from functools import lru_cache
 
 import pytest
 
 from app.analysis.technical_context.gate import chosen_gate, mitre_gate, never_applicable
-from app.analysis.technical_context.gate_llm import (
-    evaluate_mitre_applicability,
-    validate_mitre_applicability,
-)
+from app.analysis.technical_context.gate_llm import evaluate_mitre_applicability
 from app.config import settings
 from app.sources.bundle import CaseSourceItem
-from app.trace.sentences import split_sources
 
 CYBER = "ตรวจพบ PowerShell.exe เชื่อมต่อออกไปยังไอพี 198.51.100.23 เมื่อเวลา 03.00 น."
 PLAIN = "พนักงานสอบสวนได้ยึดโทรศัพท์มือถือของผู้ต้องหาไว้เป็นของกลาง"
@@ -47,145 +40,3 @@ def test_never_skips_without_asking_anything(mode, sources):
     assert record.decision == "SKIP"
     assert record.failure_code is None
     assert record.trigger_text == []
-
-
-def test_the_encoder_gate_quotes_the_sentence_it_fired_on(mode, monkeypatch, sources):
-    from app.analysis.technical_context import gate_encoder as encoder
-
-    mode("encoder")
-    monkeypatch.setattr(
-        encoder, "loaded_gate", lambda: encoder.Loaded(None, None, None, 1, 0.5, 96)
-    )
-    monkeypatch.setattr(
-        encoder, "scores", lambda texts: [0.9 if CYBER in t else 0.1 for t in texts]
-    )
-
-    record = asyncio.run(mitre_gate(case_sources=sources))
-
-    assert record.decision == "RETRIEVE"
-    assert record.source_message_ids == ["S1"]
-    assert record.trigger_text == [CYBER]
-    assert PLAIN not in record.trigger_text
-
-
-def test_the_encoder_gate_keeps_its_heavy_work_off_the_event_loop(mode, monkeypatch, sources):
-    from app.analysis.technical_context import gate_encoder as encoder
-
-    mode("encoder")
-    threads: dict[str, int] = {}
-
-    def split(case_sources):
-        threads["split"] = threading.get_ident()
-        return split_sources(case_sources)
-
-    def loaded():
-        threads["load"] = threading.get_ident()
-        return encoder.Loaded(None, None, None, 1, 0.5, 96)
-
-    def scored(texts):
-        threads["scores"] = threading.get_ident()
-        return [0.9 if CYBER in t else 0.1 for t in texts]
-
-    monkeypatch.setattr(encoder, "split_sources", split)
-    monkeypatch.setattr(encoder, "loaded_gate", loaded)
-    monkeypatch.setattr(encoder, "scores", scored)
-
-    async def gate_on_this_loop():
-        return await mitre_gate(case_sources=sources), threading.get_ident()
-
-    record, loop_thread = asyncio.run(gate_on_this_loop())
-
-    assert record.decision == "RETRIEVE"
-    assert set(threads) == {"split", "load", "scores"}
-    assert loop_thread not in threads.values()
-
-
-def test_two_gates_at_once_load_the_model_once(mode, monkeypatch, sources):
-    from app.analysis.technical_context import gate_encoder as encoder
-
-    mode("encoder")
-    loads: list[int] = []
-
-    @lru_cache(maxsize=1)
-    def slow_load():
-        loads.append(threading.get_ident())
-        time.sleep(0.2)
-        return encoder.Loaded(None, None, None, 1, 0.5, 96)
-
-    sentences = split_sources(sources)
-    monkeypatch.setattr(encoder, "split_sources", lambda case_sources: sentences)
-    monkeypatch.setattr(encoder, "loaded_gate", slow_load)
-    monkeypatch.setattr(
-        encoder, "scores", lambda texts: [0.9 if CYBER in t else 0.1 for t in texts]
-    )
-
-    async def two_gates():
-        return await asyncio.gather(
-            mitre_gate(case_sources=sources), mitre_gate(case_sources=sources)
-        )
-
-    first, second = asyncio.run(two_gates())
-
-    assert len(loads) == 1
-    assert first.decision == second.decision == "RETRIEVE"
-
-
-def test_what_the_encoder_returns_passes_the_grounding_check(mode, monkeypatch, sources):
-    from app.analysis.technical_context import gate_encoder as encoder
-
-    mode("encoder")
-    monkeypatch.setattr(
-        encoder, "loaded_gate", lambda: encoder.Loaded(None, None, None, 1, 0.5, 96)
-    )
-    monkeypatch.setattr(encoder, "scores", lambda texts: [0.9] * len(texts))
-
-    record = asyncio.run(mitre_gate(case_sources=sources))
-    regrounded = validate_mitre_applicability(
-        {
-            "decision": record.decision,
-            "source_message_ids": record.source_message_ids,
-            "trigger_text": record.trigger_text,
-        },
-        sources,
-    )
-
-    assert regrounded.decision == "RETRIEVE"
-    assert regrounded.failure_code is None
-
-
-def test_nothing_above_the_threshold_is_a_skip(mode, monkeypatch, sources):
-    from app.analysis.technical_context import gate_encoder as encoder
-
-    mode("encoder")
-    monkeypatch.setattr(
-        encoder, "loaded_gate", lambda: encoder.Loaded(None, None, None, 1, 0.5, 96)
-    )
-    monkeypatch.setattr(encoder, "scores", lambda texts: [0.2] * len(texts))
-
-    assert asyncio.run(mitre_gate(case_sources=sources)).decision == "SKIP"
-
-
-def test_a_case_with_no_readable_text_is_a_skip(mode):
-    mode("encoder")
-    blank = [CaseSourceItem(source_id="S1", source_kind="narrative", text="   ")]
-    assert asyncio.run(mitre_gate(case_sources=blank)).decision == "SKIP"
-
-
-def test_only_the_sources_actually_quoted_are_cited(mode, monkeypatch):
-    from app.analysis.technical_context import gate_encoder as encoder
-
-    mode("encoder")
-    sources = [
-        CaseSourceItem(source_id="S1", source_kind="narrative", text=PLAIN),
-        CaseSourceItem(source_id="S2", source_kind="narrative", text=CYBER),
-    ]
-    monkeypatch.setattr(
-        encoder, "loaded_gate", lambda: encoder.Loaded(None, None, None, 1, 0.5, 96)
-    )
-    monkeypatch.setattr(
-        encoder, "scores", lambda texts: [0.9 if CYBER in t else 0.1 for t in texts]
-    )
-
-    record = asyncio.run(mitre_gate(case_sources=sources))
-
-    assert record.source_message_ids == ["S2"]

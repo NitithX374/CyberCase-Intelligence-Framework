@@ -10,14 +10,12 @@ from app.errors import CaseAnalysisFailure
 from app.trace.claim_validation import unverified_claims, usable_claims, validate_claims
 from app.trace.nli_model import NliUnavailable
 from app.trace.summary import summary_pieces
-from app.trace.trace import CaseGroundingReport, CaseProviderJudgement, CaseProviderReading
+from app.trace.trace import CaseProviderJudgement, CaseProviderReading
 
 logger = logging.getLogger("app.case_analysis")
 
 
-async def checked_claim_support(
-    reading: CaseProviderReading, grounding: CaseGroundingReport
-) -> tuple[CaseProviderReading, CaseGroundingReport]:
+async def checked_claim_support(reading: CaseProviderReading) -> CaseProviderReading:
     stop = threading.Event()
     try:
         claims, counts = await asyncio.to_thread(validate_claims, reading.claims, stop=stop)
@@ -35,9 +33,7 @@ async def checked_claim_support(
         counts.calls,
         counts.duration_ms,
     )
-    return reading.model_copy(update={"claims": claims}), grounding.model_copy(
-        update=counts.grounding()
-    )
+    return reading.model_copy(update={"claims": claims})
 
 
 def usable_reading(reading: CaseProviderReading) -> CaseProviderReading:

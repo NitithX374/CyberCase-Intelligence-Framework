@@ -152,7 +152,13 @@ class CaseTechnicalAugmentation(BaseModel):
     mitre_table: list[dict[str, object]] = Field(default_factory=list)
     association_ids: list[str] = Field(default_factory=list)
     failure_code: str | None = None
-    shadow_applicability: MitreApplicabilityRecord | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_shadow(cls, data: object) -> object:
+        if isinstance(data, dict) and "shadow_applicability" in data:
+            data = {key: value for key, value in data.items() if key != "shadow_applicability"}
+        return data
 
 
 @dataclass(frozen=True)

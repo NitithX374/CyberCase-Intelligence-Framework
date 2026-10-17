@@ -8,25 +8,30 @@ from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseAnalysisMode,
-    CaseProviderClaim,
     CaseReadingClaim,
     ClaimIds,
     clipped,
     normalize_identifier,
 )
+from app.trace.retired import without_retired
 
 MAX_SUMMARY_CHARS = 24_000
 
 SupportStatus = Literal["bound", "mixed", "unbound", "no_claim"]
 
-
-class CaseProjectionGrounding(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    verdict: Literal["supported", "not_supported", "unassessed"]
-    reason: str = Field(min_length=1, max_length=120)
-    model: str | None = Field(default=None, max_length=200)
-    entailment: float | None = Field(default=None, ge=0, le=1)
+RETIRED_TRACE_FIELDS = frozenset({"grounding"})
+RETIRED_VIEW_FIELDS = frozenset({"projection_grounding", "field_spans"})
+RETIRED_EXTRACTION_FIELDS = frozenset(
+    {
+        "revision",
+        "library_version",
+        "device",
+        "threshold",
+        "quantization",
+        "runtime_revision",
+        "field_resolution_issues",
+    }
+)
 
 
 class ProviderParty(BaseModel):
@@ -48,8 +53,11 @@ class ProviderParty(BaseModel):
 class CaseInvolvedParty(ProviderParty):
     role: str | None = Field(default=None, min_length=1, max_length=500)
     support: SupportStatus | None = None
-    projection_grounding: CaseProjectionGrounding | None = None
-    field_spans: dict[str, CaseClaimSpan] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_fields(cls, data: object) -> object:
+        return without_retired(data, RETIRED_VIEW_FIELDS)
 
     @field_validator("name", "role")
     @classmethod
@@ -77,8 +85,11 @@ class CaseTimelineItem(ProviderTimelineItem):
     time: str | None = Field(default=None, min_length=1, max_length=500)
     event: str = Field(min_length=1, max_length=4_000)
     support: SupportStatus | None = None
-    projection_grounding: CaseProjectionGrounding | None = None
-    field_spans: dict[str, CaseClaimSpan] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_fields(cls, data: object) -> object:
+        return without_retired(data, RETIRED_VIEW_FIELDS)
 
     @field_validator("time", "event")
     @classmethod
@@ -104,8 +115,11 @@ class ProviderImpactItem(BaseModel):
 class CaseImpactItem(ProviderImpactItem):
     description: str = Field(min_length=1, max_length=4_000)
     support: SupportStatus | None = None
-    projection_grounding: CaseProjectionGrounding | None = None
-    field_spans: dict[str, CaseClaimSpan] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_fields(cls, data: object) -> object:
+        return without_retired(data, RETIRED_VIEW_FIELDS)
 
 
 class CaseMitreAssociation(BaseModel):
@@ -138,101 +152,22 @@ class CaseSummaryUnit(BaseModel):
     support: SupportStatus
 
 
-class CaseGroundingReport(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    claims: int = 0
-    citations_claimed: int = 0
-    citations_verified: int = 0
-    citations_pointed: int = 0
-    citations_unfound: int = 0
-    claims_without_citation: int = 0
-    claims_duplicated: int = 0
-    citations_duplicated: int = 0
-    citations_marked: int = 0
-    citations_meaning_pointed: int = 0
-    evidence_ids_claimed: int = 0
-    evidence_ids_resolved: int = 0
-    evidence_ids_invalid: int = 0
-    evidence_id_resolution_rate: float | None = Field(default=None, ge=0, le=1)
-    claims_with_direct_evidence: int = 0
-    claims_with_recovered_evidence: int = 0
-    claims_without_resolved_evidence: int = 0
-    meaning_pointer_eligible: int = 0
-    meaning_pointer_attempted: int = 0
-    meaning_pointer_unavailable: int = 0
-    meaning_pointer_unavailable_reason: str | None = Field(default=None, max_length=120)
-    meaning_pointer_skipped: int = 0
-    claims_semantically_supported: int = 0
-    claims_semantically_not_supported: int = 0
-    claims_semantically_unassessed: int = 0
-    claims_admitted_to_judgement: int = 0
-    claims_withheld_from_judgement: int = 0
-    claim_verifier_calls: int = 0
-    claim_validation_ms: float = Field(default=0, ge=0)
-    claim_verifier_model: str | None = None
-    claim_verifier_threshold: float | None = Field(default=None, ge=0.5, le=1)
-    claim_verifier_artifact_sha256: str | None = None
-    claim_source_units_considered: int = 0
-    claim_source_units_selected: int = 0
-    claim_verifier_truncated_pairs: int = 0
-    associations_outside_context: int = 0
-    associations_without_claim: int = 0
-    summary_ids_unknown: int = 0
-    sources_cited: int = 0
-    sources_total: int = 0
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_counts(cls, data: object) -> object:
-        if isinstance(data, dict) and "citations_paraphrased" in data:
-            data = {key: value for key, value in data.items() if key != "citations_paraphrased"}
-        return data
-
-
-class CaseClaimSpan(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    claim_id: str = Field(pattern=r"^A-\d{2,}$")
-    start: int = Field(ge=0, strict=True)
-    end: int = Field(gt=0, strict=True)
-
-    @model_validator(mode="after")
-    def ordered_offsets(self):
-        if self.end <= self.start:
-            raise ValueError("Claim span end must follow its start")
-        return self
-
-
-class CaseViewFieldIssue(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    view: Literal["party", "timeline_event", "impact"]
-    record_index: int = Field(ge=0)
-    field: Literal["name", "role", "time", "event", "description"]
-    text: str = Field(min_length=1)
-    reason: Literal["unresolved", "ambiguous"]
-    claim_id: str = Field(pattern=r"^A-\d{2,}$")
-
-
 class CaseViewExtraction(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     method: str = Field(default="legacy", min_length=1, max_length=200)
     model: str
-    revision: str | None = Field(default=None, pattern=r"^[a-f0-9]{40}$")
-    library_version: str | None = None
-    device: str | None = None
-    threshold: float | None = Field(default=None, gt=0, lt=1)
-    quantization: str | None = None
-    runtime_revision: str | None = Field(default=None, pattern=r"^[a-f0-9]{40}$")
-    field_resolution_issues: list[CaseViewFieldIssue] = Field(default_factory=list)
     input_claim_ids: ClaimIds
     excluded_claim_ids: ClaimIds
     duration_ms: float = Field(ge=0)
     status: Literal["completed", "failed", "skipped"] = "completed"
     warning: str | None = Field(default=None, max_length=200)
     items_dropped: int = Field(default=0, ge=0)
+
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_fields(cls, data: object) -> object:
+        return without_retired(data, RETIRED_EXTRACTION_FIELDS)
 
 
 class CaseAnalysisTrace(BaseModel):
@@ -250,22 +185,13 @@ class CaseAnalysisTrace(BaseModel):
     gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=64)
     mitre_associations: list[CaseMitreAssociation] = Field(default_factory=list, max_length=64)
     retrieval_context_id: str | None = Field(default=None, min_length=1, max_length=160)
-    grounding: CaseGroundingReport | None = None
     view_extraction: CaseViewExtraction | None = None
     stop_reason: str | None = Field(default=None, max_length=40)
 
-
-class CaseProviderAnalysis(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal["case_analysis_trace_v1"]
-    claims: list[CaseProviderClaim] = Field(max_length=64)
-    summary: str = Field(min_length=1, max_length=MAX_SUMMARY_CHARS)
-    involved_parties: list[ProviderParty] = Field(max_length=64)
-    timeline: list[ProviderTimelineItem] = Field(max_length=64)
-    impacts: list[ProviderImpactItem] = Field(max_length=64)
-    gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
-    mitre_associations: list[CaseMitreAssociation] = Field(default_factory=list, max_length=64)
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_fields(cls, data: object) -> object:
+        return without_retired(data, RETIRED_TRACE_FIELDS)
 
 
 class CaseProviderReading(BaseModel):
@@ -292,20 +218,15 @@ class CaseProviderJudgement(BaseModel):
 
 __all__ = [
     "CaseAnalysisTrace",
-    "CaseClaimSpan",
-    "CaseGroundingReport",
     "CaseImpactItem",
     "CaseInvolvedParty",
     "CaseMitreAssociation",
-    "CaseProjectionGrounding",
-    "CaseProviderAnalysis",
     "CaseProviderJudgement",
     "CaseProviderReading",
     "CaseProviderReadingReply",
     "CaseSummaryUnit",
     "CaseTimelineItem",
     "CaseViewExtraction",
-    "CaseViewFieldIssue",
     "ProviderImpactItem",
     "ProviderParty",
     "ProviderTimelineItem",

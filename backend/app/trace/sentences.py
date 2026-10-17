@@ -1,20 +1,22 @@
 from __future__ import annotations
 
-from bisect import bisect_right
-from collections.abc import Sequence
-from dataclasses import dataclass
-from functools import cached_property
-
+import logging
 import threading
+from bisect import bisect_right
+from functools import cache, cached_property
+from importlib.metadata import version
 from typing import Any
 
 from pythainlp.tokenize import sent_tokenize
 
-from app.sources.bundle import CaseSourceItem
 from app.trace.citations import MAX_CONTEXT_CHARS, CaseQuoteContext
 
 MIN_SENTENCE_CHARS = 25
+SAT_MODEL = "sat-3l-sm"
+SAT_REVISION = "137da054051ad9f1eac42025f758db4ac9f22535"
 SAT_THRESHOLD = 0.025
+
+logger = logging.getLogger(__name__)
 
 _sat_model: Any = None
 _sat_lock = threading.Lock()
@@ -31,26 +33,37 @@ def get_sat_segmenter() -> Any:
                     warnings.filterwarnings("ignore", message=".*XLMRobertaTokenizerFast.*")
                     from wtpsplit import SaT
 
-                    _sat_model = SaT("sat-3l-sm")
+                    _sat_model = SaT(SAT_MODEL, from_pretrained_kwargs={"revision": SAT_REVISION})
                 except Exception:
+                    logger.warning(
+                        "SaT %s@%s could not be loaded; sentences are split with PyThaiNLP crfcut",
+                        SAT_MODEL,
+                        SAT_REVISION,
+                        exc_info=True,
+                    )
                     _sat_model = False
     return _sat_model if _sat_model is not False else None
 
 
+@cache
+def package_version(name: str) -> str:
+    return version(name)
+
+
+def segmenter_identity() -> str:
+    if get_sat_segmenter() is not None:
+        return (
+            f"sat:{SAT_MODEL}@{SAT_REVISION}:threshold={SAT_THRESHOLD}"
+            f":wtpsplit={package_version('wtpsplit')}"
+        )
+    return f"crfcut:pythainlp={package_version('pythainlp')}"
+
+
 def tokenize_sentences(segment_text: str) -> list[str]:
     segmenter = get_sat_segmenter()
-    if segmenter is not None:
-        try:
-            return segmenter.split(segment_text, threshold=SAT_THRESHOLD)
-        except Exception:
-            pass
-    return sent_tokenize(segment_text, engine="crfcut")
-
-
-@dataclass(frozen=True)
-class Sentence:
-    source_id: str
-    text: str
+    if segmenter is None:
+        return sent_tokenize(segment_text, engine="crfcut")
+    return segmenter.split(segment_text, threshold=SAT_THRESHOLD)
 
 
 def split_text(text: str) -> list[str]:
@@ -95,14 +108,6 @@ def line_sentences(text: str, start: int, end: int) -> list[tuple[int, int]]:
 def stripped(text: str, start: int, end: int) -> tuple[int, int]:
     piece = text[start:end]
     return start + len(piece) - len(piece.lstrip()), end - len(piece) + len(piece.rstrip())
-
-
-def split_sources(sources: Sequence[CaseSourceItem]) -> list[Sentence]:
-    return [
-        Sentence(source_id=source.source_id, text=text)
-        for source in sources
-        for text in split_text(source.text)
-    ]
 
 
 class SentenceIndex:
@@ -162,12 +167,11 @@ def quote_context(index: SentenceIndex, quote: str) -> CaseQuoteContext | None:
 
 __all__ = [
     "MIN_SENTENCE_CHARS",
-    "Sentence",
     "SentenceIndex",
     "get_sat_segmenter",
     "quote_context",
+    "segmenter_identity",
     "sentence_spans",
-    "split_sources",
     "split_text",
     "tokenize_sentences",
 ]

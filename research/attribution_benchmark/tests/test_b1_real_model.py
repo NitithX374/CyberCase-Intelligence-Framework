@@ -21,7 +21,7 @@ from app.trace.trace import CaseProviderJudgement, CaseProviderReadingReply, Cas
 pytestmark = pytest.mark.skipif(
     os.getenv("B1_REAL_MODEL") != "1", reason="Explicit pinned-model integration run required"
 )
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 
 
 @pytest.fixture
@@ -146,9 +146,7 @@ async def test_real_en_th_cross_document_and_qa_gate_completes_native_pipeline(
     assert [claim["claim_id"] for claim in calls[1]["content"]["reading"]["claims"]] == views_input
     assert "semantic_grounding" not in json.dumps(calls[1]["content"])
     assert "answer" not in calls[1]["content"]["followup_history"][0]
-    assert trace.grounding.claims_admitted_to_judgement == 5
-    assert trace.grounding.evidence_ids_claimed == trace.grounding.evidence_ids_resolved == 7
-    assert trace.claims[-1].semantic_grounding.selected_citation_indices == [0, 2]
+    assert sum(len(claim.supporting_citations) for claim in trace.claims) == 7
     assert trace.claims[-1].supporting_citations[-1].page_numbers == [2]
     registry = {source.source_id: source for source in sources.sources}
     registry["QA-03"] = CaseSourceItem("QA-03", "followup_answer", history[0].answer)

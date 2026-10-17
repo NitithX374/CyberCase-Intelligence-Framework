@@ -94,8 +94,8 @@ Between the two calls, `bound_claims` in `trace/bind.py` checks the reading
 against the sources:
 - `sources/evidence.py` partitions each source into exact-offset Evidence Units;
 - `trace/evidence_binding.py` resolves selected IDs to original text and document/page locators;
-- a `reported` claim left with no resolved supporting evidence becomes `not_confirmed`;
-- the grounding counts are taken.
+  a citation that names no unit is recorded as an invalid reference, never looked up as text;
+- a `reported` claim left with no resolved supporting evidence becomes `not_confirmed`.
 
 `analysis/claim_gate.py` runs `trace/claim_validation.py` after binding, in a worker
 thread. Frozen B1-LR selects resolved Source units with pinned multilingual
@@ -109,9 +109,9 @@ The check runs concurrently with Judgement and the Views. Structural blockers
 still withhold missing, unresolved, conflicting or uncertain support before
 inference. An unavailable model is logged and the Claims are marked `unassessed`
 (`verifier_unavailable`) without failing the analysis. All Claims/citations remain
-stored, with selected indices/IDs, probabilities, LR score, artifact hash and
-truncation diagnostics. Grounding counts passed and withheld Claims, selection,
-calls and duration. An analysis abstains without Views/Judgement only when no
+stored. A verdict keeps its reason and the method and artifact hash of the
+verifier; the selection, probabilities, LR score and truncation are not stored,
+and one log line counts the verdicts, calls and time. An analysis abstains without Views/Judgement only when no
 Claim passes the structural checks. Historical .80 verdicts remain historical.
 See [the exact method and experiments](../research/attribution_benchmark/B1_INTEGRATION.md).
 
@@ -130,8 +130,8 @@ Its failure cancels outstanding extraction. UI/Report views trace through Claims
 to their Source units; no views enter Judgement/chat. Stored analysis snapshots
 cache the output for reads/reports, without a new table or revision mechanism.
 Historical local-extraction metadata and offsets remain readable. The former
-local loader/per-Claim runtime and Compose service are removed. The encoder
-and Claim support verifier have separate purposes; the stopped research experiments remain separate.
+local loader/per-Claim runtime and Compose service are removed; the stopped research
+experiments remain separate.
 
 The judgement therefore reads only claims that pass the structural checks: their statuses, and only the
 source spans that were resolved. Its payload retains Claim IDs but citation records
@@ -156,8 +156,8 @@ without `semantic_grounding` remain unassessed; reads/reports do not run NLI.
 `bind_to_case` then checks the judgement's references with `bound_references`:
 - the `affected_claim_ids` of a gap;
 - the claim IDs at the end of each summary sentence: `summary_units` is derived
-  from the summary, each unit with its known claim IDs and a `support`, and the
-  IDs that name no claim are counted in `grounding.summary_ids_unknown`.
+  from the summary, each unit with its known claim IDs and a `support`; an ID
+  that names no claim is dropped from its unit.
 
 `bound_references` also lists the ATT&CK associations, with no model call
 (`trace/associations.py::mapped_associations`). A row of the RAG service's table
@@ -169,19 +169,17 @@ description. Nothing is checked against the Sources or the Claims and no Claim i
 attached, so `claim_ids` is empty; the service already located the sentence in the
 case file. A row without a re-read span still shows as retrieved context.
 
-A trace written without the middle step, as the one-call writer in
-`experiments/analysis_arms.py` writes it, is bound in full there. The `verify` arm in
-`experiments/analysis_arms.py` runs the same three steps without the
-assessment. There is no arm switch or config value. The alternative compositions the thesis measures live in
-`backend/experiments/analysis_arms.py`; each arm calls these same functions on
-an `AnalysisInput` directly, with no case row. `run_case_analysis(pipeline=...)`
-also accepts a substitute composition, as `tests/test_case_followup_postgres.py`
-does. When that composition returns bare `AnalysisArtifacts`, `think` in
+There is no arm switch or config value. The alternative compositions the thesis
+measures are research code in `research/analysis_arms/`; each arm calls these
+same functions on an `AnalysisInput` directly, with no case row, and they run
+against the backend at commit `712aeeed`, the last one with the one-call
+contract they need. `run_case_analysis(pipeline=...)` also accepts a substitute
+composition, as `tests/test_case_followup_postgres.py` does. When that composition returns bare `AnalysisArtifacts`, `think` in
 `analysis/run.py` wraps them as a `Proceed` with an empty assessment,
 so `store_outcome` only ever sees an `AnalysisAdvance`.
 
-**`experiments/` imports `app/`. `app/` never imports `experiments/`.** If that
-ever reverses, an ablation has become production.
+**`research/` imports `app/`. `app/` never imports `research/`.** If that ever
+reverses, an ablation has become production.
 
 ---
 
@@ -289,8 +287,7 @@ violations or `<stage>_incomplete` for token limits. Refusals and timeouts are n
 generation retries. Model, provider, temperature and token settings are unchanged.
 A caller's `calls` list receives model, estimated input tokens, output mode,
 request max_tokens, generation attempts, usage, status and elapsed time. Production
-logs output mode and the request cap without prompt or source text. The encoder
-gate (`MITRE_GATE_MODE=encoder`) runs a local model and calls no provider.
+logs output mode and the request cap without prompt or source text.
 
 A chat answer reads what the analysis reads — the case sources, the answered
 follow-ups and the technical context the latest analysis retrieved — and that
@@ -298,8 +295,11 @@ analysis too when there is one. The model returns units, each with a basis
 (`case_fact`, `interpretation`, `technical` or `general`), the `claim_ids` it
 rests on and exact quotes. `chat/compose.py` builds the request and invokes the
 model; `chat/answer_contract.py` defines its reply. `chat/grounding.py` keeps only
-claim ids of that analysis, verifies quotes against the original Source text,
-and derives their locations. `chat/answer.py` stores the units on the message;
+claim ids of that analysis, cites each claim with the citations the analysis
+stored without binding them again, leaves out a stored citation whose source is
+gone from the case or no longer holds the quote at its offsets, verifies the
+model's own quotes against the original Source text, and derives their
+locations. `chat/answer.py` stores the units on the message;
 a unit whose citation fails keeps its text
 without the citation. The log line `Chat answer grounding` counts cited and
 uncited case facts per answer.

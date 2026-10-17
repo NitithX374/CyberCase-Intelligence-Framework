@@ -158,7 +158,7 @@ Backend (prefix `/api/v1`), one `routes.py` per feature folder. `tests/test_rout
 - `GET`, `POST /cases`; `GET`, `PATCH`, `DELETE /cases/{case_id}` — case lifecycle (`cases/routes.py`)
 - `GET /cases/{case_id}/chat`, `POST /cases/{case_id}/chat/messages` — the Ask/Chat panel (`chat/routes.py`). A message, a
   follow-up answer included, is at most 4,000 characters
-- `POST /cases/{case_id}/documents`, `GET /cases/{case_id}/documents/{document_id}/content` — upload and read back (`sources/routes.py`, `document_router`). There is no document list: a document is listed through its source, and `CaseSourceRead` carries `filename`, `mime_type` and `size_bytes`
+- `POST /cases/{case_id}/documents`, `GET /cases/{case_id}/documents/{document_id}/content`, `POST /cases/{case_id}/documents/{document_id}/reingest` — upload, read back, and read a stored document again, whose new text replaces the text of its source under the same source ID (`sources/routes.py`, `document_router`). There is no document list: a document is listed through its source, and `CaseSourceRead` carries `filename`, `mime_type` and `size_bytes`
 - `GET`, `POST /cases/{case_id}/sources` — what the case is analysed from (`sources/routes.py`). A source, text or
   document, is refused with 413 `source_too_large` when the sources of the case would pass `SOURCE_TOKEN_BUDGET` (40,000
   tokens). Each source is weighed as it sits in a stage payload, which serializes it twice, plus `SOURCE_OVERHEAD_TOKENS`
@@ -215,17 +215,15 @@ llm/                    calling a model
 trace/                  what the analysis, chat and reports share
   claims.py             claim fields/provider boundaries, gaps and follow-up
                         exchanges; reexports historical citation names
-  claim_validation.py   full Claim/Source NLI assessment, saved verdicts and
-                        admission counters; never truncates the pair
-  citations.py          evidence references, resolved citations, invalid pointers
-                        and legacy quote schemas; review flags are backend-only
+  claim_validation.py   full Claim/Source NLI assessment and the saved verdict;
+                        never truncates the pair
+  citations.py          evidence references, resolved citations and invalid
+                        pointers; the keys of removed quote-era fields are
+                        dropped on read
   trace.py              claims-only Reader contracts and the stored trace;
-                        historical parties, timeline and impacts retain their
-                        support and saved projection_grounding for display.
                         summary_units holds the summary cut
                         at its claim-ID brackets, each unit with its claim IDs
                         and the same derived support
-  view_fields.py        legacy Claim-span pointers and derived-view extraction metadata
   summary.py            cutting a summary into the units that end at a
                         [A-nn, A-nn] bracket; the model writes only the summary
                         string, with its brackets; summary_closings gives the
@@ -234,11 +232,15 @@ trace/                  what the analysis, chat and reports share
   b1_verifier.py        frozen WiCE TRAIN LR decision boundary, source-unit selection contract
   b1_lr.json            small frozen coefficients, selector revision/hashes and provenance
   source_selector.py    local pinned multilingual MPNet, normalized cosine, serialized CPU inference
-  claim_validation.py   structural blockers then B1-LR; saved per-Claim verdict/features/selection
+  claim_validation.py   structural blockers then B1-LR; saved per-Claim verdict, reason
+                        and the method and artifact hash of the verifier that gave it
   nli_model.py          pinned mDeBERTa full E/N/C vector; longest-first truncation512,
-                        raw token count/truncation recorded; unavailable model leaves Claims unassessed
-  sentences.py          the sentence around a quotation: PyThaiNLP crfcut, line
-                        by line; the encoder gate splits with it too
+                        raw token count/truncation on each result; unavailable model leaves Claims unassessed
+  sentences.py          the sentence splitter, line by line: SaT at a pinned
+                        revision, or PyThaiNLP crfcut when SaT cannot be
+                        loaded; Source units and the sentence around a
+                        quotation use it, and segmenter_identity names the one
+                        in use
   bind.py               stable orchestration: resolve claim source references
                         before Judgement; check final references and
                         derive summary units afterwards
@@ -247,8 +249,10 @@ trace/                  what the analysis, chat and reports share
                         that sentence as the service sent it: no check, no
                         Claim attached
   evidence_binding.py   validate selected IDs, materialize original source spans
-                        and page locators, reject duplicate references
-  grounding.py          legacy counters and deterministic Evidence ID metrics
+                        and page locators, reject duplicate references; a
+                        citation that names no unit is an invalid reference
+  retired.py            without_retired: drops the keys of removed fields from a
+                        stored record before it is validated
   support.py            bound/mixed/unbound/no_claim describe evidence binding
                         of linked claims, never semantic or factual confirmation
   messages.py           what a chat message carries: the trace attached to it,
@@ -320,8 +324,8 @@ analysis/               producing an analysis of a case; routes, schemas
     contracts.py        the augmentation and applicability records, and the
                         RAG service's request and response
     retrieve.py         run the gate, then ask the RAG service when it says to
-    gate.py             picks the gate; gate_llm.py and gate_encoder.py are
-                        the gates
+    gate.py             picks the gate: gate_llm.py, or never_applicable for
+                        the ablation
     rag_client.py       the RAG service client
 chat/                   the case conversation; routes, schemas
   reply.py              routes a message: a follow-up answer or a question
@@ -329,20 +333,16 @@ chat/                   the case conversation; routes, schemas
                         store the reply
   compose.py            the chat prompt, request and model call
   answer_contract.py    the provider reply and composed answer shapes
-  grounding.py          binds answer units to Claims and exact Source quotes
+  grounding.py          binds answer units to the Claims as their analysis
+                        stored them, keeping the citations the Sources still
+                        hold, and checks the model's own quotes against the
+                        Sources
 reports/                routes, schemas, contracts, generate.py (one report
                         per analysis, from what it recorded), display.py (the
                         snapshot a report stores and prints), findings.py
                         (Source labels and quotes), technical.py (MITRE rows
                         and notices), limitations.py (report caveats),
                         render.py (HTML and PDF from templates/)
-experiments/            ablations — imports app/, never imported by it; only
-                        __init__.py and this file are tracked; the rest
-                        is local
-  analysis_arms.py      direct / verify / revise / single, built from the same
-                        steps advance_case runs; single is the one-call writer
-                        production used before the reading/judgement split,
-                        kept as the ablation
 tests/                  every backend test and the helpers they share
 ```
 
@@ -373,7 +373,9 @@ import of `app.reports`.
 test is in `backend/tests/`, and `tests/test_layout.py` fails when a test file
 appears under `app/`. Every frontend test is in `frontend/src/test/`, at the
 path of the file it tests, and `npm run lint` fails on a test file anywhere
-else.
+else. A test of research code sits with that code under `research/`, for
+example `research/attribution_benchmark/tests/`, and is run from the repository
+root with `python -m pytest research/attribution_benchmark/tests`.
 
 **Production runs one path, and the arms are arguments.** That path is
 `advance_case`, which reads top to bottom and has no arm switch:
@@ -389,16 +391,16 @@ artifacts = await bind_to_case(...)                # the judgement's references
 ```
 
 A round that ends in a question never calls the MITRE gate, the RAG service,
-the reading and judgement calls or the binding step. The `verify` arm in
-`experiments/analysis_arms.py` runs those three expensive steps without the
-preflight. Once the rounds are spent (`rounds_are_spent` in
-`followup/clarification.py`) the preflight is skipped as well: `decide_followup`
-would proceed whatever it found, and `AnalysisAdvance.assessment` is then `None`.
-A question is never stored without its assessment.
-The arms in `experiments/analysis_arms.py` take an `AnalysisInput` directly and
-touch no case row. `run_case_analysis(pipeline=...)` also accepts a substitute
+the reading and judgement calls or the binding step. Once the rounds are spent
+(`rounds_are_spent` in `followup/clarification.py`) the preflight is skipped as
+well: `decide_followup` would proceed whatever it found, and
+`AnalysisAdvance.assessment` is then `None`. A question is never stored without
+its assessment. `run_case_analysis(pipeline=...)` also accepts a substitute
 composition, as `tests/test_case_followup_postgres.py` does. There is no
-`CASE_ANALYSIS_ARM` setting.
+`CASE_ANALYSIS_ARM` setting. The ablation arms (`direct`, `verify`, `revise`,
+`single`) are research code in `research/analysis_arms/`; they need the one-call
+contract the backend no longer has, so they run against the backend at commit
+`712aeeed` (its README says how).
 
 ### Key Modules (under `rag_service/app/RAG/GraphRAG/`)
 | Module | Path | Purpose |
@@ -413,48 +415,33 @@ composition, as `tests/test_case_followup_postgres.py` does. There is no
 ### MITRE Applicability Gate (backend)
 
 Before a case is analysed the backend decides whether ATT&CK is relevant at
-all. `MITRE_GATE_MODE` picks between three gates, which live together in
-`backend/app/analysis/technical_context/` (`gate.py` picks one):
+all. `MITRE_GATE_MODE` picks the gate in
+`backend/app/analysis/technical_context/gate.py`:
 
 | Mode | What decides | Notes |
 |------|--------------|-------|
 | `llm` (default) | one prompt over the case, each source cut to at most 4,000 characters (20,000 across all sources); `input_truncated` on the record says whether anything was cut | `technical_context/gate_llm.py`, model from `CASE_ANALYSIS_MODEL`, sent through `request_stage` like every other model call |
-| `encoder` | XLM-R over one sentence at a time | `technical_context/gate_encoder.py`; needs `torch`/`transformers`, which are **not** in `backend/requirements.txt` |
 | `never` | nothing — always SKIP | the ablation, for measuring what technical context is worth |
 
-**Shadow gate.** `MITRE_GATE_SHADOW=encoder` runs the XLM-R gate beside the LLM gate, concurrently.
-- Only the LLM gate decides.
-- The encoder's decision is stored on the analysis as `shadow_applicability` in the technical-augmentation record, so
-  the two can be compared later.
-- The shadow runs only when `MITRE_GATE_MODE=llm`.
-- If torch, transformers or the weights are missing, it records `SKIP` with `mitre_shadow_unavailable`, and the
-  analysis carries on.
-- **Where it is on.**
-  - Nowhere by default: the code default is `off`, and Compose, Railway and the tests leave it off.
-  - The default Compose setup uses the LLM gate. The encoder's weights are already in the mounted
-    `backend/models/xlmr_ladder_best`; to run the encoder or its shadow, use an explicit Compose override
-    that supplies the appropriate `MITRE_GATE_MODE` or `MITRE_GATE_SHADOW`. CPU torch and transformers remain
-    installed for the active legacy NLI recovery path.
-  - `tests/conftest.py` keeps it off whatever the local `.env` says.
+The XLM-R encoder gate and its shadow mode were removed. Their measurements stay in
+`research/mitre_gate/README.md`, and the weights in `backend/models/xlmr_ladder_best` are no
+longer loaded. A stored technical-augmentation record that carries `shadow_applicability`
+still reads: the key is dropped when the record is validated.
 
-The `encoder` gate splits its input with PyThaiNLP `crfcut` (`trace/sentences.py`, which also cuts the sentence shown around a quotation);
-every sentence is an exact substring of its source, so the encoder's `trigger_text`
-is grounded by construction. The `llm` gate does not split sentences: it reads each
-source cut to its share of the budget, and the `trigger_text` it returns is checked
-instead. `validate_mitre_applicability` keeps a RETRIEVE only if every trigger, after
-NFKC normalization, is a substring of a source the gate cited and every cited source
-holds a trigger; otherwise it records SKIP with `mitre_applicability_invalid_grounding`.
-The RAG query is not the trigger text alone: `retrieval_query` in
-`technical_context/retrieve.py` joins the triggers, falls back to the whole source bundle
-(`build_rag_query`) when there are none, and appends each answered follow-up's
-question and answer. `MITRE_GATE_MODEL_PATH` points at the encoder's weights;
-`research/mitre_gate/README.md` has the measurements.
+The `llm` gate does not split sentences: it reads each source cut to its share of the
+budget, and the `trigger_text` it returns is checked. `validate_mitre_applicability` keeps
+a RETRIEVE only if every trigger, after NFKC normalization, is a substring of a source the
+gate cited and every cited source holds a trigger; otherwise it records SKIP with
+`mitre_applicability_invalid_grounding`. The RAG query is not the trigger text alone:
+`retrieval_query` in `technical_context/retrieve.py` joins the triggers, falls back to the
+whole source bundle (`build_rag_query`) when there are none, and appends each answered
+follow-up's question and answer.
 
 ### Source units and canonical claims (backend)
 
-`sources/evidence.py` partitions every source at analysis time, reusing sentence spans and preserving all separators. Each frozen `EvidenceUnit(unit_id, source_id, start, end, text)` satisfies `text == source.text[start:end]`; ordered units reconstruct the source exactly. Canonical IDs have the form `source_id:U001-<16 hex characters>`, derived from the segmentation version and full source text. Reading receives all native sources and answered QA text together using local IDs such as `U001`, with unchanged Source identity and document/quality metadata. `analysis/reading_sources.py` captures revisions before Reading and expands its selections to canonical IDs before binding; offsets and hashes are omitted from the compact model payload. `trace/evidence_binding.py` checks source ownership, existence, syntax, stale hashes and duplicates before reproducing original text. Stored traces keep canonical IDs. On the direct path, citation `exact_quote` is backend-produced text with offsets, document identity and page locator when available. New analyses accept source-unit IDs only; historical stored quote/pointer fields remain readable.
+`sources/evidence.py` partitions every source at analysis time, reusing sentence spans and preserving all separators. Each frozen `EvidenceUnit(unit_id, source_id, start, end, text)` satisfies `text == source.text[start:end]`; ordered units reconstruct the source exactly. Canonical IDs have the form `source_id:U001-<16 hex characters>`. The hex part hashes the segmentation version (`evidence_units_v4`), the identity of the segmenter in use (`segmenter_identity`: the SaT model with its pinned revision, threshold and wtpsplit version, or the PyThaiNLP version for the crfcut fallback) and the full source text, so a segmenter change makes every earlier ID resolve to `stale_id` instead of naming other text. The splitter is chosen once per process: SaT, or crfcut for every source when SaT cannot be loaded. A SaT error on one line is raised; that line is never split by crfcut instead. Reading receives all native sources and answered QA text together using local IDs such as `U001`, with unchanged Source identity and document/quality metadata. `analysis/reading_sources.py` captures revisions before Reading and expands its selections to canonical IDs before binding; offsets and hashes are omitted from the compact model payload. `trace/evidence_binding.py` checks source ownership, existence, syntax, stale hashes and duplicates before reproducing original text. Stored traces keep canonical IDs. On the direct path, citation `exact_quote` is backend-produced text with offsets, document identity and page locator when available. New analyses accept source-unit IDs only, and binding never looks a quotation up in a source: a citation that names no unit is recorded as an invalid reference. A stored quote-era citation still reads, without its retired keys. A chat answer cites each claim with the citations its analysis stored and does not bind them again, so a stored analysis keeps its quotes after the segmenter changes. A stored citation is left out of the answer once its source is no longer in the case bundle, or no longer holds the quote at the citation's offsets (a document read again through `reingest` gets new text under the same source ID).
 
-The dedicated Reader contract contains `version` and `claims` only. Each claim contains its ID, type, text, epistemic status and supporting/contradicting unit citations. The backend derives source-ID lists and citation locations; the Reader cannot generate copied quotations, reasoning summaries, metadata or separate parties/timeline/impacts. `reported` covers attributed or qualified source assertions; `unknown` describes uncertainty explicitly stated in a source. Higher-level inference belongs to Judgement. Removing duplicated structured facts also removes projection-specific NLI verification. Historical views and saved verdicts remain readable for existing records but are never input authority for Judgement or chat. `support=bound` means linked claims have resolved supporting citations, not semantic or factual confirmation. The single-call `CaseProviderAnalysis` contract remains solely for the existing experimental baseline, separate from the production Reader.
+The dedicated Reader contract contains `version` and `claims` only. Each claim contains its ID, type, text, epistemic status and supporting/contradicting unit citations. The backend derives source-ID lists and citation locations; the Reader cannot generate copied quotations, reasoning summaries, metadata or separate parties/timeline/impacts. `reported` covers attributed or qualified source assertions; `unknown` describes uncertainty explicitly stated in a source. Higher-level inference belongs to Judgement. Removing duplicated structured facts also removes projection-specific NLI verification. Historical views and saved verdicts remain readable for existing records but are never input authority for Judgement or chat. `support=bound` means linked claims have resolved supporting citations, not semantic or factual confirmation.
 
 Judgement receives each supplied Claim's `claim_id`, type, text and epistemic status, plus supporting/contradicting citation text only. Source IDs, Evidence Unit IDs and document/page/offset metadata remain on the original Claims for binding, NLI, traceability and reports. This serialization does not alter the stored Claims or remove their attached Source text from Judgement.
 
@@ -470,8 +457,10 @@ ordered E/N/C vector enters the frozen WiCE TRAIN LR; score >=0.50 is `supported
 lower is `not_supported`. This task-specific linear decision boundary is not
 calibrated factual confidence. The verdict is a warning label: it filters nothing
 and is never sent to a model.
-All binding citations remain stored; selected indices/IDs, similarities, three
-NLI probabilities, LR score, artifact hash and truncation are separate diagnostics.
+All binding citations remain stored. A verdict stores its reason and the method
+and artifact hash of the verifier that gave it; the selection, similarities, NLI
+probabilities, LR score and truncation are not stored, and a verdict saved with
+them reads without them. The trace keeps no binding or verifier counters either.
 Unresolved support, missing support, conflicts and uncertain status still withhold
 before inference. Missing/invalid model assets are logged and mark the Claims
 `unassessed` (`verifier_unavailable`) without failing the analysis. Judgement and
@@ -497,21 +486,24 @@ context. `bound` still describes resolvable Claim citations only.
 Views and extraction status/time/dropped counts are stored in the existing trace
 snapshot. Reading an analysis or rendering a report makes no extraction call.
 There is no cross-analysis cache or new revision system. Historical extractor
-metadata, offsets and projection verdicts remain readable through generic records. Local model loaders,
+metadata, offsets and projection verdicts are dropped when a stored record is read. Local model loaders,
 per-Claim inference, the provisioner and Compose sidecar/config/mount are removed;
-Torch/Transformers remain for the encoder gate and pinned Claim/Source NLI. The full
+Torch/Transformers remain for the pinned Claim/Source NLI and its source selector. The full
 contract is in [B1-LR integration](research/attribution_benchmark/B1_INTEGRATION.md).
 
 ### Historical pointer compatibility
 
-Quote contexts, tolerated differences, near/meaning pointers and their counts
-remain accepted in stored traces and reports. There is no active meaning-pointer
-recovery or quote matcher in new analysis binding. `nli_model.py` serves the
+Stored traces and reports may still carry the keys of fields that were removed:
+quote-era tolerated differences, review marks, near and meaning pointers with their
+counters, Reader reasoning summaries, projection verdicts, view field spans and the
+GLiNER2 extraction settings. Each model drops its retired keys before validation
+(`trace/retired.py`), so such a record still reads; the values stay in the database
+and nothing reads or prints them. Quote contexts are current, and there is no quote
+matcher in new analysis binding. `nli_model.py` serves the
 Claim support check; unavailable weights leave Claims unassessed rather than
 failing the analysis. `CLAIM_NLI_PATH` and `CLAIM_SELECTOR_PATH` name the two local model
 folders, `models/nli_mdeberta` and `models/source_selector_mpnet`. Every local model lives in
-`backend/models/`, which Compose mounts at `/app/models`: those two, the encoder
-`models/xlmr_ladder_best`, and the caches `models/hf` (`HF_HOME`: the SaT segmenter and the XLM-R
+`backend/models/`, which Compose mounts at `/app/models`: those two and the caches `models/hf` (`HF_HOME`: the SaT segmenter and the XLM-R
 tokenizer it uses) and `models/tiktoken` (`TIKTOKEN_CACHE_DIR`), so nothing is downloaded again
 when a container is recreated. Provisioning is explicit and no model
 is downloaded by an analysis request. Test fixtures replace the verifier to
@@ -533,7 +525,7 @@ pipeline behind `/query` is not deterministic, so asking again is neither free
 nor neutral.
 
 
-The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated`, not rebuilt. Each quote in it carries the sentence around it, in `supporting_contexts` and `contradicting_contexts` beside `supporting_quotes`; a report stored before that has none, still validates, and prints its quotes alone. A quote a tolerant tier found carries what that tier ignored, in `supporting_tolerated` and `contradicting_tolerated`, and the report prints one plain line under it; a report stored before that has none and prints no line. An unverified quote of a not-confirmed claim carries the passage found by meaning in `meaning_passage`, and the report prints it under that quote after one plain line saying how it was found, with no score; a report stored before that has none and prints nothing new, and when the analysis could not run the pointer a limitation says so. A quote with a review flag carries it in `supporting_marked` and `contradicting_marked`, and the report prints one plain line under it, saying that the source has the mark next to the quote or that the quote and the source differ at the mark; a report stored before that has none and prints no line. Historical party, event and impact snapshots retain `support` and saved `projection_grounding` verdicts. New analyses render saved LLM-derived presentation views with linked Claim context alongside Findings; report generation runs no model or extraction step. An unresolved Evidence Unit ID prints as an invalid pointer rather than an empty quote. Each item carries `support`; the report prints one plain line for `unbound`, `mixed` and `no_claim`, and a report stored before that has none, still validates, and prints no line. The snapshot's `summary_units` carries each summary sentence with the finding numbers it rests on and its `support`; the report prints the sentences as one paragraph, each followed by its finding numbers as raised digits that link to the findings table, and, for a sentence that is `unbound`, `mixed` or `no_claim`, a raised letter whose note prints once under the paragraph with the wording of its state; one plain line says what the raised numbers are; the analysis view prints the same paragraph with the same numbers, each a link to its finding; a report stored before that has no units and prints the summary as before. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
+The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated`, not rebuilt. Each quote in it carries the sentence around it, in `supporting_contexts` and `contradicting_contexts` beside `supporting_quotes`; a report stored before that has none, still validates, and prints its quotes alone. A report stored with fields that were removed later (tolerated differences, review marks, the places and meaning passage of an unverified quote, reasoning summaries and projection verdicts) still validates: each report model drops those keys before validation, so the report prints without the lines they gave, and an unverified quote prints only that the location of its evidence could not be determined. New analyses render saved LLM-derived presentation views with linked Claim context alongside Findings; report generation runs no model or extraction step. An unresolved Evidence Unit ID prints as an invalid pointer rather than an empty quote. Each item carries `support`; the report prints one plain line for `unbound`, `mixed` and `no_claim`, and a report stored before that has none, still validates, and prints no line. The snapshot's `summary_units` carries each summary sentence with the finding numbers it rests on and its `support`; the report prints the sentences as one paragraph, each followed by its finding numbers as raised digits that link to the findings table, and, for a sentence that is `unbound`, `mixed` or `no_claim`, a raised letter whose note prints once under the paragraph with the wording of its state; one plain line says what the raised numbers are; the analysis view prints the same paragraph with the same numbers, each a link to its finding; a report stored before that has no units and prints the summary as before. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
 
 ## Key Configuration (`rag_service/app/RAG/GraphRAG/config.py`)
 - **Embedding model**: `BAAI/bge-m3` (1024-dim; FP16 on CUDA only)
@@ -554,7 +546,7 @@ The frontend loads and generates reports through the case-scoped report endpoint
 
 ## Secrets & Environment
 - **Doppler** is used for secrets management (replaces `.env` files in deployed environments); local dev can use `.env` files
-- Backend runtime and online migrations read `POSTGRES_*`, or `DATABASE_URL`, which wins when set. The analysis's technical-context step reads `RAG_SERVICE_URL`; every backend model call reads `OPENROUTER_CYBERCASE`; OCR reads `TYPHOON_API_KEY`; a session cookie needs a `JWT_SECRET_KEY` of at least 32 characters. A chat answer never calls the RAG service. A reply that closes a round runs the analysis, and the analysis's technical-context step may call it. `CASE_ANALYSIS_MODEL` selects the model for every backend model call — the preflight, Main Case Analysis, its chat answers, and the LLM MITRE applicability gate; it accepts a registry alias or full OpenRouter ID and defaults to `google/gemma-4-26b-a4b-it`. The backend calls OpenRouter unless `CASE_ANALYSIS_SERVER=vllm`, which sends the same Messages API calls to a self-hosted vLLM server at `OPENROUTER_MESSAGES_URL`: thinking is then `chat_template_kwargs.enable_thinking` (on when the stage has a budget, with no budget enforced) and no `provider` routing is sent; there is no provider fallback (`docker-compose.selfhosted.yml`, `deploy/selfhosted/README.md`). `CASE_ANALYSIS_WARMUP_SECONDS` (0 by default) lets a `vllm` call wait that long for a server that is starting, counting HTTP 503 and a refused connection as starting, and `run_case_analysis` wakes the server through its `/health` before it calls `advance_case`. `DOCUMENT_RECOGNITION_WARMUP_SECONDS` (0 by default) does the same for OCR, before its ordinary retries count. `CASE_ANALYSIS_PROVIDERS` (comma-separated OpenRouter endpoint tags, e.g. `parasail/fp8,coreweave/fp8`) pins every backend model call to those endpoints in that order with `allow_fallbacks: false`; empty lets OpenRouter route, and the tags must serve the configured model. `CORE_LLM_PROVIDER` belongs to the RAG service alone. `MITRE_GATE_MODE` and `MITRE_GATE_MODEL_PATH` select the applicability gate, and `MITRE_GATE_SHADOW` runs the encoder beside it
+- Backend runtime and online migrations read `POSTGRES_*`, or `DATABASE_URL`, which wins when set. The analysis's technical-context step reads `RAG_SERVICE_URL`; every backend model call reads `OPENROUTER_CYBERCASE`; OCR reads `TYPHOON_API_KEY`; a session cookie needs a `JWT_SECRET_KEY` of at least 32 characters. A chat answer never calls the RAG service. A reply that closes a round runs the analysis, and the analysis's technical-context step may call it. `CASE_ANALYSIS_MODEL` selects the model for every backend model call — the preflight, Main Case Analysis, its chat answers, and the LLM MITRE applicability gate; it accepts a registry alias or full OpenRouter ID and defaults to `google/gemma-4-26b-a4b-it`. The backend calls OpenRouter unless `CASE_ANALYSIS_SERVER=vllm`, which sends the same Messages API calls to a self-hosted vLLM server at `OPENROUTER_MESSAGES_URL`: thinking is then `chat_template_kwargs.enable_thinking` (on when the stage has a budget, with no budget enforced) and no `provider` routing is sent; there is no provider fallback (`docker-compose.selfhosted.yml`, `deploy/selfhosted/README.md`). `CASE_ANALYSIS_WARMUP_SECONDS` (0 by default) lets a `vllm` call wait that long for a server that is starting, counting HTTP 503 and a refused connection as starting, and `run_case_analysis` wakes the server through its `/health` before it calls `advance_case`. `DOCUMENT_RECOGNITION_WARMUP_SECONDS` (0 by default) does the same for OCR, before its ordinary retries count. `CASE_ANALYSIS_PROVIDERS` (comma-separated OpenRouter endpoint tags, e.g. `parasail/fp8,coreweave/fp8`) pins every backend model call to those endpoints in that order with `allow_fallbacks: false`; empty lets OpenRouter route, and the tags must serve the configured model. `CORE_LLM_PROVIDER` belongs to the RAG service alone. `MITRE_GATE_MODE` selects the applicability gate, `llm` or `never`
 - RAG service reads `OPENROUTER_CYBERCASE` (or `ANTHROPIC_API_KEY` when `CORE_LLM_PROVIDER=anthropic`), `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`, `QDRANT_URL`/`QDRANT_API_KEY`, and `THANOY_API_URL`/`THANOY_API_KEY` for the legal lookup. `OPENROUTER_API_KEY` is read only by the RAGAS evaluation
 - Default Compose forwards the OpenRouter key. Selecting Anthropic requires an explicit environment override supplying `ANTHROPIC_API_KEY`; the provider implementation remains available. The RAG image includes its model registry and legal-reference client without requiring a source bind mount.
 - Deployment targets **Railway** platform via GitHub Actions in `.github/workflows/deploy.yml`

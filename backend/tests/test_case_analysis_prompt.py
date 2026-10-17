@@ -1,11 +1,8 @@
 import re
-import unittest
 from typing import get_args
-from unittest.mock import patch
 
 import httpx
 import pytest
-from case_mitre_test_support import _fixtures
 
 from app.analysis.prompts import (
     CASE_JUDGEMENT_SYSTEM_PROMPT,
@@ -15,16 +12,8 @@ from app.analysis.prompts import (
 )
 from app.errors import CaseAnalysisFailure
 from app.llm.request import decode_response
-from app.llm.settings import AnalysisPipelineConfig
-from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace.citations import CaseProviderCitation
-from app.trace.claims import (
-    MAX_CLARIFICATION_QUESTION_CHARS,
-    CaseAssessmentTrace,
-    CaseProviderClaim,
-)
-from app.trace.trace import CaseProviderAnalysis, CaseProviderJudgement, CaseProviderReadingReply
-from experiments.analysis_arms import write_single_call
+from app.trace.claims import MAX_CLARIFICATION_QUESTION_CHARS, CaseAssessmentTrace
+from app.trace.trace import CaseProviderJudgement, CaseProviderReadingReply
 
 
 @pytest.mark.parametrize(
@@ -53,9 +42,7 @@ def test_the_gap_instructions_state_the_question_limit(prompt) -> None:
     assert f"at most {MAX_CLARIFICATION_QUESTION_CHARS} characters" in " ".join(prompt().split())
 
 
-@pytest.mark.parametrize(
-    "prompt", [case_assessment_prompt, lambda: CASE_JUDGEMENT_SYSTEM_PROMPT]
-)
+@pytest.mark.parametrize("prompt", [case_assessment_prompt, lambda: CASE_JUDGEMENT_SYSTEM_PROMPT])
 def test_the_gap_instructions_keep_the_topic_in_words(prompt) -> None:
     assert "It is never the gap_key." in " ".join(prompt().split())
 
@@ -78,136 +65,13 @@ def test_reader_prompt_enforces_complete_evidence_attribution() -> None:
         in prompt
     )
     # 4. unsupported specificity must be removed/generalized
-    assert (
-        "keep the claim at the less-specific wording actually supported by those units"
-        in prompt
-    )
+    assert "keep the claim at the less-specific wording actually supported by those units" in prompt
     # 5. final evidence-completeness check
     assert "Final evidence-completeness check:" in prompt
     assert (
         "add the required Evidence Unit if available, or remove / generalize that unsupported detail from the claim"
         in prompt
     )
-
-
-def provider_result(*, contradicting: bool) -> CaseProviderAnalysis:
-    citation = CaseProviderCitation(
-        source_id="s1",
-        exact_quote="The report",
-    )
-    claim = CaseProviderClaim(
-        claim_id="A-01",
-        claim_type="reported",
-        text="The report was submitted.",
-        epistemic_status="reported",
-        supporting_source_ids=["s1"],
-        contradicting_source_ids=["s1"] if contradicting else [],
-        supporting_citations=[citation],
-        contradicting_citations=[citation] if contradicting else [],
-    )
-    return CaseProviderAnalysis(
-        version="case_analysis_trace_v1",
-        summary="The report was submitted.",
-        involved_parties=[],
-        timeline=[],
-        impacts=[],
-        claims=[claim],
-    )
-
-
-class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
-    async def test_provider_request_uses_one_structured_case_source_collection(self) -> None:
-        source = CaseSourceItem(
-            source_id="s1",
-            source_kind="document",
-            text="The report was submitted.",
-            document_id="d1",
-            filename="report.pdf",
-            provenance={"verification_status": "machine_read"},
-        )
-        observed: dict[str, object] = {}
-
-        async def request_stage(**kwargs):
-            observed.update(kwargs)
-            return provider_result(contradicting=False)
-
-        with patch("experiments.analysis_arms.request_stage", new=request_stage):
-            await write_single_call(
-                sources=CaseSourceBundle(revision=1, sources=(source,)),
-                language="english",
-                config=AnalysisPipelineConfig(),
-            )
-
-        self.assertEqual(observed["stage"], "case_direct")
-        self.assertIs(observed["schema"], CaseProviderAnalysis)
-        content = observed["content"]
-        self.assertEqual(
-            content,
-            {
-                "response_language": "english",
-                "case_sources": [
-                    {
-                        "source_id": "s1",
-                        "source_kind": "document",
-                        "text": "The report was submitted.",
-                        "document": {
-                            "document_id": "d1",
-                            "filename": "report.pdf",
-                            "verification_status": "machine_read",
-                        },
-                    }
-                ],
-                "followup_history": [],
-                "technical_context": None,
-            },
-        )
-
-    async def test_a_source_in_both_roles_costs_no_second_provider_call(self) -> None:
-        source = CaseSourceItem(
-            source_id="s1",
-            source_kind="narrative",
-            text="The report was submitted.",
-        )
-        calls: list[str] = []
-
-        async def request_stage(**kwargs):
-            calls.append(kwargs["stage"])
-            return provider_result(contradicting=len(calls) == 1)
-
-        with patch("experiments.analysis_arms.request_stage", new=request_stage):
-            trace = await write_single_call(
-                sources=CaseSourceBundle(revision=1, sources=(source,)),
-                language="english",
-                config=AnalysisPipelineConfig(),
-            )
-
-        self.assertEqual(calls, ["case_direct"])
-        claim = trace.claims[0]
-        self.assertEqual(claim.supporting_source_ids, ["s1"])
-        self.assertEqual(claim.contradicting_source_ids, ["s1"])
-
-    async def test_retrieved_context_is_shown_and_its_id_bound_to_the_trace(self) -> None:
-        _, _, bundle, _, context = _fixtures()
-        observed: dict[str, object] = {}
-
-        async def request_stage(**kwargs):
-            observed.update(kwargs)
-            return provider_result(contradicting=False)
-
-        with patch("experiments.analysis_arms.request_stage", new=request_stage):
-            trace = await write_single_call(
-                sources=bundle,
-                language="thai",
-                technical_context=context,
-                config=AnalysisPipelineConfig(),
-            )
-
-        self.assertEqual(observed["content"]["response_language"], "thai")
-        self.assertEqual(
-            observed["content"]["technical_context"],
-            {"context": context.context, "mitre_table": list(context.mitre_table)},
-        )
-        self.assertEqual(trace.retrieval_context_id, context.retrieval_context_id)
 
 
 @pytest.mark.parametrize(
