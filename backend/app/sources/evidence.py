@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import re
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 
 from app.sources.bundle import CaseSourceItem
 from app.sources.markup import source_tables
@@ -64,16 +64,6 @@ def segmentation_starts(text: str) -> list[int]:
     return [0, *starts[1:]]
 
 
-def evidence_payload(source: CaseSourceItem) -> dict[str, object]:
-    return {
-        "evidence_version": EVIDENCE_VERSION,
-        "evidence_units": [
-            {key: value for key, value in asdict(unit).items() if key != "source_id"}
-            for unit in evidence_units(source)
-        ],
-    }
-
-
 class EvidenceIndex:
     def __init__(self, sources: Sequence[CaseSourceItem]) -> None:
         self.sources = {source.source_id: source for source in sources}
@@ -119,7 +109,6 @@ __all__ = [
     "EVIDENCE_VERSION",
     "EvidenceIndex",
     "EvidenceUnit",
-    "evidence_payload",
     "evidence_revision",
     "evidence_units",
 ]

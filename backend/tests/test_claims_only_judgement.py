@@ -19,13 +19,14 @@ from app.chat.compose import analysis_payload
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import evidence_units
-from app.trace.bind import bound_claims, bound_references
+from app.trace.bind import bound_references
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseClaimGrounding,
     CaseFollowupExchange,
     CaseSourceCitation,
 )
+from app.trace.sentences import SentenceIndex, quote_context
 from app.trace.trace import (
     CaseAnalysisTrace,
     CaseProviderJudgement,
@@ -54,7 +55,13 @@ def bundle_and_reading() -> tuple[CaseSourceBundle, CaseProviderReading]:
                 text="A share was encrypted.",
                 epistemic_status="reported",
                 supporting_source_ids=[source_id],
-                supporting_citations=[CaseSourceCitation(source_id=source_id, exact_quote=QUOTE)],
+                supporting_citations=[
+                    CaseSourceCitation(
+                        source_id=source_id,
+                        exact_quote=QUOTE,
+                        context=quote_context(SentenceIndex(SOURCE_TEXT), QUOTE),
+                    )
+                ],
             )
         ],
     )
@@ -126,11 +133,10 @@ def test_the_judgement_request_has_no_case_sources():
 
 
 def test_no_citation_sent_to_the_judgement_carries_the_sentence_around_its_quote():
-    bundle, reading = bundle_and_reading()
-    checked, _ = bound_claims(reading, bundle)
-    assert checked.claims[0].supporting_citations[0].context is not None
+    _, reading = bundle_and_reading()
+    assert reading.claims[0].supporting_citations[0].context is not None
 
-    content = judgement_request(checked, "english", ())
+    content = judgement_request(reading, "english", ())
     [claim] = content["reading"]["claims"]
     [citation] = claim["supporting_citations"]
     assert citation == {"exact_quote": QUOTE}
@@ -175,9 +181,8 @@ def test_a_source_no_claim_cites_changes_nothing_in_the_judgement_request():
 
 def test_the_chat_still_receives_the_sources_and_the_sentence_around_each_quote():
     bundle, reading = bundle_and_reading()
-    checked, _ = bound_claims(reading, bundle)
     trace = CaseAnalysisTrace(
-        analysis_mode="case_overview", summary="A summary.", claims=checked.claims
+        analysis_mode="case_overview", summary="A summary.", claims=reading.claims
     )
 
     material = write_request(bundle, "english", (), None)
@@ -193,15 +198,14 @@ def test_the_chat_still_receives_the_sources_and_the_sentence_around_each_quote(
 
 
 def test_the_chat_never_sees_a_verdict_or_the_reason_for_it():
-    bundle, reading = bundle_and_reading()
-    checked, _ = bound_claims(reading, bundle)
+    _, reading = bundle_and_reading()
     labelled = [
-        checked.claims[0].model_copy(
+        reading.claims[0].model_copy(
             update={"semantic_grounding": CaseClaimGrounding(verdict=verdict, reason=reason)}
         )
         for verdict, reason in (("not_supported", "lr_not_supported"),)
     ]
-    unchecked = checked.claims[0].model_copy(
+    unchecked = reading.claims[0].model_copy(
         update={
             "claim_id": "A-09",
             "semantic_grounding": CaseClaimGrounding(
@@ -226,10 +230,9 @@ def test_the_chat_never_sees_a_verdict_or_the_reason_for_it():
 
 
 def test_the_judgement_request_builder_takes_the_checked_reading_and_nothing_of_the_sources():
-    bundle, reading = bundle_and_reading()
-    checked, _ = bound_claims(reading, bundle)
+    _, reading = bundle_and_reading()
 
-    request = judgement_request(checked, "thai", history())
+    request = judgement_request(reading, "thai", history())
 
     assert request["response_language"] == "thai"
     assert "technical_context" not in request
@@ -346,4 +349,3 @@ def test_the_bound_trace_has_the_units_of_the_judgements_summary():
         ["A-01"],
         "bound",
     )
-    assert bound.grounding.summary_ids_unknown == 0

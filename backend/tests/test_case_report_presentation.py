@@ -31,7 +31,6 @@ from app.reports.render import (
 )
 from app.reports.schemas import CaseReportContent, ReportQuoteContext
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace.bind import resolve_case_trace
 from app.trace.citations import CaseUnverifiedCitation
 from app.trace.claims import (
     CaseAnalysisClaim,
@@ -40,6 +39,7 @@ from app.trace.claims import (
     CaseFollowupExchange,
     CaseSourceCitation,
 )
+from app.trace.sentences import SentenceIndex, quote_context
 from app.trace.trace import (
     CaseAnalysisTrace,
     CaseImpactItem,
@@ -364,19 +364,19 @@ def _input_quoting(text: str, quote: str) -> CaseReportInput:
     source = replace(report_input.source_bundle.sources[0], text=text)
     bundle = CaseSourceBundle(revision=1, sources=(source,))
     trace = report_input.analysis_trace
-    claim = trace.claims[0].model_copy(
-        update={
-            "supporting_citations": [
-                CaseSourceCitation(source_id=source.source_id, exact_quote=quote)
-            ]
-        }
+    start = text.index(quote)
+    citation = CaseSourceCitation(
+        source_id=source.source_id,
+        exact_quote=quote,
+        start=start,
+        end=start + len(quote),
+        context=quote_context(SentenceIndex(text), quote),
     )
+    claim = trace.claims[0].model_copy(update={"supporting_citations": [citation]})
     return report_input.model_copy(
         update={
             "source_bundle": bundle,
-            "analysis_trace": resolve_case_trace(
-                trace.model_copy(update={"claims": [claim]}), bundle
-            ),
+            "analysis_trace": trace.model_copy(update={"claims": [claim]}),
         }
     )
 
@@ -1129,7 +1129,6 @@ def test_an_analysis_stored_with_retired_fields_makes_a_report_without_them() ->
         }
     ]
     written["grounding"] = {
-        **(written.get("grounding") or {}),
         "citations_pointed": 0,
         "meaning_pointer_unavailable": 3,
         "meaning_pointer_unavailable_reason": "weights_missing",

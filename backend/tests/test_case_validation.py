@@ -7,6 +7,7 @@ from app.models.analysis_result import CaseAnalysisResult
 from app.models.case import Case
 from app.models.source import CaseSource
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem, case_source_bundle_for_analysis
+from app.sources.evidence import evidence_units
 from app.sources.ingestion.contracts import DocumentPage, ExtractionMethod, IngestedDocument
 from app.sources.ingestion.provenance import bind_exact_page_spans
 from app.sources.service import document_provenance
@@ -14,11 +15,10 @@ from app.trace.bind import resolve_case_trace
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
-    CaseProviderClaim,
     CaseSourceCitation,
 )
 from app.trace.quotes import find_document_locator
-from app.trace.trace import CaseAnalysisTrace, CaseProviderAnalysis
+from app.trace.trace import CaseAnalysisTrace, CaseProviderJudgement
 
 
 def _source(
@@ -141,55 +141,6 @@ def test_case_claim_normalizes_c_and_claim_identifier_aliases():
     assert claim_canonical.claim_id == "A-03"
 
 
-def test_case_provider_analysis_normalizes_model_claim_ids_from_json():
-    raw_payload = """{
-        "version": "case_analysis_trace_v1",
-        "summary": "Summary text.",
-        "involved_parties": [],
-        "timeline": [],
-        "impacts": [],
-        "claims": [
-            {
-                "claim_id": "C1",
-                "claim_type": "reported",
-                "text": "First claim text.",
-                "epistemic_status": "reported",
-                "supporting_source_ids": ["s1"],
-                "contradicting_source_ids": [],
-                "supporting_citations": [],
-                "contradicting_citations": [],
-                "reasoning_summary": null
-            },
-            {
-                "claim_id": "C9",
-                "claim_type": "reported",
-                "text": "Ninth claim text.",
-                "epistemic_status": "reported",
-                "supporting_source_ids": ["s1"],
-                "contradicting_source_ids": [],
-                "supporting_citations": [],
-                "contradicting_citations": [],
-                "reasoning_summary": null
-            }
-        ],
-        "mitre_associations": [
-            {
-                "association_id": "MA1",
-                "technique_id": "T1078",
-                "claim_ids": ["C1", "C9"],
-                "reason": "Valid technique mapping",
-                "status": "candidate_only",
-                "support_role": "external_technical_context"
-            }
-        ]
-    }"""
-    parsed = CaseProviderAnalysis.model_validate_json(raw_payload)
-    assert parsed.claims[0].claim_id == "A-01"
-    assert parsed.claims[1].claim_id == "A-09"
-    assert parsed.mitre_associations[0].association_id == "MA-01"
-    assert parsed.mitre_associations[0].claim_ids == ["A-01", "A-09"]
-
-
 def gap_payload(**overrides) -> dict[str, object]:
     return {
         "gap_id": "G-01",
@@ -206,37 +157,11 @@ def gap_payload(**overrides) -> dict[str, object]:
     }
 
 
-def test_provider_output_is_normalized_instead_of_rejected():
-    parsed = CaseProviderAnalysis.model_validate(
+def test_judgement_gaps_are_normalized_instead_of_rejected():
+    parsed = CaseProviderJudgement.model_validate(
         {
             "version": "case_analysis_trace_v1",
-            "summary": "Files were encrypted.",
-            "involved_parties": [
-                {"name": "ACME", "role": "Victim", "claim_ids": ["A-01", "A-1", "claim-1"]}
-            ],
-            "timeline": [],
-            "impacts": [],
-            "claims": [
-                {
-                    "claim_id": "A-01",
-                    "claim_type": "reported",
-                    "text": "Files were encrypted.",
-                    "epistemic_status": "reported",
-                    "supporting_source_ids": ["s1"],
-                    "contradicting_source_ids": [],
-                    "supporting_citations": [
-                        {
-                            "source_id": "s1",
-                            "exact_quote": "Files were encrypted.",
-                            "document_id": "d1",
-                            "filename": "report.pdf",
-                            "page_numbers": list(range(1, 10)),
-                        }
-                    ],
-                    "contradicting_citations": [],
-                    "reasoning_summary": "r" * 1_001,
-                }
-            ],
+            "summary": "Files were encrypted [A-01].",
             "gaps": [
                 gap_payload(
                     gap_key="incident\ntime",
@@ -246,68 +171,30 @@ def test_provider_output_is_normalized_instead_of_rejected():
                 ),
                 gap_payload(gap_id="G-02", clarification_question="x" * 301),
             ],
-            "mitre_associations": [
-                {
-                    "association_id": "MA-01",
-                    "technique_id": " S0096 ",
-                    "claim_ids": ["A-01", "A-1"],
-                    "reason": "Copied from the table.",
-                    "plain_meaning": "p" * 601,
-                    "status": "candidate_only",
-                    "support_role": "external_technical_context",
-                }
-            ],
         }
     )
 
-    assert parsed.involved_parties[0].claim_ids == ["A-01"]
-    assert parsed.claims[0].supporting_citations[0].model_dump() == {
-        "source_id": "s1",
-        "exact_quote": "Files were encrypted.",
-    }
     assert parsed.gaps[0].gap_key == "incident time"
     assert parsed.gaps[0].topic == "Incident time"
     assert parsed.gaps[0].affected_claim_ids == ["A-01"]
     assert parsed.gaps[0].clarification_question == "When did it happen?"
     assert parsed.gaps[1].clarification_question is None
-    assert parsed.mitre_associations[0].technique_id == "S0096"
-    assert parsed.mitre_associations[0].claim_ids == ["A-01"]
-    assert parsed.claims[0].reasoning_summary == "r" * 1_000
-    assert parsed.mitre_associations[0].plain_meaning == "p" * 600
 
 
-def test_a_quote_spanning_more_pages_than_a_citation_holds_keeps_no_page_locator():
+def test_a_passage_spanning_more_pages_than_a_citation_holds_gets_no_page_locator():
     lines = [f"line {number}" for number in range(1, 11)]
     content = "\n\n".join(lines)
-    provenance = bind_exact_page_spans(
+    pages = bind_exact_page_spans(
         {"pages": [{"page_number": number, "text": line} for number, line in enumerate(lines, 1)]},
         content,
-    )
-    quote = "\n\n".join(lines[:9])
-    source = CaseSourceItem(
-        source_id="s1",
-        source_kind="document",
-        text=content,
-        document_id="d1",
-        filename="report.pdf",
-        provenance={"pages": provenance["pages"]},
-    )
-    claim = CaseAnalysisClaim(
-        claim_id="A-01",
-        claim_type="reported",
-        text="Nine pages were quoted.",
-        epistemic_status="reported",
-        supporting_source_ids=["s1"],
-        supporting_citations=[CaseSourceCitation(source_id="s1", exact_quote=quote)],
-    )
+    )["pages"]
+    document = {"document_id": "d1", "filename": "report.pdf", "page_spans": pages}
 
-    validated = resolve_case_trace(
-        _trace(claim, content), CaseSourceBundle(revision=1, sources=(source,)), []
-    )
+    eight_pages = find_document_locator(document, content, [0], len("\n\n".join(lines[:8])))
+    nine_pages = find_document_locator(document, content, [0], len("\n\n".join(lines[:9])))
 
-    citation = validated.claims[0].supporting_citations[0]
-    assert citation.exact_quote == quote
-    assert citation.page_numbers == []
+    assert eight_pages[2] == tuple(range(1, 9))
+    assert nine_pages is None
 
 
 def test_a_blank_page_does_not_cost_the_pages_after_it_their_numbers():
@@ -335,6 +222,7 @@ def test_a_blank_page_does_not_cost_the_pages_after_it_their_numbers():
         filename="scan.pdf",
         provenance=document_provenance(ingested),
     )
+    first_page, third_page = evidence_units(source)
     claims = [
         CaseAnalysisClaim(
             claim_id=claim_id,
@@ -342,9 +230,11 @@ def test_a_blank_page_does_not_cost_the_pages_after_it_their_numbers():
             text="A page was quoted.",
             epistemic_status="reported",
             supporting_source_ids=["s1"],
-            supporting_citations=[CaseSourceCitation(source_id="s1", exact_quote=quote)],
+            supporting_citations=[
+                CaseSourceCitation(source_id="s1", evidence_unit_ids=[unit.unit_id])
+            ],
         )
-        for claim_id, quote in (("A-01", "first page"), ("A-02", "third page"))
+        for claim_id, unit in (("A-01", first_page), ("A-02", third_page))
     ]
 
     validated = resolve_case_trace(
@@ -355,35 +245,6 @@ def test_a_blank_page_does_not_cost_the_pages_after_it_their_numbers():
     first, third = (claim.supporting_citations[0] for claim in validated.claims)
     assert (first.document_id, first.page_numbers) == ("d1", [1])
     assert (third.document_id, third.page_numbers) == ("d1", [3])
-
-
-def test_case_provider_analysis_carries_material_gaps_from_main_analysis():
-    parsed = CaseProviderAnalysis.model_validate(
-        {
-            "version": "case_analysis_trace_v1",
-            "summary": "A loss was reported, but its timing is not established.",
-            "involved_parties": [],
-            "timeline": [],
-            "impacts": [],
-            "claims": [],
-            "gaps": [
-                {
-                    "gap_id": "gap1",
-                    "gap_key": "incident_time",
-                    "topic": "Incident time",
-                    "status": "NOT_PROVIDED",
-                    "description": "The supplied material does not state when the incident occurred.",
-                    "affected_claim_ids": [],
-                    "reason": "Timing affects the case chronology.",
-                    "priority": "high",
-                    "askable": True,
-                }
-            ],
-            "mitre_associations": [],
-        }
-    )
-    assert parsed.gaps[0].gap_id == "G-01"
-    assert parsed.gaps[0].topic == "Incident time"
 
 
 def test_gap_identifier_normalization():
@@ -427,21 +288,6 @@ def test_case_evidence_citation_normalizes_partial_document_locators():
     assert citation_complete.document_id == "doc-01"
     assert citation_complete.filename == "ลำดับ01 รายงานการสอบสวน.pdf"
     assert citation_complete.page_numbers == [1, 2]
-
-
-@pytest.mark.parametrize("written", ["", "   "])
-def test_claim_reasoning_summary_empty_and_whitespace_normalized(written):
-    claim = CaseProviderClaim.model_validate(
-        {
-            "claim_id": "A-01",
-            "claim_type": "reported",
-            "text": "Valid factual claim text",
-            "epistemic_status": "reported",
-            "supporting_source_ids": ["s1"],
-            "reasoning_summary": written,
-        }
-    )
-    assert claim.reasoning_summary is None
 
 
 def test_a_stored_claim_with_a_reasoning_summary_reads_without_it():

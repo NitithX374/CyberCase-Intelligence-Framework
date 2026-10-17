@@ -62,8 +62,10 @@ independent Judgement inputs. Raw follow-up answers cannot bypass the structural
 checks. An analysis abstains without calling Judgement only when no Claim
 passes the structural checks. Final references to Claims that were not given to Judgement fail
 validation. All original Claims, citations, verdicts and provenance remain in the
-trace, including selected/considered citation indices, similarities, three NLI
-probabilities, LR score, raw token count, truncation and timing.
+trace. Updated 2026-10-17: a verdict keeps only its reason and the verifier's
+method and artifact hash. The selected/considered citation indices,
+similarities, three NLI probabilities, LR score, raw token count, truncation and
+timing are no longer stored, and a verdict saved with them reads without them.
 
 Judgement receives the original bound citation text attached to each Claim,
 including units excluded by semantic selection; the selection controls the
@@ -122,9 +124,9 @@ Both arms use identical fixed A IDs, original Claims, native Judgement prompt,
 model/provider configuration and temperature 0. No Reader is called. The
 `unfiltered` arm admits all Claims, while `verified` admits B1-LR positives.
 Claim-link-only admission is equivalent to unfiltered in this slice because
-every selected row has valid links. The old `experiments/analysis_arms.py` runs the
-production pipeline in every condition; production no longer filters on the
-verdict, so it is not a gate arm.
+every selected row has valid links. The old analysis arms, now in
+`research/analysis_arms/`, run the production pipeline in every condition;
+production no longer filters on the verdict, so it is not a gate arm.
 
 PowerShell example, run from the repository root:
 

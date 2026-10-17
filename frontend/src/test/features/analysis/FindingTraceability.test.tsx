@@ -84,11 +84,6 @@ describe("Finding traceability", () => {
       result.trace_json!.claims[0].semantic_grounding = {
         verdict,
         reason,
-        model: "test-nli",
-        threshold: 0.8,
-        duration_ms: 0,
-        selection_ms: 0,
-        entailment: verdict === "unassessed" ? null : verdict === "supported" ? 0.99 : 0.1,
       };
       render(<Findings result={result} />);
       expect(screen.getByText(label)).toBeVisible();

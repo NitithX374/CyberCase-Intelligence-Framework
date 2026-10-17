@@ -94,29 +94,19 @@ class ClaimValidationStats:
     unassessed: int
     calls: int
     duration_ms: float
-    model: str | None
-    threshold: float
-    considered: int
-    selected: int
-    truncated: int
-    unavailable: int = 0
 
-    def grounding(self) -> dict[str, object]:
-        return {
-            "claims_semantically_supported": self.supported,
-            "claims_semantically_not_supported": self.not_supported,
-            "claims_semantically_unassessed": self.unassessed,
-            "claims_admitted_to_judgement": self.supported + self.not_supported + self.unavailable,
-            "claims_withheld_from_judgement": self.unassessed - self.unavailable,
-            "claim_verifier_calls": self.calls,
-            "claim_validation_ms": self.duration_ms,
-            "claim_verifier_model": self.model,
-            "claim_verifier_threshold": self.threshold,
-            "claim_verifier_artifact_sha256": ARTIFACT_SHA256,
-            "claim_source_units_considered": self.considered,
-            "claim_source_units_selected": self.selected,
-            "claim_verifier_truncated_pairs": self.truncated,
-        }
+
+def validation_stats(
+    checked: Sequence[CaseAnalysisClaim], calls: int, started: float
+) -> ClaimValidationStats:
+    verdicts = [claim.semantic_grounding.verdict for claim in checked]
+    return ClaimValidationStats(
+        supported=verdicts.count("supported"),
+        not_supported=verdicts.count("not_supported"),
+        unassessed=verdicts.count("unassessed"),
+        calls=calls,
+        duration_ms=(perf_counter() - started) * 1_000,
+    )
 
 
 def validate_claims(
@@ -126,103 +116,51 @@ def validate_claims(
     stop: Event | None = None,
 ) -> tuple[list[CaseAnalysisClaim], ClaimValidationStats]:
     started = perf_counter()
-    threshold = THRESHOLD
     scorer: Scorer | None = None
     checked: list[CaseAnalysisClaim] = []
     calls = 0
-    considered = selected = truncated = 0
     for claim in claims:
         if stop is not None and stop.is_set():
             raise VerificationStopped
-        claim_started = perf_counter()
-        premise = source_premise(claim)
-        reason = assessment_blocker(claim, premise)
+        reason = claim_blocker(claim)
         verdict = CaseClaimGrounding(
             verdict="unassessed",
             reason=reason or "no_resolved_source",
-            threshold=threshold,
             method=METHOD,
             artifact_sha256=ARTIFACT_SHA256,
         )
         if reason is None:
             if scorer is None:
                 scorer = (provider or load_scorer)()
-            citations = resolved_support(claim)
-            result = scorer.verify(claim.text, [citation.exact_quote for _, citation in citations])
+            units = [citation.exact_quote for _, citation in resolved_support(claim)]
+            result = scorer.verify(claim.text, units)
             calls += 1
-            considered += len(citations)
-            selected += len(result.indices)
-            truncated += int(result.nli.truncated)
-            supported = result.p_supported >= threshold
+            supported = result.p_supported >= THRESHOLD
             verdict = CaseClaimGrounding(
                 verdict="supported" if supported else "not_supported",
                 reason="lr_supported" if supported else "lr_not_supported",
                 method=METHOD,
                 artifact_sha256=ARTIFACT_SHA256,
-                model=scorer.name,
-                label=result.nli.label,
-                entailment=result.nli.entailment,
-                neutral=result.nli.neutral,
-                contradiction=result.nli.contradiction,
-                p_supported=result.p_supported,
-                threshold=threshold,
-                selected_citation_indices=[citations[index][0] for index in result.indices],
-                considered_citation_indices=[index for index, _ in citations],
-                selected_evidence_unit_ids=[
-                    unit_id
-                    for index in result.indices
-                    for unit_id in citations[index][1].evidence_unit_ids
-                ],
-                source_similarities=list(result.similarities),
-                selector_threshold=ARTIFACT["selector_threshold"],
-                selection_ms=result.selection_ms,
-                raw_tokens=result.nli.raw_tokens,
-                truncated=result.nli.truncated,
             )
-        verdict.duration_ms = (perf_counter() - claim_started) * 1_000
         checked.append(claim.model_copy(update={"semantic_grounding": verdict}))
-    verdicts = [claim.semantic_grounding.verdict for claim in checked]
-    return checked, ClaimValidationStats(
-        supported=verdicts.count("supported"),
-        not_supported=verdicts.count("not_supported"),
-        unassessed=verdicts.count("unassessed"),
-        calls=calls,
-        duration_ms=(perf_counter() - started) * 1_000,
-        model=scorer.name if scorer is not None else None,
-        threshold=threshold,
-        considered=considered,
-        selected=selected,
-        truncated=truncated,
-    )
+    return checked, validation_stats(checked, calls, started)
 
 
 def unverified_claims(
     claims: Sequence[CaseAnalysisClaim],
 ) -> tuple[list[CaseAnalysisClaim], ClaimValidationStats]:
     started = perf_counter()
-    checked: list[CaseAnalysisClaim] = []
-    unavailable = 0
-    for claim in claims:
-        reason = claim_blocker(claim)
-        unavailable += int(reason is None)
-        verdict = CaseClaimGrounding(
-            verdict="unassessed",
-            reason=reason or "verifier_unavailable",
-            threshold=THRESHOLD,
-            method=METHOD,
-            artifact_sha256=ARTIFACT_SHA256,
+    checked = [
+        claim.model_copy(
+            update={
+                "semantic_grounding": CaseClaimGrounding(
+                    verdict="unassessed",
+                    reason=claim_blocker(claim) or "verifier_unavailable",
+                    method=METHOD,
+                    artifact_sha256=ARTIFACT_SHA256,
+                )
+            }
         )
-        checked.append(claim.model_copy(update={"semantic_grounding": verdict}))
-    return checked, ClaimValidationStats(
-        supported=0,
-        not_supported=0,
-        unassessed=len(checked),
-        calls=0,
-        duration_ms=(perf_counter() - started) * 1_000,
-        model=None,
-        threshold=THRESHOLD,
-        considered=0,
-        selected=0,
-        truncated=0,
-        unavailable=unavailable,
-    )
+        for claim in claims
+    ]
+    return checked, validation_stats(checked, 0, started)

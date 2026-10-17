@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from fake_nli import FakeNli
 
-from app.trace.b1_verifier import THRESHOLD
+from app.trace.b1_verifier import ARTIFACT_SHA256, METHOD
 from app.trace.claim_validation import (
     source_premise,
     unverified_claims,
@@ -55,8 +55,6 @@ def test_complete_claim_support_uses_frozen_lr_decision(text, label, score, expe
 
     assert scorer.judged == [("John sent an email.", text)]
     assert checked[0].semantic_grounding.verdict == expected
-    assert checked[0].semantic_grounding.entailment == score
-    assert checked[0].semantic_grounding.threshold == THRESHOLD
     assert checked[0].semantic_grounding.method == "b1-lr-wice-train-v1"
     assert usable_claims(checked) == checked
     assert stats.calls == 1
@@ -96,8 +94,7 @@ def test_bound_citations_do_not_bypass_a_negative_semantic_verdict_which_only_la
     assert scorer.judged == [(source_text, hypothesis)]
     assert checked[0].semantic_grounding.verdict == "not_supported"
     assert usable_claims(checked) == checked
-    assert stats.grounding()["claims_admitted_to_judgement"] == 1
-    assert stats.grounding()["claims_withheld_from_judgement"] == 0
+    assert stats.calls == 1
 
 
 def test_multiple_units_and_documents_form_one_complete_premise_without_duplicate_spans():
@@ -124,7 +121,7 @@ def test_same_text_under_different_sources_remains_distinct_in_the_premise():
     assert source_premise(claim(citations=citations)) == "John sent an email.\nJohn sent an email."
 
 
-def test_long_input_follows_research_truncation_policy_and_records_it():
+def test_long_input_follows_research_truncation_policy():
     original = claim("John sent an email and encrypted the server.")
     scorer = FakeNli(fits=lambda premise, hypothesis: False)
 
@@ -133,9 +130,8 @@ def test_long_input_follows_research_truncation_policy_and_records_it():
     assert checked[0].text == original.text
     assert checked[0].semantic_grounding.reason == "lr_not_supported"
     assert checked[0].semantic_grounding.verdict == "not_supported"
-    assert checked[0].semantic_grounding.truncated is True
     assert len(scorer.judged) == 1
-    assert stats.calls == stats.truncated == 1
+    assert stats.calls == 1
     assert usable_claims(checked) == checked
 
 
@@ -179,7 +175,6 @@ def test_unassessed_or_conflicting_claims_stay_withheld(changes, reason):
     assert stats.unassessed == 1
     assert stats.calls == 0
     assert usable_claims(checked) == []
-    assert stats.grounding()["claims_withheld_from_judgement"] == 1
 
 
 @pytest.mark.parametrize("reason", ["stale_id", "unknown_unit", "duplicate_id"])
@@ -222,18 +217,16 @@ def test_claims_stay_unassessed_and_usable_when_the_verifier_is_unavailable():
         "no_resolved_source",
     ]
     assert stats.calls == 0
-    assert stats.grounding()["claims_admitted_to_judgement"] == 1
-    assert stats.grounding()["claims_withheld_from_judgement"] == 1
     assert usable_claims(checked) == [checked[0]]
     assert eligible.semantic_grounding is None
 
 
-def test_frozen_lr_threshold_is_recorded_and_entailment_is_not_the_admission_score():
+def test_a_verdict_names_the_verifier_that_gave_it():
     scorer = FakeNli(judge=lambda premise, hypothesis: Judgement("entailment", 0.9))
-    checked, stats = validate_claims([claim()], provider=lambda: scorer)
-    assert checked[0].semantic_grounding.reason == "lr_supported"
-    assert stats.threshold == checked[0].semantic_grounding.threshold == 0.5
-    assert checked[0].semantic_grounding.p_supported != 0.9
+    checked, _ = validate_claims([claim()], provider=lambda: scorer)
+    grounding = checked[0].semantic_grounding
+    assert (grounding.verdict, grounding.reason) == ("supported", "lr_supported")
+    assert (grounding.method, grounding.artifact_sha256) == (METHOD, ARTIFACT_SHA256)
 
 
 def test_saved_legacy_claims_have_no_invented_verdict():
@@ -241,7 +234,7 @@ def test_saved_legacy_claims_have_no_invented_verdict():
     assert original.semantic_grounding is None
 
 
-def test_selection_diagnostics_address_original_citation_indices_after_source_ordering():
+def test_the_verifier_reads_the_units_of_each_source_in_offset_order():
     from types import SimpleNamespace
 
     from app.trace.b1_verifier import ClaimVerification
@@ -270,8 +263,4 @@ def test_selection_diagnostics_address_original_citation_indices_after_source_or
         [claim(citations=citations)], provider=lambda: SimpleNamespace(name="test", verify=verify)
     )
     assert seen == [["First. ", "Second.", "Other."]]
-    grounding = checked[0].semantic_grounding
-    assert grounding.considered_citation_indices == [2, 0, 1]
-    assert grounding.selected_citation_indices == [2, 1]
-    assert grounding.selected_evidence_unit_ids == ["first", "other"]
-    assert grounding.source_similarities == [0.8, 0.1, 0.6]
+    assert checked[0].semantic_grounding.verdict == "supported"

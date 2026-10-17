@@ -99,21 +99,6 @@ def analysable_bundle(case: Case) -> CaseSourceBundle:
     return bundle
 
 
-def build_document_source_context(bundle: CaseSourceBundle) -> list[dict[str, object]]:
-    context: list[dict[str, object]] = []
-    for source in bundle.sources:
-        pages = source.provenance.get("pages")
-        if not source.document_id or not source.filename or not isinstance(pages, list):
-            continue
-        document = {
-            "document_id": source.document_id,
-            "filename": source.filename,
-            "page_spans": pages,
-        }
-        context.append({"source_id": source.source_id, "documents": [document]})
-    return context
-
-
 def build_rag_query(bundle: CaseSourceBundle) -> str:
     return "\n\n".join(
         f"[{source_label(source)} · SOURCE {source.source_id}]\n{source.text.strip()}"
@@ -127,7 +112,6 @@ __all__ = [
     "CaseSourceItem",
     "SourcesRead",
     "analysable_bundle",
-    "build_document_source_context",
     "build_rag_query",
     "case_source_bundle_for_analysis",
     "case_source_bundle_from_case",

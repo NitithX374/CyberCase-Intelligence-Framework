@@ -95,11 +95,11 @@ The system preserves reported, suspected, contradicted, unknown, and not-establi
 | Pre-analysis assessment | `case_assessment_v1` |
 | Native input | `CaseSourceBundle(revision, sources)` |
 | Follow-up state | `ChatMessage` history, gap keys, round budget |
-| Full-analysis output | `CaseAnalysisTrace` with summary, claims, timeline, parties, impacts, gaps, grounding, and optional technical associations |
+| Full-analysis output | `CaseAnalysisTrace` with summary, claims, timeline, parties, impacts, gaps, and optional technical associations |
 | Report | Deterministic `CaseReportContent` snapshot, one per validated analysis |
 | Technical context | Optional external augmentation, isolated from Case facts |
 
-Production runs one composition, `advance_case`, and there is no setting that selects another. The `direct`, `verify`, `revise` and `split` arms live in `backend/experiments/analysis_arms.py` and `backend/experiments/split_analysis.py`. Claim-anchored and event-structured variants are not implemented in `backend/app/`.
+Production runs one composition, `advance_case`, and there is no setting that selects another. The `direct`, `verify`, `revise` and `single` arms live in `research/analysis_arms/` and run against the backend at `712aeeed`; the `split` arm became the production reading and judgement on 2026-09-28. Claim-anchored and event-structured variants are not implemented in `backend/app/`.
 
 ## 6. Thesis scope that is supportable now
 

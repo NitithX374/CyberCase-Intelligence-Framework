@@ -193,7 +193,7 @@ This profile has not been run: no machine here has such a GPU. Its vLLM flags ma
 - Modal usage for the whole session was $0.64, all of it from credits.
 
 The comparison script, `backend/experiments/selfhosted_compare.py`, stays local: the repository
-tracks only `analysis_arms.py` in that folder.
+tracks nothing in that folder.
 
 ### Grammar on this server
 

@@ -58,8 +58,7 @@ Every ratio stores numerator, denominator and value; a zero denominator yields n
 ## Validation without model calls
 
 ```powershell
-& '.\env_mitre\Scripts\python.exe' -m pytest -c backend/pytest.ini `
-  backend/tests/test_claim_propagation.py backend/tests/test_b1_research_evaluation.py -q
+& '.\env_mitre\Scripts\python.exe' -m pytest research/attribution_benchmark/tests -q
 ```
 
-The propagation checks are now in normal backend test discovery and reuse pinned local raw rows/caches. The evaluation checks exercise cache integrity, metrics and failure accounting using controlled fixtures. Neither calls a live provider. The separate `test_b1_real_model.py` requires explicit `B1_REAL_MODEL=1` and local pinned model assets; Reader/Judgement remain mocked in that integration smoke.
+Since 2026-10-17 these checks sit with the benchmark code in `research/attribution_benchmark/tests/`, outside the backend's test discovery, and reuse pinned local raw rows/caches. The evaluation checks exercise cache integrity, metrics and failure accounting using controlled fixtures. Neither calls a live provider. The separate `test_b1_real_model.py` requires explicit `B1_REAL_MODEL=1` and local pinned model assets; Reader/Judgement remain mocked in that integration smoke.

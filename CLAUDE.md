@@ -215,8 +215,8 @@ llm/                    calling a model
 trace/                  what the analysis, chat and reports share
   claims.py             claim fields/provider boundaries, gaps and follow-up
                         exchanges; reexports historical citation names
-  claim_validation.py   full Claim/Source NLI assessment, saved verdicts and
-                        admission counters; never truncates the pair
+  claim_validation.py   full Claim/Source NLI assessment and the saved verdict;
+                        never truncates the pair
   citations.py          evidence references, resolved citations and invalid
                         pointers; the keys of removed quote-era fields are
                         dropped on read
@@ -232,9 +232,10 @@ trace/                  what the analysis, chat and reports share
   b1_verifier.py        frozen WiCE TRAIN LR decision boundary, source-unit selection contract
   b1_lr.json            small frozen coefficients, selector revision/hashes and provenance
   source_selector.py    local pinned multilingual MPNet, normalized cosine, serialized CPU inference
-  claim_validation.py   structural blockers then B1-LR; saved per-Claim verdict/features/selection
+  claim_validation.py   structural blockers then B1-LR; saved per-Claim verdict, reason
+                        and the method and artifact hash of the verifier that gave it
   nli_model.py          pinned mDeBERTa full E/N/C vector; longest-first truncation512,
-                        raw token count/truncation recorded; unavailable model leaves Claims unassessed
+                        raw token count/truncation on each result; unavailable model leaves Claims unassessed
   sentences.py          the sentence splitter, line by line: SaT at a pinned
                         revision, or PyThaiNLP crfcut when SaT cannot be
                         loaded; Source units and the sentence around a
@@ -248,8 +249,8 @@ trace/                  what the analysis, chat and reports share
                         that sentence as the service sent it: no check, no
                         Claim attached
   evidence_binding.py   validate selected IDs, materialize original source spans
-                        and page locators, reject duplicate references
-  grounding.py          binding counters and deterministic Evidence ID metrics
+                        and page locators, reject duplicate references; a
+                        citation that names no unit is an invalid reference
   retired.py            without_retired: drops the keys of removed fields from a
                         stored record before it is validated
   support.py            bound/mixed/unbound/no_claim describe evidence binding
@@ -332,20 +333,15 @@ chat/                   the case conversation; routes, schemas
                         store the reply
   compose.py            the chat prompt, request and model call
   answer_contract.py    the provider reply and composed answer shapes
-  grounding.py          binds answer units to Claims and exact Source quotes
+  grounding.py          binds answer units to the Claims as their analysis
+                        stored them, and checks the model's own quotes
+                        against the Sources
 reports/                routes, schemas, contracts, generate.py (one report
                         per analysis, from what it recorded), display.py (the
                         snapshot a report stores and prints), findings.py
                         (Source labels and quotes), technical.py (MITRE rows
                         and notices), limitations.py (report caveats),
                         render.py (HTML and PDF from templates/)
-experiments/            ablations — imports app/, never imported by it; only
-                        __init__.py and this file are tracked; the rest
-                        is local
-  analysis_arms.py      direct / verify / revise / single, built from the same
-                        steps advance_case runs; single is the one-call writer
-                        production used before the reading/judgement split,
-                        kept as the ablation
 tests/                  every backend test and the helpers they share
 ```
 
@@ -376,7 +372,9 @@ import of `app.reports`.
 test is in `backend/tests/`, and `tests/test_layout.py` fails when a test file
 appears under `app/`. Every frontend test is in `frontend/src/test/`, at the
 path of the file it tests, and `npm run lint` fails on a test file anywhere
-else.
+else. A test of research code sits with that code under `research/`, for
+example `research/attribution_benchmark/tests/`, and is run from the repository
+root with `python -m pytest research/attribution_benchmark/tests`.
 
 **Production runs one path, and the arms are arguments.** That path is
 `advance_case`, which reads top to bottom and has no arm switch:
@@ -392,16 +390,16 @@ artifacts = await bind_to_case(...)                # the judgement's references
 ```
 
 A round that ends in a question never calls the MITRE gate, the RAG service,
-the reading and judgement calls or the binding step. The `verify` arm in
-`experiments/analysis_arms.py` runs those three expensive steps without the
-preflight. Once the rounds are spent (`rounds_are_spent` in
-`followup/clarification.py`) the preflight is skipped as well: `decide_followup`
-would proceed whatever it found, and `AnalysisAdvance.assessment` is then `None`.
-A question is never stored without its assessment.
-The arms in `experiments/analysis_arms.py` take an `AnalysisInput` directly and
-touch no case row. `run_case_analysis(pipeline=...)` also accepts a substitute
+the reading and judgement calls or the binding step. Once the rounds are spent
+(`rounds_are_spent` in `followup/clarification.py`) the preflight is skipped as
+well: `decide_followup` would proceed whatever it found, and
+`AnalysisAdvance.assessment` is then `None`. A question is never stored without
+its assessment. `run_case_analysis(pipeline=...)` also accepts a substitute
 composition, as `tests/test_case_followup_postgres.py` does. There is no
-`CASE_ANALYSIS_ARM` setting.
+`CASE_ANALYSIS_ARM` setting. The ablation arms (`direct`, `verify`, `revise`,
+`single`) are research code in `research/analysis_arms/`; they need the one-call
+contract the backend no longer has, so they run against the backend at commit
+`712aeeed` (its README says how).
 
 ### Key Modules (under `rag_service/app/RAG/GraphRAG/`)
 | Module | Path | Purpose |
@@ -440,9 +438,9 @@ follow-up's question and answer.
 
 ### Source units and canonical claims (backend)
 
-`sources/evidence.py` partitions every source at analysis time, reusing sentence spans and preserving all separators. Each frozen `EvidenceUnit(unit_id, source_id, start, end, text)` satisfies `text == source.text[start:end]`; ordered units reconstruct the source exactly. Canonical IDs have the form `source_id:U001-<16 hex characters>`. The hex part hashes the segmentation version (`evidence_units_v4`), the identity of the segmenter in use (`segmenter_identity`: the SaT model with its pinned revision, threshold and wtpsplit version, or the PyThaiNLP version for the crfcut fallback) and the full source text, so a segmenter change makes every earlier ID resolve to `stale_id` instead of naming other text. The splitter is chosen once per process: SaT, or crfcut for every source when SaT cannot be loaded. A SaT error on one line is raised; that line is never split by crfcut instead. Reading receives all native sources and answered QA text together using local IDs such as `U001`, with unchanged Source identity and document/quality metadata. `analysis/reading_sources.py` captures revisions before Reading and expands its selections to canonical IDs before binding; offsets and hashes are omitted from the compact model payload. `trace/evidence_binding.py` checks source ownership, existence, syntax, stale hashes and duplicates before reproducing original text. Stored traces keep canonical IDs. On the direct path, citation `exact_quote` is backend-produced text with offsets, document identity and page locator when available. New analyses accept source-unit IDs only; a stored quote-era citation still reads, without its retired keys.
+`sources/evidence.py` partitions every source at analysis time, reusing sentence spans and preserving all separators. Each frozen `EvidenceUnit(unit_id, source_id, start, end, text)` satisfies `text == source.text[start:end]`; ordered units reconstruct the source exactly. Canonical IDs have the form `source_id:U001-<16 hex characters>`. The hex part hashes the segmentation version (`evidence_units_v4`), the identity of the segmenter in use (`segmenter_identity`: the SaT model with its pinned revision, threshold and wtpsplit version, or the PyThaiNLP version for the crfcut fallback) and the full source text, so a segmenter change makes every earlier ID resolve to `stale_id` instead of naming other text. The splitter is chosen once per process: SaT, or crfcut for every source when SaT cannot be loaded. A SaT error on one line is raised; that line is never split by crfcut instead. Reading receives all native sources and answered QA text together using local IDs such as `U001`, with unchanged Source identity and document/quality metadata. `analysis/reading_sources.py` captures revisions before Reading and expands its selections to canonical IDs before binding; offsets and hashes are omitted from the compact model payload. `trace/evidence_binding.py` checks source ownership, existence, syntax, stale hashes and duplicates before reproducing original text. Stored traces keep canonical IDs. On the direct path, citation `exact_quote` is backend-produced text with offsets, document identity and page locator when available. New analyses accept source-unit IDs only, and binding never looks a quotation up in a source: a citation that names no unit is recorded as an invalid reference. A stored quote-era citation still reads, without its retired keys. A chat answer cites each claim with the citations its analysis stored and does not bind them again, so a stored analysis keeps its quotes after the segmenter changes.
 
-The dedicated Reader contract contains `version` and `claims` only. Each claim contains its ID, type, text, epistemic status and supporting/contradicting unit citations. The backend derives source-ID lists and citation locations; the Reader cannot generate copied quotations, reasoning summaries, metadata or separate parties/timeline/impacts. `reported` covers attributed or qualified source assertions; `unknown` describes uncertainty explicitly stated in a source. Higher-level inference belongs to Judgement. Removing duplicated structured facts also removes projection-specific NLI verification. Historical views and saved verdicts remain readable for existing records but are never input authority for Judgement or chat. `support=bound` means linked claims have resolved supporting citations, not semantic or factual confirmation. The single-call `CaseProviderAnalysis` contract remains solely for the existing experimental baseline, separate from the production Reader.
+The dedicated Reader contract contains `version` and `claims` only. Each claim contains its ID, type, text, epistemic status and supporting/contradicting unit citations. The backend derives source-ID lists and citation locations; the Reader cannot generate copied quotations, reasoning summaries, metadata or separate parties/timeline/impacts. `reported` covers attributed or qualified source assertions; `unknown` describes uncertainty explicitly stated in a source. Higher-level inference belongs to Judgement. Removing duplicated structured facts also removes projection-specific NLI verification. Historical views and saved verdicts remain readable for existing records but are never input authority for Judgement or chat. `support=bound` means linked claims have resolved supporting citations, not semantic or factual confirmation.
 
 Judgement receives each supplied Claim's `claim_id`, type, text and epistemic status, plus supporting/contradicting citation text only. Source IDs, Evidence Unit IDs and document/page/offset metadata remain on the original Claims for binding, NLI, traceability and reports. This serialization does not alter the stored Claims or remove their attached Source text from Judgement.
 
@@ -458,8 +456,10 @@ ordered E/N/C vector enters the frozen WiCE TRAIN LR; score >=0.50 is `supported
 lower is `not_supported`. This task-specific linear decision boundary is not
 calibrated factual confidence. The verdict is a warning label: it filters nothing
 and is never sent to a model.
-All binding citations remain stored; selected indices/IDs, similarities, three
-NLI probabilities, LR score, artifact hash and truncation are separate diagnostics.
+All binding citations remain stored. A verdict stores its reason and the method
+and artifact hash of the verifier that gave it; the selection, similarities, NLI
+probabilities, LR score and truncation are not stored, and a verdict saved with
+them reads without them. The trace keeps no binding or verifier counters either.
 Unresolved support, missing support, conflicts and uncertain status still withhold
 before inference. Missing/invalid model assets are logged and mark the Claims
 `unassessed` (`verifier_unavailable`) without failing the analysis. Judgement and

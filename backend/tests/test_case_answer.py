@@ -250,6 +250,31 @@ def test_after_an_analysis_a_claim_is_cited_with_the_sources_behind_it(monkeypat
     assert [claim.claim_id for claim in output.trace.claims] == ["A-01"]
 
 
+def test_a_claim_keeps_the_citation_its_analysis_stored_after_the_units_change(monkeypatch):
+    stored = CaseSourceCitation(
+        source_id=NARRATIVE_ID,
+        evidence_unit_ids=[f"{NARRATIVE_ID}:U001-0000000000000000"],
+        pointer_state="direct",
+        start=0,
+        end=len(NARRATIVE),
+        exact_quote=NARRATIVE,
+    )
+    result = stored_analysis()
+    trace = CaseAnalysisTrace.model_validate(result.trace_json)
+    claim = trace.claims[0].model_copy(update={"supporting_citations": [stored]})
+    result.trace_json = trace.model_copy(update={"claims": [claim]}).model_dump(mode="json")
+
+    output, _ = ask(
+        monkeypatch,
+        reply(unit("A caller posed as police.", claim_ids=["A-01"])),
+        result=result,
+    )
+
+    [answered] = output.units
+    assert answered.supporting_citations == [stored]
+    assert output.trace.claims[0].supporting_citations == [stored]
+
+
 def test_after_an_analysis_the_model_still_reads_the_sources_and_the_gaps(monkeypatch):
     _, seen = ask(monkeypatch, reply(unit("See the sources.", "general")), analysed=True)
 

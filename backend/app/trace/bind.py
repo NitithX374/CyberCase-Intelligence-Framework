@@ -14,11 +14,9 @@ from app.trace.claims import (
     CaseSourceCitation,
 )
 from app.trace.evidence_binding import bind_citations
-from app.trace.grounding import grounding_report
 from app.trace.summary import summary_pieces
 from app.trace.trace import (
     CaseAnalysisTrace,
-    CaseGroundingReport,
     CaseImpactItem,
     CaseInvolvedParty,
     CaseProviderReading,
@@ -70,41 +68,27 @@ def resolve_case_trace(
     mitre_table: object = None,
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseAnalysisTrace:
-    bound, grounding = bound_claims(trace, source_bundle, followup_history)
-    return bound_references(bound.model_copy(update={"grounding": grounding}), mitre_table)
+    return bound_references(bound_claims(trace, source_bundle, followup_history), mitre_table)
 
 
 def bound_claims(
     written: CaseAnalysisTrace | CaseProviderReading,
     source_bundle: CaseSourceBundle,
     followup_history: Sequence[CaseFollowupExchange] = (),
-) -> tuple[CaseAnalysisTrace | CaseProviderReading, CaseGroundingReport]:
+) -> CaseAnalysisTrace | CaseProviderReading:
     evidence = EvidenceIndex((*source_bundle.sources, *followup_registry_items(followup_history)))
-    registry = evidence.sources
-
     claims = deduplicated_claims(written.claims)
-    resolved_claims = [
-        resolve_claim(claim, registry, evidence=evidence) for claim in claims
-    ]
-
-    bound = written.model_copy(update={"claims": resolved_claims})
-    grounding = grounding_report(
-        claims,
-        resolved_claims,
-        registry,
-        evidence=evidence,
-        claims_dropped=len(written.claims) - len(claims),
+    return written.model_copy(
+        update={"claims": [resolve_claim(claim, evidence) for claim in claims]}
     )
-    return bound, grounding
 
 
 def bound_references(trace: CaseAnalysisTrace, mitre_table: object = None) -> CaseAnalysisTrace:
     claims_by_id = {claim.claim_id: claim for claim in trace.claims}
     known_claim_ids = set(claims_by_id)
-    units, unknown_ids = summary_units(trace.summary, claims_by_id)
     return trace.model_copy(
         update={
-            "summary_units": units,
+            "summary_units": summary_units(trace.summary, claims_by_id),
             "involved_parties": [
                 with_support(party, claims_by_id) for party in trace.involved_parties
             ],
@@ -112,23 +96,20 @@ def bound_references(trace: CaseAnalysisTrace, mitre_table: object = None) -> Ca
             "impacts": [with_support(impact, claims_by_id) for impact in trace.impacts],
             "gaps": [answerable_gap(gap, known_claim_ids) for gap in trace.gaps],
             "mitre_associations": mapped_associations(mitre_table),
-            "grounding": trace.grounding.model_copy(update={"summary_ids_unknown": unknown_ids}),
         }
     )
 
 
 def summary_units(
     summary: str, claims_by_id: Mapping[str, CaseAnalysisClaim]
-) -> tuple[list[CaseSummaryUnit], int]:
+) -> list[CaseSummaryUnit]:
     units: list[CaseSummaryUnit] = []
-    unknown_ids = 0
     for text, written in summary_pieces(summary):
         known = [claim_id for claim_id in written if claim_id in claims_by_id]
-        unknown_ids += len(written) - len(known)
         units.append(
             CaseSummaryUnit(text=text, claim_ids=known, support=item_support(known, claims_by_id))
         )
-    return units, unknown_ids
+    return units
 
 
 def deduplicated_claims(claims: list[CaseAnalysisClaim]) -> list[CaseAnalysisClaim]:
@@ -151,16 +132,8 @@ def answerable_gap(gap, known_claim_ids: set[str]):
     )
 
 
-def resolve_claim(
-    claim: CaseAnalysisClaim,
-    registry: dict[str, CaseSourceItem],
-    document_context: object = None,
-    search: object = None,
-    evidence: EvidenceIndex | None = None,
-    *args,
-    **kwargs,
-) -> CaseAnalysisClaim:
-    evidence = evidence or EvidenceIndex(tuple(registry.values()))
+def resolve_claim(claim: CaseAnalysisClaim, evidence: EvidenceIndex) -> CaseAnalysisClaim:
+    registry = evidence.sources
     seen: set[str] = set()
     supporting, supporting_invalid, supporting_unverified = bind_citations(
         claim.supporting_citations, "supporting", evidence, seen

@@ -151,7 +151,7 @@ def test_the_reading_prompt_selects_units_and_states_the_json():
     )
 
 
-def test_a_stored_legacy_quote_remains_locatable_without_the_new_reader_contract():
+def test_a_stored_legacy_reading_still_reads_with_its_quote():
     source_id = str(uuid4())
     reading = CaseProviderReading.model_validate(
         {
@@ -172,9 +172,7 @@ def test_a_stored_legacy_quote_remains_locatable_without_the_new_reader_contract
         }
     )
 
-    bundle = CaseSourceBundle(1, (CaseSourceItem(source_id, "narrative", SOURCE_TEXT),))
-    checked, _ = bound_claims(reading, bundle)
-    [citation] = checked.claims[0].supporting_citations
+    [citation] = reading.claims[0].supporting_citations
     assert citation.exact_quote == SOURCE_TEXT
     assert citation.pointer_state == "recovered"
     assert citation.page_numbers == []
@@ -198,7 +196,7 @@ def test_the_judgement_call_receives_claims_after_their_unit_references_are_chec
     reading = reading_of(bundle)
     _, (_, judgement_call) = written(bundle, reading)
 
-    checked, _ = bound_claims(reading, bundle)
+    checked = bound_claims(reading, bundle)
     assert judgement_call["content"]["reading"] == reading_payload(checked)
     assert judgement_call["content"]["reading"]["claims"][0]["claim_id"] == "A-01"
 
@@ -233,9 +231,7 @@ def test_the_judgement_excludes_a_claim_whose_unit_was_not_found_but_retains_it_
     assert demoted["epistemic_status"] == "not_confirmed"
     assert demoted["supporting_citations"] == []
     assert demoted["semantic_grounding"]["verdict"] == "unassessed"
-    assert trace.grounding.claims_withheld_from_judgement == 1
-    assert trace.grounding.citations_claimed == 2
-    assert trace.grounding.citations_verified == 1
+    assert [entry["reason"] for entry in demoted["invalid_evidence"]] == ["malformed_id"]
 
 
 def test_the_judgement_is_not_told_the_claims_were_verified():
@@ -289,12 +285,12 @@ def test_checking_the_claims_before_the_judgement_binds_them_as_checking_after_i
     after = resolve_case_trace(
         joined_trace(reading, verdict, context), bundle, mitre_table=mitre_table
     )
-    checked, grounding = bound_claims(reading, bundle)
-    before = bound_references(joined_trace(checked, verdict, context, grounding), mitre_table)
+    checked = bound_claims(reading, bundle)
+    before = bound_references(joined_trace(checked, verdict, context), mitre_table)
 
     assert before == after
+    assert [claim.claim_id for claim in before.claims] == ["A-01", "A-02"]
     assert [claim.epistemic_status for claim in before.claims] == ["reported", "not_confirmed"]
-    assert before.grounding.claims_duplicated == 1
     assert [a.technique_id for a in before.mitre_associations] == ["T1486"]
 
 
@@ -319,8 +315,6 @@ def test_the_reading_is_given_the_case_sources_and_the_judgement_is_not():
         "followup_history": [],
     }
     assert "text" not in reading_call["content"]["case_sources"][0]
-
-    assert trace.grounding.claims_admitted_to_judgement == 0
     assert "no case summary was generated" in trace.summary
 
 
@@ -332,7 +326,6 @@ def test_the_trace_takes_its_claims_from_the_reading_and_its_summary_from_the_ju
     assert [claim.claim_id for claim in trace.claims] == ["A-01"]
     assert trace.summary == "Overnight encryption of a file share."
     assert trace.involved_parties == trace.timeline == trace.impacts == []
-    assert trace.grounding is None
 
 
 def test_a_joined_trace_is_bound_to_the_case_like_any_other():
@@ -361,8 +354,7 @@ def test_a_joined_trace_is_bound_to_the_case_like_any_other():
 
     assert bound.gaps[0].affected_claim_ids == ["A-01"]
     assert [item.technique_id for item in bound.mitre_associations] == ["T1486"]
-    assert bound.grounding.associations_outside_context == 0
-    assert bound.grounding.citations_verified == 1
+    assert len(bound.claims[0].supporting_citations) == 1
 
 
 def test_the_judgement_is_shown_which_sentence_carries_each_claim():
@@ -370,7 +362,7 @@ def test_the_judgement_is_shown_which_sentence_carries_each_claim():
     payload = reading_payload(reading_of(bundle))
 
     assert set(payload) == {"claims"}
-    checked, _ = bound_claims(reading_of(bundle), bundle)
+    checked = bound_claims(reading_of(bundle), bundle)
     assert (
         reading_payload(checked)["claims"][0]["supporting_citations"][0]["exact_quote"]
         == SOURCE_TEXT

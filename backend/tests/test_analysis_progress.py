@@ -27,7 +27,7 @@ from app.errors import CaseWorkflowError
 from app.llm.settings import AnalysisPipelineConfig
 from app.main import app
 from app.trace.claims import CaseAssessmentTrace
-from app.trace.trace import CaseGroundingReport, CaseProviderJudgement
+from app.trace.trace import CaseProviderJudgement
 
 
 class Done(BaseModel):
@@ -218,18 +218,16 @@ def test_a_request_that_finishes_logs_nothing(caplog):
     assert failures_logged(caplog) == []
 
 
-def test_the_preflight_and_the_binding_announce_themselves():
-    _, trace, bundle, _, _ = _fixtures()
-    data = AnalysisInput(sources=bundle)
+def test_the_preflight_announces_itself():
+    _, _, bundle, _, _ = _fixtures()
 
     async def assessed(**_kwargs):
         return CaseAssessmentTrace(gaps=[])
 
     async def exercise():
-        await assess_gaps(data, request=assessed)
-        await bind_to_case(data, AnalysisArtifacts(trace=trace))
+        await assess_gaps(AnalysisInput(sources=bundle), request=assessed)
 
-    assert steps_heard(exercise) == ["assess", "bind"]
+    assert steps_heard(exercise) == ["assess"]
 
 
 def test_reading_source_binding_and_judgement_announce_in_turn():
@@ -251,12 +249,11 @@ def test_reading_source_binding_and_judgement_announce_in_turn():
     assert steps_heard(exercise) == ["read", "bind", "verify", "views", "judge"]
 
 
-def test_the_checks_after_a_checked_reading_announce_nothing():
+def test_the_reference_checks_after_the_writer_announce_nothing():
     _, trace, bundle, _, _ = _fixtures()
-    checked = trace.model_copy(update={"grounding": CaseGroundingReport()})
 
     async def exercise():
-        await bind_to_case(AnalysisInput(sources=bundle), AnalysisArtifacts(trace=checked))
+        await bind_to_case(AnalysisInput(sources=bundle), AnalysisArtifacts(trace=trace))
 
     assert steps_heard(exercise) == []
 

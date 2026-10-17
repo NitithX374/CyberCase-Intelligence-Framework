@@ -134,12 +134,12 @@ def test_invalid_provider_pointers_are_diagnosed_before_judgement(source_id, uni
         {"source_id": source_id, "evidence_unit_ids": [unit_id]}
     ]
     reading = reading_from(CaseProviderReadingReply.model_validate(payload))
-    checked, metrics = bound_claims(reading, BUNDLE)
+    checked = bound_claims(reading, BUNDLE)
     [claim] = checked.claims
     assert claim.supporting_citations == []
     assert claim.invalid_evidence[0].reason == reason
     assert claim.epistemic_status == "not_confirmed"
-    assert metrics.evidence_ids_invalid == 1
+    assert len(claim.invalid_evidence) == 1
     assert set(reading_payload(checked)) == {"claims"}
 
 
@@ -160,7 +160,7 @@ def test_claims_only_trace_builds_a_deterministic_report_without_a_provider(monk
 
     monkeypatch.setattr("app.llm.request.request_stage", forbidden)
     monkeypatch.setattr("app.analysis.write.request_stage", forbidden)
-    checked, metrics = bound_claims(
+    checked = bound_claims(
         reading_from(CaseProviderReadingReply.model_validate(reader_json())), BUNDLE
     )
     trace = bound_references(
@@ -169,7 +169,6 @@ def test_claims_only_trace_builds_a_deterministic_report_without_a_provider(monk
             CaseProviderJudgement(
                 version=checked.version, summary="Jane reported losing 25,000 baht [A-01]."
             ),
-            grounding=metrics,
         )
     )
     report = build_case_report_content(

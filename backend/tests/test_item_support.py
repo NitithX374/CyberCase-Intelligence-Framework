@@ -5,17 +5,18 @@ from uuid import uuid4
 
 import pytest
 
+from app.analysis.views import DerivedCaseViewsReply
 from app.analysis.write import reading_payload
 from app.chat.compose import analysis_payload
 from app.llm.schema import structured_output_schema
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
+from app.sources.evidence import evidence_units
 from app.trace.bind import item_support, resolve_case_trace
 from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation
 from app.trace.trace import (
     CaseAnalysisTrace,
     CaseImpactItem,
     CaseInvolvedParty,
-    CaseProviderAnalysis,
     CaseProviderJudgement,
     CaseProviderReading,
     CaseProviderReadingReply,
@@ -23,7 +24,6 @@ from app.trace.trace import (
 )
 
 SOURCE_TEXT = "The finance share was encrypted overnight."
-INVENTED = "The attacker demanded two bitcoin."
 
 
 def claim(claim_id: str, source_id: str, quote: str) -> CaseAnalysisClaim:
@@ -34,6 +34,17 @@ def claim(claim_id: str, source_id: str, quote: str) -> CaseAnalysisClaim:
         epistemic_status="reported",
         supporting_source_ids=[source_id],
         supporting_citations=[CaseSourceCitation(source_id=source_id, exact_quote=quote)],
+    )
+
+
+def cited_claim(claim_id: str, source_id: str, unit_id: str) -> CaseAnalysisClaim:
+    return CaseAnalysisClaim(
+        claim_id=claim_id,
+        claim_type="reported",
+        text=f"Claim {claim_id}.",
+        epistemic_status="reported",
+        supporting_source_ids=[source_id],
+        supporting_citations=[CaseSourceCitation(source_id=source_id, evidence_unit_ids=[unit_id])],
     )
 
 
@@ -79,10 +90,9 @@ def test_an_item_is_as_supported_as_the_claims_it_names_that_exist(claim_ids, ex
 
 def bundle_and_trace() -> tuple[CaseSourceBundle, CaseAnalysisTrace]:
     source_id = str(uuid4())
-    bundle = CaseSourceBundle(
-        revision=1,
-        sources=(CaseSourceItem(source_id=source_id, source_kind="narrative", text=SOURCE_TEXT),),
-    )
+    source = CaseSourceItem(source_id=source_id, source_kind="narrative", text=SOURCE_TEXT)
+    bundle = CaseSourceBundle(revision=1, sources=(source,))
+    [unit] = evidence_units(source)
     trace = CaseAnalysisTrace(
         analysis_mode="case_overview",
         summary="A share was encrypted.",
@@ -96,14 +106,14 @@ def bundle_and_trace() -> tuple[CaseSourceBundle, CaseAnalysisTrace]:
         ],
         impacts=[CaseImpactItem(description="Payroll was lost", claim_ids=["A-99"])],
         claims=[
-            claim("A-01", source_id, SOURCE_TEXT),
-            claim("A-02", source_id, INVENTED),
+            cited_claim("A-01", source_id, unit.unit_id),
+            cited_claim("A-02", source_id, unit.unit_id.replace("U001", "U002")),
         ],
     )
     return bundle, trace
 
 
-def test_binding_marks_what_rests_only_on_a_claim_whose_quote_was_not_found():
+def test_binding_marks_what_rests_only_on_a_claim_whose_unit_was_not_found():
     bundle, trace = bundle_and_trace()
 
     bound = resolve_case_trace(trace, bundle)
@@ -132,7 +142,7 @@ def test_a_trace_stored_before_the_status_existed_still_validates_without_one():
 def test_the_status_is_in_no_schema_the_model_fills():
     for schema in (
         CaseProviderReadingReply.model_json_schema(),
-        structured_output_schema(CaseProviderAnalysis),
+        structured_output_schema(DerivedCaseViewsReply),
         structured_output_schema(CaseProviderJudgement),
     ):
         assert '"support"' not in json.dumps(schema)
@@ -140,15 +150,13 @@ def test_the_status_is_in_no_schema_the_model_fills():
 
 def test_a_reply_that_names_a_status_is_refused():
     reply = {
-        "version": "case_analysis_trace_v1",
-        "claims": [],
-        "involved_parties": [{"name": "A", "role": "B", "claim_ids": [], "support": "bound"}],
+        "parties": [{"name": "A", "role": "B", "claim_ids": ["A-01"], "support": "bound"}],
         "timeline": [],
         "impacts": [],
     }
 
     with pytest.raises(ValueError, match="support"):
-        CaseProviderAnalysis.model_validate({**reply, "summary": "Legacy summary."})
+        DerivedCaseViewsReply.model_validate(reply)
 
 
 def test_neither_model_is_shown_the_status():

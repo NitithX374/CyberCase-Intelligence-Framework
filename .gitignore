@@ -175,8 +175,6 @@ deliverables/**/*.pdf
 # Experiments & Research Benchmarks
 # ==============================================================================
 backend/experiments/*
-!backend/experiments/__init__.py
-!backend/experiments/analysis_arms.py
 /evaluation/
 
 # The offline semantic-verification fixture is intentionally versioned.

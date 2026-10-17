@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import re
 from collections.abc import Iterable, Mapping, Sequence
-from copy import deepcopy
 from dataclasses import dataclass
 
 from fastapi import status
@@ -12,7 +11,7 @@ from app.analysis.language import ResponseLanguage
 from app.chat.answer_contract import CaseAnalysisOutput, ChatReply, ChatReplyUnit
 from app.errors import CaseAnalysisFailure
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace.bind import followup_registry_items, resolve_case_trace
+from app.trace.bind import followup_registry_items
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseFollowupExchange,
@@ -81,20 +80,15 @@ def answer_from(
         )
     selected = list(dict.fromkeys(claim_id for draft in drafts for claim_id in draft.claim_ids))
     answer_trace = (
-        resolve_case_trace(
-            CaseAnalysisTrace(
-                analysis_mode="question_answer",
-                summary=answer,
-                claims=[deepcopy(claims[claim_id]) for claim_id in selected],
-            ),
-            sources,
-            followup_history=followups,
+        CaseAnalysisTrace(
+            analysis_mode="question_answer",
+            summary=answer,
+            claims=[claims[claim_id] for claim_id in selected],
         )
         if selected
         else None
     )
-    bound = {claim.claim_id: claim for claim in answer_trace.claims} if answer_trace else {}
-    units = tuple(finished_unit(draft, bound) for draft in drafts)
+    units = tuple(finished_unit(draft, claims) for draft in drafts)
     log_grounding(drafts, units)
     return CaseAnalysisOutput(
         answer=answer, trace=answer_trace, units=units, suggestion=reply.suggestion

@@ -127,18 +127,6 @@ class CaseSourceCitation(BaseModel):
         return self
 
 
-class CaseProviderCitation(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    source_id: str = Field(min_length=1, max_length=160)
-    exact_quote: str = Field(min_length=1, max_length=MAX_QUOTE_CHARS)
-
-    @field_validator("source_id", "exact_quote", mode="before")
-    @classmethod
-    def normalize_text(cls, value: object) -> object:
-        return value.strip() if isinstance(value, str) else value
-
-
 class CaseUnverifiedCitation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

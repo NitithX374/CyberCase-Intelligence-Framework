@@ -8,7 +8,6 @@ from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseAnalysisMode,
-    CaseProviderClaim,
     CaseReadingClaim,
     ClaimIds,
     clipped,
@@ -20,6 +19,7 @@ MAX_SUMMARY_CHARS = 24_000
 
 SupportStatus = Literal["bound", "mixed", "unbound", "no_claim"]
 
+RETIRED_TRACE_FIELDS = frozenset({"grounding"})
 RETIRED_VIEW_FIELDS = frozenset({"projection_grounding", "field_spans"})
 RETIRED_EXTRACTION_FIELDS = frozenset(
     {
@@ -30,19 +30,6 @@ RETIRED_EXTRACTION_FIELDS = frozenset(
         "quantization",
         "runtime_revision",
         "field_resolution_issues",
-    }
-)
-RETIRED_GROUNDING_COUNTS = frozenset(
-    {
-        "citations_paraphrased",
-        "citations_pointed",
-        "citations_marked",
-        "citations_meaning_pointed",
-        "meaning_pointer_eligible",
-        "meaning_pointer_attempted",
-        "meaning_pointer_unavailable",
-        "meaning_pointer_unavailable_reason",
-        "meaning_pointer_skipped",
     }
 )
 
@@ -165,48 +152,6 @@ class CaseSummaryUnit(BaseModel):
     support: SupportStatus
 
 
-class CaseGroundingReport(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    claims: int = 0
-    citations_claimed: int = 0
-    citations_verified: int = 0
-    citations_unfound: int = 0
-    claims_without_citation: int = 0
-    claims_duplicated: int = 0
-    citations_duplicated: int = 0
-    evidence_ids_claimed: int = 0
-    evidence_ids_resolved: int = 0
-    evidence_ids_invalid: int = 0
-    evidence_id_resolution_rate: float | None = Field(default=None, ge=0, le=1)
-    claims_with_direct_evidence: int = 0
-    claims_with_recovered_evidence: int = 0
-    claims_without_resolved_evidence: int = 0
-    claims_semantically_supported: int = 0
-    claims_semantically_not_supported: int = 0
-    claims_semantically_unassessed: int = 0
-    claims_admitted_to_judgement: int = 0
-    claims_withheld_from_judgement: int = 0
-    claim_verifier_calls: int = 0
-    claim_validation_ms: float = Field(default=0, ge=0)
-    claim_verifier_model: str | None = None
-    claim_verifier_threshold: float | None = Field(default=None, ge=0.5, le=1)
-    claim_verifier_artifact_sha256: str | None = None
-    claim_source_units_considered: int = 0
-    claim_source_units_selected: int = 0
-    claim_verifier_truncated_pairs: int = 0
-    associations_outside_context: int = 0
-    associations_without_claim: int = 0
-    summary_ids_unknown: int = 0
-    sources_cited: int = 0
-    sources_total: int = 0
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_counts(cls, data: object) -> object:
-        return without_retired(data, RETIRED_GROUNDING_COUNTS)
-
-
 class CaseViewExtraction(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -240,22 +185,13 @@ class CaseAnalysisTrace(BaseModel):
     gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=64)
     mitre_associations: list[CaseMitreAssociation] = Field(default_factory=list, max_length=64)
     retrieval_context_id: str | None = Field(default=None, min_length=1, max_length=160)
-    grounding: CaseGroundingReport | None = None
     view_extraction: CaseViewExtraction | None = None
     stop_reason: str | None = Field(default=None, max_length=40)
 
-
-class CaseProviderAnalysis(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal["case_analysis_trace_v1"]
-    claims: list[CaseProviderClaim] = Field(max_length=64)
-    summary: str = Field(min_length=1, max_length=MAX_SUMMARY_CHARS)
-    involved_parties: list[ProviderParty] = Field(max_length=64)
-    timeline: list[ProviderTimelineItem] = Field(max_length=64)
-    impacts: list[ProviderImpactItem] = Field(max_length=64)
-    gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
-    mitre_associations: list[CaseMitreAssociation] = Field(default_factory=list, max_length=64)
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_fields(cls, data: object) -> object:
+        return without_retired(data, RETIRED_TRACE_FIELDS)
 
 
 class CaseProviderReading(BaseModel):
@@ -282,11 +218,9 @@ class CaseProviderJudgement(BaseModel):
 
 __all__ = [
     "CaseAnalysisTrace",
-    "CaseGroundingReport",
     "CaseImpactItem",
     "CaseInvolvedParty",
     "CaseMitreAssociation",
-    "CaseProviderAnalysis",
     "CaseProviderJudgement",
     "CaseProviderReading",
     "CaseProviderReadingReply",

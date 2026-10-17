@@ -27,11 +27,6 @@ describe("Saved Finding Source linkage", () => {
                 : verdict === "not_supported"
                   ? "neutral"
                   : "input_too_long",
-            model: "test-nli",
-            entailment: verdict === "unassessed" ? null : verdict === "supported" ? 0.99 : 0.1,
-            threshold: 0.8,
-            duration_ms: 0,
-            selection_ms: 0,
           },
         }),
       );

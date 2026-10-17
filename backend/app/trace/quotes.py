@@ -70,20 +70,10 @@ def validate_page_spans(value: object, content: str) -> list[tuple[int, int, int
     return spans
 
 
-def quote_occurrences(content: str, quote: str) -> list[int]:
-    occurrences: list[int] = []
-    start = content.find(quote)
-    while start >= 0:
-        occurrences.append(start)
-        start = content.find(quote, start + 1)
-    return occurrences
-
-
 __all__ = [
     "MAX_PAGE_SPANS_PER_QUOTE",
     "MAX_QUOTE_CHARS",
     "MAX_SUPPORTED_DOCUMENT_PAGES",
     "find_document_locator",
-    "quote_occurrences",
     "validate_page_spans",
 ]

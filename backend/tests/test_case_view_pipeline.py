@@ -112,8 +112,7 @@ async def test_bound_whole_case_same_claim_set_concurrent_views_and_judgement(
     assert trace.claims[2].supporting_source_ids == ["QA-03"]
     assert trace.claims[3].epistemic_status == "not_confirmed"
     assert trace.claims[3].semantic_grounding.verdict == "unassessed"
-    assert trace.grounding.claims_withheld_from_judgement == 1
-    assert trace.grounding.evidence_ids_resolved == 3
+    assert sum(len(claim.supporting_citations) for claim in trace.claims) == 3
     assert trace.summary_units[0].support == "bound"
     assert trace.view_extraction.excluded_claim_ids == ["A-04"]
     assert CaseAnalysisTrace.model_validate_json(trace.model_dump_json()) == trace

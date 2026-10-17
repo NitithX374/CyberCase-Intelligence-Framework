@@ -29,7 +29,7 @@ from app.followup.clarification import (
 from app.llm.request import request_stage
 from app.llm.settings import AnalysisPipelineConfig, configured_pipeline
 from app.sources.bundle import CaseSourceBundle
-from app.trace.bind import bound_references, resolve_case_trace
+from app.trace.bind import bound_references
 from app.trace.claims import CaseAssessmentTrace, CaseFollowupExchange, followup_payload
 from app.trace.trace import CaseAnalysisTrace
 
@@ -163,10 +163,10 @@ async def write_analysis(
 
 
 async def bind_to_case(data: AnalysisInput, so_far: AnalysisArtifacts) -> AnalysisArtifacts:
-    if so_far.trace.grounding is None:
-        announce("bind")
+    context = so_far.technical_context
+    mitre_table = list(context.mitre_table) if context is not None else []
     try:
-        trace = await asyncio.to_thread(bound_trace, data, so_far, so_far.trace)
+        trace = await asyncio.to_thread(bound_references, so_far.trace, mitre_table)
     except ValidationError as error:
         logger.exception("Binding the analysis to the case built an invalid trace")
         raise CaseAnalysisFailure(
@@ -177,21 +177,6 @@ async def bind_to_case(data: AnalysisInput, so_far: AnalysisArtifacts) -> Analys
     return replace(so_far, trace=trace)
 
 
-def bound_trace(
-    data: AnalysisInput, so_far: AnalysisArtifacts, trace: CaseAnalysisTrace
-) -> CaseAnalysisTrace:
-    context = so_far.technical_context
-    mitre_table = list(context.mitre_table) if context is not None else []
-    if trace.grounding is not None:
-        return bound_references(trace, mitre_table)
-    return resolve_case_trace(
-        trace,
-        data.sources,
-        mitre_table=mitre_table,
-        followup_history=data.followup_history,
-    )
-
-
 __all__ = [
     "AnalysisAdvance",
     "AnalysisArtifacts",
@@ -200,7 +185,6 @@ __all__ = [
     "assess_case",
     "assess_gaps",
     "bind_to_case",
-    "bound_trace",
     "retrieve_technical_context",
     "write_analysis",
 ]

@@ -4,7 +4,9 @@ import asyncio
 from unittest.mock import patch
 from uuid import uuid4
 
+import analysis_arms
 import pytest
+from analysis_arms import case_system_prompt, revise, write_revision
 from case_mitre_test_support import _gate
 
 from app.analysis.pipeline import AnalysisArtifacts, AnalysisInput, write_analysis
@@ -17,8 +19,6 @@ from app.trace.claims import (
     CaseSourceCitation,
 )
 from app.trace.trace import CaseAnalysisTrace, CaseProviderAnalysis
-from experiments import analysis_arms
-from experiments.analysis_arms import case_system_prompt, revise, write_revision
 
 TEXT = "The finance share was encrypted overnight and a note demanded contact."
 SOURCE_ID = str(uuid4())

@@ -87,7 +87,6 @@ def test_the_sentence_is_shown_as_the_service_sent_it_with_nothing_checked_again
     [association] = bound.mitre_associations
     assert (association.technique_id, association.claim_ids) == ("T1486", [])
     assert association.reason == "“A sentence no source holds.”"
-    assert bound.grounding.associations_without_claim == 0
     assert CaseAnalysisTrace.model_validate(bound.model_dump()) == bound
 
 

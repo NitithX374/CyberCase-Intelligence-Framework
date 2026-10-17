@@ -61,10 +61,7 @@ def test_judgement_serialization_preserves_original_grounding_and_saved_trace():
     original = reading()
     claim = original.claims[0]
     claim.semantic_grounding = CaseClaimGrounding(
-        verdict="supported",
-        reason="lr_supported",
-        threshold=0.5,
-        selected_evidence_unit_ids=[claim.supporting_citations[0].evidence_unit_ids[0]],
+        verdict="supported", reason="lr_supported", method="b1-lr-wice-train-v1"
     )
     before = original.model_dump(mode="json")
 

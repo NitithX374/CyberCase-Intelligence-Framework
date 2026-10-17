@@ -18,7 +18,6 @@ from app.trace import claim_validation
 from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, CaseSourceCitation
 from app.trace.nli_model import Judgement, NliUnavailable
 from app.trace.trace import (
-    CaseGroundingReport,
     CaseProviderJudgement,
     CaseProviderReading,
     CaseProviderReadingReply,
@@ -158,11 +157,8 @@ async def test_a_claim_the_check_does_not_support_still_reaches_judgement_and_vi
     assert trace.claims[1].supporting_citations[0].exact_quote == "John sent an email."
     assert trace.claims[1].semantic_grounding.verdict == "not_supported"
     assert trace.claims[0].semantic_grounding.verdict == "supported"
-    assert trace.grounding.claims_admitted_to_judgement == 3
-    assert trace.grounding.claims_withheld_from_judgement == 0
-    assert trace.grounding.claims_semantically_not_supported == 1
-    assert trace.grounding.claim_verifier_calls == 3
-    assert trace.grounding.evidence_ids_resolved == 3
+    assert len(scorer.judged) == 3
+    assert [len(claim.supporting_citations) for claim in trace.claims] == [1, 1, 1]
     assert trace.view_extraction.excluded_claim_ids == []
 
 
@@ -178,7 +174,6 @@ async def test_unresolved_id_is_withheld_even_if_another_claim_has_resolved_evid
         "A-01",
         "A-03",
     ]
-    assert trace.grounding.claims_withheld_from_judgement == 1
     assert trace.view_extraction.excluded_claim_ids == ["A-02"]
 
 
@@ -239,16 +234,15 @@ async def test_no_claim_with_resolved_support_abstains_without_calling_judgement
     _, claims = fixtures()
     for claim in claims:
         claim["supporting_citations"][0]["evidence_unit_ids"] = ["S1:U001-stale"]
-    trace, calls, views = await run_pipeline(monkeypatch, scorer=FakeNli(), claims=claims)
+    scorer = FakeNli()
+    trace, calls, views = await run_pipeline(monkeypatch, scorer=scorer, claims=claims)
 
     assert [call["stage"] for call in calls] == ["case_reading"]
     assert views == []
     assert "no case summary was generated" in trace.summary
     assert len(trace.claims) == 3
     assert all(claim.semantic_grounding.verdict == "unassessed" for claim in trace.claims)
-    assert trace.grounding.claims_admitted_to_judgement == 0
-    assert trace.grounding.claims_withheld_from_judgement == 3
-    assert trace.grounding.claim_verifier_calls == 0
+    assert scorer.judged == []
     assert (
         trace.involved_parties == trace.timeline == trace.impacts == trace.mitre_associations == []
     )
@@ -282,8 +276,11 @@ async def test_claims_the_check_does_not_support_are_labels_not_an_abstention(mo
     assert [claim.claim_id for claim in views] == ["A-01", "A-02", "A-03"]
     assert trace.summary == "John sent an email [A-01]."
     assert all(claim.semantic_grounding.verdict == "not_supported" for claim in trace.claims)
-    assert trace.grounding.claims_admitted_to_judgement == 3
-    assert trace.grounding.claims_withheld_from_judgement == 0
+    assert [claim["claim_id"] for claim in calls[1]["content"]["reading"]["claims"]] == [
+        "A-01",
+        "A-02",
+        "A-03",
+    ]
 
 
 @pytest.mark.asyncio
@@ -311,9 +308,10 @@ async def test_an_unavailable_verifier_leaves_claims_unassessed_and_the_analysis
         "no_resolved_source",
         "verifier_unavailable",
     ]
-    assert trace.grounding.claims_admitted_to_judgement == 2
-    assert trace.grounding.claims_withheld_from_judgement == 1
-    assert trace.grounding.claim_verifier_calls == 0
+    assert [claim["claim_id"] for claim in calls[1]["content"]["reading"]["claims"]] == [
+        "A-01",
+        "A-03",
+    ]
     assert trace.summary == "John sent an email [A-01]."
     assert "weights_missing" in caplog.text
 
@@ -383,7 +381,7 @@ async def test_cancelling_the_checks_stops_the_scoring_of_the_remaining_claims(m
         for number in (1, 2, 3)
     ]
     reading = CaseProviderReading(version="case_analysis_trace_v1", claims=claims)
-    task = asyncio.create_task(checked_claim_support(reading, CaseGroundingReport()))
+    task = asyncio.create_task(checked_claim_support(reading))
 
     try:
         assert await asyncio.to_thread(first.wait, 5)
@@ -439,7 +437,7 @@ async def test_long_input_is_scored_with_research_truncation_and_a_negative_verd
     scorer = FakeNli(fits=lambda premise, hypothesis: False)
     trace, calls, _ = await run_pipeline(monkeypatch, scorer=scorer)
     assert all(claim.semantic_grounding.reason == "lr_not_supported" for claim in trace.claims)
-    assert all(claim.semantic_grounding.truncated for claim in trace.claims)
+    assert len(scorer.judged) == 3
     assert [call["stage"] for call in calls] == ["case_reading", "case_judgement"]
 
 
