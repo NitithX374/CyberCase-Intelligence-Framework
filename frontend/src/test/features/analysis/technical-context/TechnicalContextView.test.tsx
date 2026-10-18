@@ -85,6 +85,29 @@ describe("TechnicalContextView", () => {
     expect(screen.queryByText(/could not be verified/)).not.toBeInTheDocument();
   });
 
+  it("shows the passage the retrieval service tied to a technique that names no claim", () => {
+    const projection = technicalProjection();
+    const passage = "“The attacker ran a PowerShell script on the clerk's computer.”";
+    const mapped = projection.result.trace_json!.mitre_associations![0];
+    mapped.claim_ids = [];
+    mapped.reason = passage;
+    render(
+      <TechnicalContextView analysisResult={projection.result} sources={projection.sources} />,
+    );
+    expect(screen.getByText(passage)).toBeInTheDocument();
+    expect(
+      screen.getByText("Tied to this technique by the retrieval service, not checked"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("No case source is recorded for this technique."),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /The attacker ran/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Why it applies" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "ATT&CK definition" }));
+    expect(screen.getByText("Command and scripting interpreter.")).toBeInTheDocument();
+    expect(screen.getAllByText(passage)).toHaveLength(1);
+  });
+
   it("prints no quotation for a source with no checked quote, and never the start of the source", () => {
     const projection = technicalProjection();
     const unconfirmed = projection.result.trace_json!.claims[0];

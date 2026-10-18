@@ -26,6 +26,7 @@ export interface TechnicalContextCard {
   retrievedBy: "vector" | "graph";
   fullTechnicalDefinition: string;
   whyRelevantHere: string;
+  casePassage: string;
   mitreUrl: string;
   caseBasisSources: SourceMessageRef[];
 }
@@ -114,6 +115,7 @@ function mappedCard(
   row: MitreRow,
   findings: Map<string, CaseFinding>,
 ): TechnicalContextCard {
+  const claimBased = association.claim_ids.length > 0;
   return {
     associationId: association.association_id,
     techniqueId: row.id,
@@ -123,7 +125,8 @@ function mappedCard(
     retrievalScore: row.retrievalScore,
     retrievedBy: row.retrievedBy,
     fullTechnicalDefinition: attackDescription(row.description),
-    whyRelevantHere: association.reason,
+    whyRelevantHere: claimBased ? association.reason : "",
+    casePassage: claimBased ? "" : association.reason,
     mitreUrl: mitreAttackUrl(row.id, row.mitreUrl),
     caseBasisSources: caseBasis(
       association.claim_ids.flatMap((claimId) => findings.get(claimId)?.supportingSources ?? []),
