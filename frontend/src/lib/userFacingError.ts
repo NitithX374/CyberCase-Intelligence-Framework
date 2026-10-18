@@ -1,7 +1,7 @@
 import axios, { type AxiosError } from "axios";
 import { asRecord, asString } from "@/lib/parse";
 
-export type ErrorCategory = "timeout" | "network" | "rate_limit" | "server" | "refused" | "unknown";
+type ErrorCategory = "timeout" | "network" | "rate_limit" | "server" | "refused" | "unknown";
 
 export interface UserFacingError {
   title: string;

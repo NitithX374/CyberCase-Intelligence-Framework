@@ -4,7 +4,7 @@ import type { CaseFinding } from "@/features/analysis/types";
 import { asArray, asRecord, asString } from "@/lib/parse";
 import { buildCaseOverview } from "@/features/analysis/overview";
 
-export type TechnicalContextStatus =
+type TechnicalContextStatus =
   | "not_applicable"
   | "insufficient_context"
   | "retrieved_from_rag"
@@ -13,7 +13,7 @@ export type TechnicalContextStatus =
   | "invalid_trace"
   | "unavailable";
 
-export type TechnicalFailureStage =
+type TechnicalFailureStage =
   "applicability" | "retrieval" | "mapping" | "metadata" | "augmentation";
 
 export interface TechnicalContextCard {
@@ -38,7 +38,7 @@ export interface RetrievedTechnicalContextCard {
   mitreUrl: string;
 }
 
-export interface TechnicalContextData {
+interface TechnicalContextData {
   status: TechnicalContextStatus;
   hasContext: boolean;
   techniques: TechnicalContextCard[];
@@ -258,4 +258,3 @@ export function mitreAttackUrl(techniqueId: string, customUrl?: string | null): 
   const path = MITRE_PREFIX_PATHS[prefix] ?? "techniques";
   return `https://attack.mitre.org/${path}/${upper.replace(".", "/")}/`;
 }
-

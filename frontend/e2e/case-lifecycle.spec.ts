@@ -29,9 +29,7 @@ test.describe("case lifecycle", () => {
     await expect(page.getByRole("heading", { name: "No saved cases yet" })).toBeVisible();
 
     await page.getByRole("button", { name: "Create your first case", exact: true }).click();
-    await expect(page).toHaveURL(/\/case\/[^/]+\/(?:sources|analysis)$/, { timeout: 45_000 });
-    if (page.url().endsWith("/analysis")) await page.locator("#workspace-tab-sources").click();
-    await expect(page).toHaveURL(/\/case\/[^/]+\/sources$/);
+    await expect(page).toHaveURL(/\/case\/[^/]+\/sources$/, { timeout: 45_000 });
     await addCaseNarrative(page, narrative);
     await page.getByRole("button", { name: /^Analyze/ }).click();
     await expect(page).toHaveURL(/\/case\/[^/]+\/analysis$/);

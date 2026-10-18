@@ -42,12 +42,11 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
   const send = useMutation({
     mutationKey: caseQueryKeys.chatSend(caseId ?? "none"),
     mutationFn: ({ content, key, answersQuestion }: Submission) =>
-      createCaseChatMessage(
-        caseId!,
+      createCaseChatMessage(caseId!, {
         content,
-        key,
-        answersQuestion ? (step) => recordStep(queryClient, caseId!, step) : undefined,
-      ),
+        idempotencyKey: key,
+        onStep: answersQuestion ? (step) => recordStep(queryClient, caseId!, step) : undefined,
+      }),
     onMutate: ({ answersQuestion }: Submission) => {
       if (caseId && answersQuestion) clearProgress(queryClient, caseId);
     },

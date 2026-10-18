@@ -67,7 +67,7 @@ describe("the requests that start work on a case", () => {
   it("sends a chat message without a language, whatever it is written in", async () => {
     const fetchMock = respondWith(streamOf([result({ messages: [] })]));
 
-    await createCaseChatMessage("case-1", "02:00", "key-1");
+    await createCaseChatMessage("case-1", { content: "02:00", idempotencyKey: "key-1" });
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("http://api.test/api/v1/cases/case-1/chat/messages");

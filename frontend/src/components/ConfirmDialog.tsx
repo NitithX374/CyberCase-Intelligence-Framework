@@ -2,7 +2,7 @@
 
 import { Dialog } from "./Dialog";
 
-export interface ConfirmDialogProps {
+interface ConfirmDialogProps {
   isOpen: boolean;
   title: string;
   description?: string;

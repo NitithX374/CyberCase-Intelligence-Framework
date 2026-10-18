@@ -73,8 +73,6 @@ export function useCaseSourceActions({ caseId }: UseCaseSourceActionsOptions) {
         await addCaseSource(caseId, {
           exact_text: text,
           source_kind: "narrative",
-          provenance_json: { interface: "case_sources" },
-          source_metadata_json: { interface: "case_sources" },
         });
         void refreshAfterSourceChange(queryClient, caseId);
         return true;

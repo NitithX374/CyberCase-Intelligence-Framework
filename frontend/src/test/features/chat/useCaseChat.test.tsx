@@ -221,7 +221,7 @@ it("retries with the key the server already saw, so one message is not written t
   await waitFor(() => expect(result.current.isSending).toBe(false));
 
   const [firstCall, retryCall] = createCaseChatMessage.mock.calls;
-  expect(retryCall[2]).toBe(firstCall[2]);
+  expect(retryCall[1].idempotencyKey).toBe(firstCall[1].idempotencyKey);
 });
 
 describe("the chat error modal", () => {

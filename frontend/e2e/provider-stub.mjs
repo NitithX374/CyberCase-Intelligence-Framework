@@ -69,6 +69,76 @@ function assessedGaps(request) {
   ];
 }
 
+function readingReply(request) {
+  const sources = Array.isArray(request?.case_sources) ? request.case_sources : [];
+  const claims = sources
+    .filter(
+      (source) =>
+        source &&
+        typeof source === "object" &&
+        typeof source.source_id === "string" &&
+        Array.isArray(source.evidence_units) &&
+        source.evidence_units.length > 0,
+    )
+    .map((source, idx) => ({
+      claim_id: `A-0${idx + 1}`,
+      claim_type: "reported",
+      text: source.evidence_units
+        .map((unit) => unit.text)
+        .join("")
+        .trim(),
+      epistemic_status: "reported",
+      supporting_citations: [
+        {
+          source_id: source.source_id,
+          evidence_unit_ids: source.evidence_units.map((unit) => unit.unit_id),
+        },
+      ],
+      contradicting_citations: [],
+    }));
+  if (claims.length === 0) throw new Error("Unsupported E2E provider request");
+  return { version: "case_analysis_trace_v1", claims };
+}
+
+function judgementReply(request) {
+  const claims = request.reading.claims.filter(
+    (claim) =>
+      claim &&
+      typeof claim === "object" &&
+      typeof claim.claim_id === "string" &&
+      typeof claim.text === "string",
+  );
+  const history = Array.isArray(request.followup_history) ? request.followup_history : [];
+  const answered = history.some((item) => item?.answered === true);
+  const text = claims.map((claim) => claim.text).join(" ");
+  const gaps =
+    text.includes("needs-clarification") && !answered && claims.length <= 1
+      ? [
+          {
+            gap_id: "G-01",
+            gap_key: "workstation_owner",
+            topic: "Workstation Owner",
+            status: "AMBIGUOUS",
+            description:
+              "Which identification is correct: the primary operator or the secondary contractor?",
+            reason: "Clarifying workstation ownership is required to substantiate findings.",
+            priority: "high",
+            askable: true,
+            clarification_question:
+              "Which identification is correct: the primary operator or the secondary contractor?",
+            affected_claim_ids: ["A-01"],
+          },
+        ]
+      : [];
+  return {
+    version: "case_analysis_trace_v1",
+    summary: `Deterministic E2E summary: ${claims
+      .map((claim) => `${claim.text.trim()} [${claim.claim_id}]`)
+      .join(" ")}`,
+    gaps,
+  };
+}
+
 function responseFor(body) {
   const system = typeof body?.system === "string" ? body.system : "";
   const content = firstMessageContent(body);
@@ -96,99 +166,10 @@ function responseFor(body) {
     };
   }
   const request = asObject(content);
-  const caseSources = Array.isArray(request?.case_sources)
-    ? request.case_sources.filter(
-        (source) =>
-          source &&
-          typeof source === "object" &&
-          typeof source.source_id === "string" &&
-          source.source_id,
-      )
-    : [];
-  const readClaims = Array.isArray(request?.reading?.claims)
-    ? request.reading.claims.filter(
-        (claim) =>
-          claim &&
-          typeof claim === "object" &&
-          typeof claim.claim_id === "string" &&
-          typeof claim.text === "string",
-      )
-    : [];
-  if (caseSources.length === 0 && readClaims.length === 0) {
-    throw new Error("Unsupported E2E provider request");
-  }
-
-  const sections =
-    caseSources.length > 0
-      ? caseSources.map((source, idx) => ({
-          claimId: `A-0${idx + 1}`,
-          sourceId: source.source_id,
-          quote: typeof source.text === "string" ? source.text.trim() : "",
-        }))
-      : readClaims.map((claim) => ({
-          claimId: claim.claim_id,
-          sourceId: claim.supporting_source_ids?.[0] ?? "",
-          quote: claim.text.trim(),
-        }));
-  const sourceText = sections.map((section) => section.quote).join("\n\n");
-
-  const claims = sections.map((sec, idx) => ({
-    claim_id: `A-0${idx + 1}`,
-    claim_type: "reported",
-    text: sec.quote,
-    epistemic_status: "reported",
-    supporting_source_ids: [sec.sourceId],
-    contradicting_source_ids: [],
-    supporting_citations: [
-      {
-        source_id: sec.sourceId,
-        exact_quote: sec.quote,
-      },
-    ],
-    contradicting_citations: [],
-  }));
-
-  const followupHistory = Array.isArray(request?.followup_history) ? request.followup_history : [];
-  const hasClarificationAnswer =
-    followupHistory.some((item) => item && typeof item.answer === "string" && item.answer.trim()) ||
-    caseSources.some((source) => source.source_kind === "followup_answer") ||
-    sections.length > 1;
-
-  const gaps =
-    sourceText.includes("needs-clarification") && !hasClarificationAnswer
-      ? [
-          {
-            gap_id: "G-01",
-            gap_key: "workstation_owner",
-            topic: "Workstation Owner",
-            status: "AMBIGUOUS",
-            description:
-              "Which identification is correct: the primary operator or the secondary contractor?",
-            reason: "Clarifying workstation ownership is required to substantiate findings.",
-            priority: "high",
-            askable: true,
-            clarification_question:
-              "Which identification is correct: the primary operator or the secondary contractor?",
-            affected_claim_ids: ["A-01"],
-          },
-        ]
-      : [];
-
-  const trace = {
-    version: "case_analysis_trace_v1",
-    summary: `Deterministic E2E summary: ${sections
-      .map((section) => `${section.quote} [${section.claimId}]`)
-      .join(" ")}`,
-    involved_parties: [],
-    timeline: [],
-    impacts: [],
-    claims,
-    gaps,
-  };
-  const asked = body?.output_config
-    ? Object.keys(body.output_config.format?.schema?.properties ?? trace)
-    : ["version", "claims", "involved_parties", "timeline", "impacts"];
-  return Object.fromEntries(Object.entries(trace).filter(([key]) => asked.includes(key)));
+  if (Array.isArray(request?.reading?.claims)) return judgementReply(request);
+  if (Array.isArray(request?.case_sources)) return readingReply(request);
+  if (Array.isArray(request?.claims)) return { parties: [], timeline: [], impacts: [] };
+  throw new Error("Unsupported E2E provider request");
 }
 
 const server = http.createServer(async (request, response) => {

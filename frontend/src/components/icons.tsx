@@ -51,7 +51,7 @@ const nameToBoxicon: Record<IconName, string> = {
   spinner: "bx-loader-alt bx-spin",
 };
 
-export interface IconProps extends HTMLAttributes<HTMLElement> {
+interface IconProps extends HTMLAttributes<HTMLElement> {
   name: IconName;
 }
 

@@ -7,7 +7,7 @@ export type ClaimType = "reported" | "analytical_inference" | "unknown";
 export type EpistemicStatus =
   "reported" | "suspected" | "contradicted" | "not_established" | "unknown" | "not_confirmed";
 
-export type GapStatus = "NOT_PROVIDED" | "EXPLICITLY_UNKNOWN" | "AMBIGUOUS" | "CONFLICTING";
+type GapStatus = "NOT_PROVIDED" | "EXPLICITLY_UNKNOWN" | "AMBIGUOUS" | "CONFLICTING";
 
 export interface CaseFinding {
   id: string;
@@ -21,7 +21,7 @@ export interface CaseFinding {
   unverifiedQuotes: UnverifiedQuote[];
 }
 
-export interface UnverifiedQuote {
+interface UnverifiedQuote {
   evidenceUnitId?: string | null;
 }
 

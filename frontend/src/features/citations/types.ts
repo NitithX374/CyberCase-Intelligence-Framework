@@ -14,7 +14,7 @@ export interface SourceMessageRef {
   passages?: CitedSourcePassage[];
 }
 
-export type SourcePointerState = "direct" | "recovered" | "unresolved" | "legacy";
+type SourcePointerState = "direct" | "recovered" | "unresolved" | "legacy";
 
 export interface CitedSourcePassage {
   quote: string;

@@ -14,11 +14,6 @@ const databaseUrl =
 export const backendEnvironment = {
   ...process.env,
   DATABASE_URL: databaseUrl,
-  POSTGRES_HOST: "127.0.0.1",
-  POSTGRES_PORT: "5433",
-  POSTGRES_USER: "postgres",
-  POSTGRES_PASSWORD: "postgres",
-  POSTGRES_DB: "cybercase_framework",
   JWT_SECRET_KEY: "e2e-local-secret-key-for-playwright-tests",
   OPENROUTER_CYBERCASE: "e2e-local-key",
   OPENROUTER_MESSAGES_URL: "http://127.0.0.1:8099/v1/messages",

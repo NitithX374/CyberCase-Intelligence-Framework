@@ -37,7 +37,7 @@ export function AccountMenu({ actions = [] }: { actions?: AccountMenuAction[] })
   );
 }
 
-export interface AccountMenuAction {
+interface AccountMenuAction {
   label: string;
   icon: IconName;
   href?: string;
@@ -154,7 +154,6 @@ export function UserProfileMenu({
         onCancel={() => setIsSignOutDialogOpen(false)}
         onConfirm={() => void handleSignOut()}
         titleId="signout-dialog-title"
-        descriptionId="signout-dialog-description"
       />
     </div>
   );
