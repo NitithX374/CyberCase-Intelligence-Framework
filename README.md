@@ -4,7 +4,7 @@ CyberCase is a full-stack prototype for general case summarization and prelimina
 
 The current production path is source-bounded and domain-neutral. MITRE ATT&CK retrieval is an optional external technical augmentation; it is not required for the core case-analysis path and is never treated as a Case source.
 
-For the current product direction and research boundaries, see [`docs/research/CURRENT_PROJECT_DIRECTION.md`](docs/research/CURRENT_PROJECT_DIRECTION.md).
+Research notes and earlier design reviews are in [`research/notes/`](research/notes/). Each describes the project as it was on the date it was written.
 
 ## Trust boundary and source roles
 

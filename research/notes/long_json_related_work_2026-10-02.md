@@ -2,8 +2,8 @@
 
 Search and verification: four search angles, each followed by a verifier that opened every paper and checked its
 numbers. Only verified, corrected values are used below. Papers already in
-`research/structured_output_reliability/related_work.md`, `docs/research/runaway-review-2026-09-30.md` and
-`docs/research/cybercase-positioning-fulltext-2026-09-30/` are not repeated.
+`research/structured_output_reliability/related_work.md`, `research/notes/runaway-review-2026-09-30.md` and
+`research/notes/cybercase-positioning-fulltext-2026-09-30/` are not repeated.
 
 CyberCase for comparison: the reading call writes one JSON object of roughly 5-15k output tokens (up to 64 claims, each
 with a verbatim quotation that code checks), and parties, timeline and impacts that point at claim ids.

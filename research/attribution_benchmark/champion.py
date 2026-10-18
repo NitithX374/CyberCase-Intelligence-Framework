@@ -17,7 +17,7 @@ from research.attribution_benchmark.propagation_data import (
     select_clusters,
 )
 
-EXPERIMENT = Path(__file__).resolve().parents[2] / "nli_grounding_experiment"
+EXPERIMENT = Path(__file__).resolve().parents[1] / "nli_grounding"
 CACHE_SPLITS = {"test": "id", "test_ood": "ood"}
 
 

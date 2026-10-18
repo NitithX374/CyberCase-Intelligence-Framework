@@ -181,7 +181,7 @@ def test_real_selector_and_forward_nli_match_original_research_method(verifier):
 
     import numpy as np
 
-    sys.path.insert(0, str(ROOT / "nli_grounding_experiment"))
+    sys.path.insert(0, str(ROOT / "research" / "nli_grounding"))
     from src.nli import NLIRunner
     from src.semantic_filter import SemanticFilter
 

@@ -429,10 +429,10 @@ all. `MITRE_GATE_MODE` picks the gate in
 | `llm` (default) | one prompt over the case, each source cut to at most 4,000 characters (20,000 across all sources); `input_truncated` on the record says whether anything was cut | `technical_context/gate_llm.py`, model from `CASE_ANALYSIS_MODEL`, sent through `request_stage` like every other model call |
 | `never` | nothing — always SKIP | the ablation, for measuring what technical context is worth |
 
-The XLM-R encoder gate and its shadow mode were removed. Their measurements stay in
-`research/mitre_gate/README.md`, and the weights in `backend/models/xlmr_ladder_best` are no
-longer loaded. A stored technical-augmentation record that carries `shadow_applicability`
-still reads: the key is dropped when the record is validated.
+The XLM-R encoder gate and its shadow mode were removed, and the weights in
+`backend/models/xlmr_ladder_best` are no longer loaded. A stored technical-augmentation
+record that carries `shadow_applicability` still reads: the key is dropped when the record
+is validated.
 
 The `llm` gate does not split sentences: it reads each source cut to its share of the
 budget, and the `trigger_text` it returns is checked. `validate_mitre_applicability` keeps
