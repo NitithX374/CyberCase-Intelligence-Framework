@@ -64,6 +64,10 @@ export function AnalysisFindings() {
                 Not confirmed <span className="text-unresolved">{unconfirmed.length}</span>
               </FilterButton>
             </div>
+            <p className="mt-3 max-w-[68ch] text-[13px] leading-6 text-ink-secondary">
+              An automatic check reads each finding against the text it cites. &ldquo;Check against
+              the source&rdquo; is a reason to look, not a verdict that the finding is wrong.
+            </p>
             {filter === "not_confirmed" && (
               <p className="mt-3 max-w-[68ch] text-[13px] leading-6 text-ink-secondary">
                 These findings are marked as not confirmed in the saved analysis. Review their

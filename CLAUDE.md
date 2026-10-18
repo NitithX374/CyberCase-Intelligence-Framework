@@ -215,6 +215,8 @@ llm/                    calling a model
                         504 is asked once more after 2 seconds (one retry
                         between them); a timeout is not. A 429 that survives
                         is analysis_provider_rate_limited, HTTP 429
+  prompt_files.py       prompt_template: reads one prompt from the
+                        prompt_templates/ folder beside the module that uses it
   settings.py           model, providers, output and thinking budgets; optional
                         Reading-only override with historical inheritance
   openrouter.py         the OpenRouter target; registry.py (model aliases),
@@ -322,8 +324,11 @@ analysis/               producing an analysis of a case; routes, schemas
                         a request that listens
   prompts.py            the reading prompt (claims with Source unit selection;
                         attribution, uncertainty and whole-Case
-                        consolidation), the views, assessment and Judgement
-                        prompts, and CASE_CHECKLIST
+                        consolidation), the views, gap, assessment and
+                        Judgement prompts, read from prompt_templates/, and
+                        CASE_CHECKLIST
+  prompt_templates/     one text file per prompt; prompts.py fills in its
+                        {placeholders} (the 5W1H checklist, the gap rules)
   reading_sources.py    compact local unit IDs for the Reader; request-owned
                         revision mapping back to canonical IDs before binding;
                         provider_source_payload, the Source/document
@@ -337,13 +342,15 @@ analysis/               producing an analysis of a case; routes, schemas
                         RAG service's request and response
     retrieve.py         run the gate, then ask the RAG service when it says to
     gate.py             picks the gate: gate_llm.py, or never_applicable for
-                        the ablation
+                        the ablation; prompt_templates/ holds the LLM gate's
+                        prompt
     rag_client.py       the RAG service client
 chat/                   the case conversation; routes, schemas
   reply.py              routes a message: a follow-up answer or a question
   answer.py             answering a chat question: read the case, compose,
                         store the reply
-  compose.py            the chat prompt, request and model call
+  compose.py            the chat request and model call; the prompt is
+                        prompt_templates/answer.txt
   answer_contract.py    the provider reply and composed answer shapes
   grounding.py          binds answer units to the Claims as their analysis
                         stored them, keeping the citations the Sources still
@@ -354,7 +361,10 @@ reports/                routes, schemas, contracts, generate.py (one report
                         snapshot a report stores and prints), findings.py
                         (Source labels and quotes), technical.py (MITRE rows
                         and notices), limitations.py (report caveats),
-                        render.py (HTML and PDF from templates/)
+                        render.py (HTML and PDF from templates/:
+                        case_report.html.j2 is the page, and includes one
+                        partial per part from templates/case_report/: the
+                        CSS, the title block, sections 1 to 7 and Annex A)
 tests/                  every backend test and the helpers they share
 ```
 

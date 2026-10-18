@@ -1,0 +1,19 @@
+      <section class="annex" id="evidence_register">
+        <h2>ภาคผนวก ก บัญชีหลักฐานที่ใช้ประกอบการวิเคราะห์</h2>
+        <p class="body">รหัสอ้างอิงในรายงานนี้หมายถึงรายการดังต่อไปนี้ รหัสขึ้นต้นด้วย E หมายถึงหลักฐานในสำนวนคดี รหัสขึ้นต้นด้วย Q หมายถึงคำตอบของผู้ใช้ต่อคำถามติดตามผล ซึ่งเป็นคำบอกเล่าที่ยังไม่ได้ตรวจสอบกับหลักฐาน</p>
+        {% set tables.n = tables.n + 1 %}
+        <p class="caption">ตารางที่ {{ tables.n }} บัญชีหลักฐาน</p>
+        <table class="formal">
+          <colgroup><col style="width: 12%"><col style="width: 26%"><col style="width: 62%"></colgroup>
+          <thead><tr><th>รหัส</th><th>ประเภท</th><th>รายละเอียด</th></tr></thead>
+          <tbody>
+            {% for source in report.sources %}
+            <tr>
+              <td class="n">{{ source.label }}</td>
+              <td>{{ source.kind }}</td>
+              <td>{{ source.detail }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>

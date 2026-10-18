@@ -5,7 +5,8 @@ import { Icon } from "@/components/icons";
 import { EmptyState } from "@/components/EmptyState";
 import type { CaseSourceRead } from "@/lib/api/types";
 import { NarrativeDialog } from "./NarrativeDialog";
-import { SourceRail, railGroups } from "./SourceRail";
+import { SourceRail } from "./SourceRail";
+import { railGroups } from "./railItems";
 import { SourceViewport, type PreviewMode } from "./SourceViewport";
 import type { FollowupAnswer } from "@/features/citations/types";
 

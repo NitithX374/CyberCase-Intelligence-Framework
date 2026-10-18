@@ -1,0 +1,11 @@
+Output format:
+{"version": "case_analysis_trace_v1", "claims": [
+  {"claim_id": "A-01", "claim_type": "reported", "text": "...", "epistemic_status": "reported",
+   "supporting_citations": [{"source_id": "SRC-1", "evidence_unit_ids": ["U001"]}],
+   "contradicting_citations": []}
+]}
+- claim_type: "reported" or "unknown".
+- epistemic_status: "reported", "suspected", "contradicted", "not_established" or "unknown".
+- Return no additional keys or markdown fences. Empty claims are allowed when no useful
+  source-supported proposition is available.
+- Inside any string, write a double quotation mark as \" so the JSON stays valid.
