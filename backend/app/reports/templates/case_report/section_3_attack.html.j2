@@ -1,0 +1,43 @@
+      <section id="mitre_attack_mapping">
+        <h2>3. การจำแนกพฤติกรรมตามกรอบ MITRE ATT&amp;CK</h2>
+        <p class="body">MITRE ATT&amp;CK เป็นข้อมูลภายนอกเพื่อช่วยจัดหมวดพฤติกรรมทางเทคนิค ไม่ใช่หลักฐานของคดี</p>
+        {% if report.techniques %}
+          {% set tables.n = tables.n + 1 %}
+          {% if report.techniques_matched %}
+            <p class="caption">ตารางที่ {{ tables.n }} เทคนิคที่เชื่อมโยงกับข้อเท็จจริงของคดี</p>
+            <table class="formal">
+              <colgroup><col style="width: 12%"><col style="width: 23%"><col style="width: 35%"><col style="width: 30%"></colgroup>
+              <thead><tr><th>รหัสเทคนิค</th><th>ชื่อเทคนิค</th><th>ความหมายโดยสังเขป</th><th>ข้อเท็จจริงที่เกี่ยวข้อง</th></tr></thead>
+              <tbody>
+                {% for technique in report.techniques %}
+                <tr>
+                  <td class="n">{{ technique.technique_id }}</td>
+                  <td>{{ technique.name or "-" }}{% if technique.tactic %}<span class="minor">กลยุทธ์: {{ technique.tactic }}</span>{% endif %}</td>
+                  <td>{{ technique.meaning | clean_report_text or "-" }}</td>
+                  <td>{% if technique.reason %}{{ technique.reason | clean_report_text }}{% elif technique.findings %}ข้อ {{ technique.findings | join(", ") }}{% else %}-{% endif %}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p class="body">รายการต่อไปนี้ได้จากฐานความรู้ MITRE ATT&amp;CK โดยตรง และยังไม่ได้เชื่อมโยงกับข้อเท็จจริงรายข้อ</p>
+            <p class="caption">ตารางที่ {{ tables.n }} เทคนิคที่ได้จากฐานความรู้</p>
+            <table class="formal">
+              <colgroup><col style="width: 9%"><col style="width: 18%"><col style="width: 45%"><col style="width: 28%"></colgroup>
+              <thead><tr><th>ลำดับ</th><th>รหัส</th><th>ชื่อเทคนิค</th><th>กลยุทธ์</th></tr></thead>
+              <tbody>
+                {% for technique in report.techniques %}
+                <tr>
+                  <td class="n">{{ loop.index }}</td>
+                  <td>{{ technique.technique_id }}</td>
+                  <td>{{ technique.name or "-" }}</td>
+                  <td>{{ technique.tactic or "-" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% endif %}
+        {% elif report.mapping_note %}
+          <p class="body">{{ report.mapping_note | clean_report_text }}</p>
+        {% endif %}
+      </section>

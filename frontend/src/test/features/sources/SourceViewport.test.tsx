@@ -4,7 +4,7 @@ import { StrictMode, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CaseSourceRead } from "@/lib/api/types";
 import { narrativeSource } from "@/test/fixtures";
-import type { RailItem } from "@/features/sources/SourceRail";
+import type { RailItem } from "@/features/sources/railItems";
 import { SourceViewport, type PreviewMode } from "@/features/sources/SourceViewport";
 
 vi.mock("@/features/sources/api", async (importOriginal) => ({

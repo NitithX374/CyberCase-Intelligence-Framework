@@ -1,0 +1,25 @@
+      <section id="evidence_to_examine">
+        <h2>5. ประเด็นที่ต้องตรวจสอบเพิ่มเติม</h2>
+        <p class="body">รายการนี้สรุปช่องว่างหรือความขัดแย้งที่ควรตรวจสอบเพิ่มเติมก่อนใช้ประกอบการพิจารณาคดี</p>
+        {% if report.gaps %}
+          {% set tables.n = tables.n + 1 %}
+          <p class="caption">ตารางที่ {{ tables.n }} ประเด็นที่ต้องตรวจสอบเพิ่มเติม</p>
+          <table class="formal">
+            <colgroup><col style="width: 7%"><col style="width: 24%"><col style="width: 12%"><col style="width: 15%"><col style="width: 42%"></colgroup>
+            <thead><tr><th>ข้อ</th><th>ประเด็น</th><th>ความสำคัญ</th><th>สถานะข้อมูล</th><th>รายละเอียด</th></tr></thead>
+            <tbody>
+              {% for gap in report.gaps %}
+              <tr>
+                <td class="n">{{ loop.index }}</td>
+                <td>{{ gap.topic }}</td>
+                <td class="n">{{ gap.priority }}</td>
+                <td>{{ gap.status }}</td>
+                <td>{{ gap.description | clean_report_text }}<span class="minor">เหตุผล: {{ gap.reason | clean_report_text }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="body">ไม่พบประเด็นสำคัญที่ต้องตรวจสอบเพิ่มเติมจากผลการวิเคราะห์นี้</p>
+        {% endif %}
+      </section>

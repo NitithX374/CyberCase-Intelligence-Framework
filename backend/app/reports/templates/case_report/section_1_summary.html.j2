@@ -1,0 +1,88 @@
+      {% set support_notes = {
+        "unbound": "ไม่พบข้อความที่อ้างในเอกสาร",
+        "mixed": "ข้อความที่อ้างบางส่วนไม่พบในเอกสาร",
+        "no_claim": "ไม่ได้เชื่อมกับข้อสังเกตใด",
+      } %}
+      <section id="case_summary">
+        <h2>1. สรุปข้อเท็จจริงของคดี</h2>
+        {% set sub = namespace(n=1) %}
+        <h3>1.1 ภาพรวมของเหตุการณ์</h3>
+        {% if report.summary_units %}
+          {% set notes = namespace(items=[]) %}
+          <p class="body summary-paragraph">{% for unit in report.summary_units %}{{ unit.text | clean_report_text }}{% if unit.references %}<sup>{% for number in unit.references %}{% if not loop.first %},{% endif %}<a href="#finding-{{ number }}" aria-label="ข้อ {{ number }}">{{ number }}</a>{% endfor %}</sup>{% endif %}{% if unit.support in support_notes %}{% set letter = notes.items | length | note_letter %}{% set _ = notes.items.append((letter, unit.support)) %}<sup>{{ letter }}</sup>{% endif %}{{ summary_closings[loop.index0] }}{% if not loop.last %} {% endif %}{% endfor %}</p>
+          {% if report.summary_units | selectattr("references") | list %}<p class="quote unit-note">ตัวเลขยกคือเลขข้อค้นพบในหัวข้อที่ 2</p>{% endif %}
+          {% for letter, support in notes.items %}<p class="quote unit-note"><sup>{{ letter }}</sup> {{ support_notes[support] }}</p>{% endfor %}
+        {% else %}
+          <p class="body">{{ report.summary | clean_report_text }}</p>
+        {% endif %}
+
+        {% if report.views_derived_from_claims and (report.parties or report.timeline or report.impacts) %}
+          <p class="note">รายการในส่วนนี้จัดรูปแบบจากข้อความข้อค้นพบเพื่อช่วยอ่านคดี การจับคู่ชื่อกับบทบาทหรือเวลากับเหตุการณ์ยังไม่ได้ตรวจความหมาย โปรดตรวจบริบท ผู้รายงาน และความไม่แน่นอนจากข้อค้นพบที่เชื่อมอยู่ในส่วนที่ 2</p>
+        {% endif %}
+        {% if report.parties %}
+          {% set sub.n = sub.n + 1 %}{% set tables.n = tables.n + 1 %}
+          <h3>1.{{ sub.n }} บุคคลและหน่วยงานที่เกี่ยวข้อง</h3>
+          <p class="caption">ตารางที่ {{ tables.n }} บุคคลและหน่วยงานที่เกี่ยวข้องในคดี</p>
+          <table class="formal">
+            <colgroup><col style="width: 9%"><col style="width: 33%"><col style="width: 44%"><col style="width: 14%"></colgroup>
+            <thead><tr><th>ลำดับ</th><th>ชื่อ</th><th>บทบาทหรือความเกี่ยวข้อง</th><th>อ้างอิง</th></tr></thead>
+            <tbody>
+              {% for party in report.parties %}
+              <tr>
+                <td class="n">{{ loop.index }}</td>
+                <td>{{ party.name }}{% if party.support in support_notes %}<div class="quote">{{ support_notes[party.support] }}</div>{% endif %}</td>
+                <td>{{ party.role if party.role is not none else 'ไม่ได้สกัดบทบาท โปรดตรวจข้อค้นพบที่เชื่อมโยง' }}{% for context in party.claim_context %}<div class="quote">{{ context }}</div>{% endfor %}</td>
+                <td class="ref">{{ party.references | join(", ") or "-" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+
+        {% if report.timeline %}
+          {% set sub.n = sub.n + 1 %}{% set tables.n = tables.n + 1 %}
+          <h3>1.{{ sub.n }} ลำดับเหตุการณ์</h3>
+          <p class="caption">ตารางที่ {{ tables.n }} ลำดับเหตุการณ์ตามที่ปรากฏในหลักฐาน</p>
+          <table class="formal">
+            <colgroup><col style="width: 9%"><col style="width: 22%"><col style="width: 55%"><col style="width: 14%"></colgroup>
+            <thead><tr><th>ลำดับ</th><th>วันและเวลา</th><th>เหตุการณ์</th><th>อ้างอิง</th></tr></thead>
+            <tbody>
+              {% for event in report.timeline %}
+              <tr>
+                <td class="n">{{ loop.index }}</td>
+                <td>{{ event.time if event.time is not none else 'ไม่ได้สกัดวันหรือเวลา' }}</td>
+                <td>{{ event.event | clean_report_text }}{% if event.support in support_notes %}<div class="quote">{{ support_notes[event.support] }}</div>{% endif %}</td>
+                <td class="ref">{{ event.references | join(", ") or "-" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+
+        {% if report.impacts %}
+          {% set sub.n = sub.n + 1 %}{% set tables.n = tables.n + 1 %}
+          <h3>1.{{ sub.n }} ความเสียหายและผลกระทบ</h3>
+          <p class="caption">ตารางที่ {{ tables.n }} ความเสียหายและผลกระทบที่ปรากฏ</p>
+          <table class="formal">
+            <colgroup><col style="width: 9%"><col style="width: 77%"><col style="width: 14%"></colgroup>
+            <thead><tr><th>ลำดับ</th><th>ความเสียหายหรือผลกระทบ</th><th>อ้างอิง</th></tr></thead>
+            <tbody>
+              {% for impact in report.impacts %}
+              <tr>
+                <td class="n">{{ loop.index }}</td>
+                <td>{{ impact.description | clean_report_text }}{% if impact.support in support_notes %}<div class="quote">{{ support_notes[impact.support] }}</div>{% endif %}</td>
+                <td class="ref">{{ impact.references | join(", ") or "-" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+
+        {% if not (report.parties or report.timeline or report.impacts) %}
+          {% if report.findings %}
+          <p class="note">ข้อมูลบุคคล เหตุการณ์ และผลกระทบของคดีแสดงในข้อค้นพบพร้อม Source ที่อ้างอิงในส่วนที่ 2</p>
+          {% else %}
+          <p class="note">ผลการวิเคราะห์นี้ไม่มีข้อค้นพบที่บันทึกไว้</p>
+          {% endif %}
+        {% endif %}
+      </section>

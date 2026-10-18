@@ -1,0 +1,95 @@
+    @page {
+      size: A4;
+      margin: 25mm 20mm 22mm 30mm;
+      @top-right {
+        content: "รายงานเบื้องต้น ยังไม่ผ่านการตรวจสอบ";
+        font-family: "Noto Looped Thai", "Noto Sans", "Leelawadee UI", "Tahoma", sans-serif;
+        font-size: 8.5pt; color: #3f3f46;
+      }
+      @bottom-left {
+        content: "รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น{% if issue %} ฉบับที่ {{ issue.version_number }}{% endif %}";
+        font-family: "Noto Looped Thai", "Noto Sans", "Leelawadee UI", "Tahoma", sans-serif;
+        font-size: 8.5pt; color: #3f3f46;
+        border-top: 0.5pt solid #52525b; padding-top: 3pt; vertical-align: top;
+      }
+      @bottom-right {
+        content: "หน้า " counter(page) " จาก " counter(pages);
+        font-family: "Noto Looped Thai", "Noto Sans", "Leelawadee UI", "Tahoma", sans-serif;
+        font-size: 8.5pt; color: #3f3f46;
+        border-top: 0.5pt solid #52525b; padding-top: 3pt; vertical-align: top; text-align: right;
+      }
+    }
+    @page :first { @top-right { content: none; } }
+
+    html {
+      color-scheme: light;
+      background: #ffffff;
+      font-family: "Noto Looped Thai", "Noto Sans", "Leelawadee UI", "Tahoma", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #111111; font-size: 11pt; line-height: 1.65; }
+    p { margin: 0 0 6pt; }
+
+    .title-block { text-align: center; margin-bottom: 14pt; }
+    .issuer { margin: 0 0 4pt; font-size: 9pt; letter-spacing: 0.08em; color: #3f3f46; }
+    h1 { margin: 0; font-size: 17pt; line-height: 1.4; font-weight: 700; }
+    .subject { margin: 4pt 0 0; font-size: 12.5pt; }
+    .subject .label { font-weight: 700; margin-right: 6pt; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 0.6pt solid #3f3f46; padding: 3.5pt 6pt; vertical-align: top; text-align: left; }
+    thead { display: table-header-group; }
+    tr { break-inside: avoid; }
+
+    .doc-info { margin-bottom: 10pt; font-size: 10pt; }
+    .doc-info th { width: 17%; background: #f1f1f2; font-weight: 700; white-space: nowrap; }
+    .doc-info td { width: 33%; }
+    .doc-info .nowrap { white-space: nowrap; }
+
+    .notice { margin: 0 0 16pt; padding: 6pt 9pt; border: 0.6pt solid #3f3f46; font-size: 10pt; text-indent: 0; }
+    .notice strong { margin-right: 4pt; }
+
+    section { margin-top: 16pt; }
+    h2 {
+      margin: 0 0 7pt; padding-bottom: 2pt; border-bottom: 0.75pt solid #111111;
+      font-size: 13pt; line-height: 1.45; font-weight: 700; break-after: avoid;
+    }
+    h3 { margin: 10pt 0 5pt; font-size: 11.5pt; font-weight: 700; break-after: avoid; }
+    .body { text-indent: 2.5em; white-space: pre-wrap; }
+    .body.summary-paragraph { white-space: normal; }
+    sup { font-size: 0.7em; line-height: 0; vertical-align: super; }
+    sup a { color: inherit; text-decoration: none; }
+    .quote.unit-note { margin: 0 0 4pt 1.5em; }
+    .note { font-size: 10pt; color: #27272a; }
+
+    .caption { margin: 8pt 0 3pt; font-size: 10pt; font-weight: 700; break-after: avoid; }
+    .formal { margin-bottom: 8pt; font-size: 10pt; line-height: 1.55; }
+    .formal th { background: #f1f1f2; font-weight: 700; text-align: center; vertical-align: middle; }
+    .formal .n { text-align: center; white-space: nowrap; }
+    .formal .ref { white-space: nowrap; }
+    .formal .minor { display: block; font-size: 9pt; color: #3f3f46; }
+    .quote { margin-top: 3pt; font-size: 9.5pt; color: #27272a; }
+    .quote-label { font-weight: 700; }
+
+    ol.numbered { margin: 0; padding: 0; list-style: none; }
+    ol.numbered > li { display: flex; gap: 6pt; margin: 0 0 4pt; }
+    ol.numbered .n { flex: none; min-width: 2.2em; }
+
+    .signoff { margin-top: 20pt; break-inside: avoid; }
+    .signature { width: 92mm; margin: 14pt 0 0 auto; text-align: center; line-height: 1.9; }
+    .signature p { margin: 0; white-space: nowrap; }
+
+    .annex { margin-top: 28pt; }
+
+    @media screen {
+      html { background: #e9ebee; }
+      body { padding: 24px 12px; }
+      .document {
+        max-width: 210mm; margin: 0 auto; padding: 25mm 20mm 22mm 30mm;
+        background: #ffffff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+      }
+    }
+    @media screen and (max-width: 640px) {
+      body { padding: 0; }
+      .document { padding: 20px 16px; box-shadow: none; }
+    }

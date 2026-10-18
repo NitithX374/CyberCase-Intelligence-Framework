@@ -1,0 +1,18 @@
+      <section id="mapping_rationale">
+        <h2>4. เหตุผลประกอบการจำแนกพฤติกรรม</h2>
+        <p class="body">เหตุผลต่อไปนี้อธิบายการเชื่อมโยงเชิงเทคนิคกับข้อเท็จจริงของคดี ไม่ใช่การยืนยันว่ามีการใช้เทคนิคนั้นจริง</p>
+        {% if report.techniques_matched %}
+          <ol class="numbered">
+            {% for technique in report.techniques %}
+            <li>
+              <span class="n">4.{{ loop.index }}</span>
+              <span><strong>{{ technique.technique_id }}{% if technique.name %} {{ technique.name }}{% endif %}</strong> {{ technique.reason | clean_report_text }}{% if technique.references %} (อ้างอิง {{ technique.references | join(", ") }}){% endif %}</span>
+            </li>
+            {% endfor %}
+          </ol>
+        {% elif report.techniques %}
+          <p class="body">เทคนิคในส่วนที่ 3 ยังไม่ได้วิเคราะห์ความเชื่อมโยงกับข้อเท็จจริงรายข้อ จึงไม่มีเหตุผลประกอบเป็นรายเทคนิค และใช้เป็นบริบทประกอบเท่านั้น</p>
+        {% elif report.rationale_note %}
+          <p class="body">{{ report.rationale_note | clean_report_text }}</p>
+        {% endif %}
+      </section>
