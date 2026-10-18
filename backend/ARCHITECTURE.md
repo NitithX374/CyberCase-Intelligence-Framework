@@ -27,7 +27,7 @@ it, most of the layout stops looking arbitrary: anything that calls a model or
 another service is surrounded by two small database functions.
 
 The corollary is the rule the pipeline lives by: **no step of the pipeline
-touches the database.** `pipeline.py`, `assess.py`, `write.py`,
+touches the database.** `pipeline.py`, `write.py`, `views.py`,
 `technical_context/` and `trace/` are handed what they need and return what
 they produced; only `run.py`, `store.py` and `latest.py` read or write rows. That is also what lets an experiment run the same
 steps over a dataset file instead of a case row.
@@ -97,23 +97,54 @@ against the sources:
   a citation that names no unit is recorded as an invalid reference, never looked up as text;
 - a `reported` claim left with no resolved supporting evidence becomes `not_confirmed`.
 
-`analysis/claim_gate.py` runs `trace/claim_validation.py` after binding, in a worker
-thread. Frozen B1-LR selects resolved Source units with pinned multilingual
-MPNet cosine >=0.20, retaining the first maximum when none pass. Original
-retained units are joined with a single newline. Pinned mDeBERTa applies
-longest-first truncation512 and returns E/N/C probabilities; the frozen WiCE
-TRAIN-fitted LR scores at0.50: `supported` at or above, `not_supported` below.
-This is a task-specific decision boundary, not calibrated factual confidence.
-The verdict is a warning label: it filters nothing and is never sent to a model.
-The check runs concurrently with Judgement and the Views. Structural blockers
-still withhold missing, unresolved, conflicting or uncertain support before
-inference. An unavailable model is logged and the Claims are marked `unassessed`
-(`verifier_unavailable`) without failing the analysis. All Claims/citations remain
-stored. A verdict keeps its reason and the method and artifact hash of the
-verifier; the selection, probabilities, LR score and truncation are not stored,
-and one log line counts the verdicts, calls and time. An analysis abstains without Views/Judgement only when no
-Claim passes the structural checks. Historical .80 verdicts remain historical.
-See [the exact method and experiments](../research/attribution_benchmark/B1_INTEGRATION.md).
+**The claim verifier.** `analysis/claim_gate.py` runs `trace/claim_validation.py`
+after binding, in a worker thread, concurrently with Judgement and the Views. The
+verdict is a warning label: it filters nothing and is never sent to a model.
+
+Only the resolved **supporting** units linked to a Claim are candidates. The check
+searches no other Case Source and creates no citation. Duplicate spans are removed;
+Sources keep the order they first appear in, and each Source's units are ordered by
+offset when every one has an offset. The original unit text is used as it is, OCR
+markup included. The frozen method, `b1-lr-wice-train-v1`:
+
+1. `sentence-transformers/paraphrase-multilingual-mpnet-base-v2` at revision
+   `4328cf26390c98c5e3c738b4460a05b95f4911f5`, normalized embeddings, a 128-token
+   limit (`trace/source_selector.py`). Units with cosine similarity >= 0.20 are
+   kept; when none passes, the first unit with the highest similarity is kept.
+2. The kept units are joined with one newline.
+3. `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` at revision
+   `b5113eb38ab63efdd7f280f8c144ea8b13f978ce` reads the (premise, Claim) pair with
+   longest-first truncation at 512 tokens (`trace/nli_model.py`).
+4. `[P(entailment), P(neutral), P(contradiction)]` goes into the logistic regression
+   fitted on WiCE TRAIN. A score >= 0.50 is `supported`; lower is `not_supported`.
+
+`trace/b1_lr.json` holds the coefficients, the selector pins and file hashes, and
+the hash of the research artifact they came from; nothing is refitted at startup.
+The score is a task-specific decision boundary, not calibrated factual confidence.
+A verdict stores its reason, the method and `artifact_sha256`, the SHA-256 of the
+bytes of `b1_lr.json`; `.gitattributes` keeps that file byte for byte on every
+checkout, so line endings cannot change the hash. The selection, similarities, NLI
+probabilities, LR score and truncation are not stored, and one log line counts the
+verdicts, calls and time.
+
+A Claim with no resolved support, an unresolved supporting pointer that is not a
+duplicate, declared conflicting support or an uncertain epistemic status is
+`unassessed` and withheld before inference. When a pinned model is missing or does
+not match its pins, the error is logged and every eligible Claim is `unassessed`
+with reason `verifier_unavailable`; the analysis still completes. Every Claim that
+passes the structural checks reaches the Views and Judgement whatever its verdict,
+and an analysis abstains without Views or Judgement only when no Claim passes them.
+Judgement receives each Claim's bound citation text (`exact_quote` only); the
+selection shapes the verification premise and nothing else. Historical .80 verdicts
+keep their original meaning.
+
+The weights live in `backend/models/nli_mdeberta` and
+`backend/models/source_selector_mpnet` (`CLAIM_NLI_PATH`, `CLAIM_SELECTOR_PATH`),
+put there by `scripts/copy_nli_weights.py` and `scripts/copy_source_selector.py`;
+`requirements-encoder.txt` installs torch, transformers and sentence-transformers.
+Both models run on the CPU, the NLI model in its stored float16 and the selector in
+float32. How the method was chosen and measured is in
+[research/attribution_benchmark](../research/attribution_benchmark/B1_INTEGRATION.md).
 
 `analysis/views.py` batches the Claims supplied to Judgement from the same reading into one
 prompt-structured LLM call. Input is only Claim IDs and text. Parties, Timeline and
@@ -260,14 +291,15 @@ asked for it.
 
 ## 5. Where a model is actually called
 
-Five stages in four files, and all of them go through `request_stage` in
+Six stages in five files, and all of them go through `request_stage` in
 `llm/request.py`:
 
 | Call | File | `stage` |
 |---|---|---|
-| The gap-only assessment | `analysis/assess.py` | `assess` |
+| The gap-only assessment | `analysis/pipeline.py` | `assess` |
 | The reading: canonical claims with selected Source units | `analysis/write.py` | `case_reading` |
 | The judgement: summary and gaps | `analysis/write.py` | `case_judgement` |
+| The views: parties, timeline and impacts | `analysis/views.py` | `case_views` |
 | A chat answer, before or after an analysis | `chat/compose.py` | `chat_answer` |
 | The MITRE applicability gate, when `MITRE_GATE_MODE=llm` | `analysis/technical_context/gate_llm.py` | `mitre_applicability` |
 

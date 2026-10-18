@@ -1,5 +1,10 @@
 # Frozen B1-LR integration and matched downstream evaluation
 
+The current production contract is in
+[backend/ARCHITECTURE.md](../../backend/ARCHITECTURE.md), under "The claim verifier".
+This file records the integration of 2026-10-07 and the matched downstream
+experiment; its production sections describe the code as it was then.
+
 Updated 2026-10-07. The working tree integrates the selected verifier; deployment
 into a newly built Docker image must be checked separately. Historical saved
 analyses retain their original methods and thresholds.

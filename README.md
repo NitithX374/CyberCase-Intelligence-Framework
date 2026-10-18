@@ -9,9 +9,9 @@ Research notes and earlier design reviews are in [`research/notes/`](research/no
 ## Trust boundary and source roles
 
 - **Case sources**: user narratives and extracted text from uploaded documents. Case sources and answered follow-ups (below) are the only inputs that can support case facts, timelines, entities, and findings.
-- **Follow-up history**: answers to clarification questions are persisted as Case chat messages. A later analysis may cite an answer as `QA-nn` to support a claim, the same way it cites a source (`MAIN_CASE_ANALYSIS_SYSTEM_PROMPT` in `backend/app/analysis/prompts.py`, `followup_registry_items` in `backend/app/trace/bind.py`). An answer is still not a `CaseSource` row and does not increment `source_revision`.
+- **Follow-up history**: answers to clarification questions are persisted as Case chat messages. A later analysis may cite an answer as `QA-nn` to support a claim, the same way it cites a source (`followup_registry_items` in `backend/app/trace/bind.py` puts each answered follow-up beside the sources, in the reading input and in the binding index). An answer is still not a `CaseSource` row and does not increment `source_revision`.
 - **External context**: assistant responses, MITRE descriptions, RAG retrieval, and general model knowledge are not Case sources and cannot establish incident facts.
-- **Traceability**: structured claims may carry source identifiers and exact quotes. The backend verifies those references against the source bundle and the answered follow-ups, and records unresolved bindings.
+- **Traceability**: each claim cites the source units it rests on by ID. The backend resolves those IDs to the exact text and offsets of the source bundle and the answered follow-ups, and records a reference it cannot resolve as invalid.
 
 ## Runtime flow
 
@@ -27,15 +27,16 @@ Deterministic follow-up policy
        ↓             ↓
 Persist assessment   Optional MITRE augmentation
 and focused question ↓
-(request ends)       Structured main analysis
-                     (case_analysis_trace_v1)
+(request ends)       Reading: claims citing source units
                      ↓
                      Deterministic source binding
+                     ↓
+                     Judgement, views and claim check, side by side
                      ↓
                      Validated analysis → Report
 ```
 
-The assessment may stop the request before technical augmentation, the two analysis calls, and binding. When the case proceeds, the analysis makes two structured LLM calls: a reading that writes the claims, parties, timeline and impacts with their quotations, then a judgement that writes the summary and gaps over that reading. The ATT&CK associations are not written by a model: the backend lists the techniques the RAG service tied to a sentence of the case, with that sentence. Analysis and Case Ask operations are request-scoped; there is no run resource, job queue, or polling workflow.
+The assessment may stop the request before technical augmentation, the analysis calls, and binding. When the case proceeds, a reading call writes the claims, each citing the source units it rests on, and the backend binds those units to the source text. Then three things run at once: a judgement call writes the summary and gaps over the checked claims, a views call lists the parties, timeline and impacts, and the claim check labels each claim. The ATT&CK associations are not written by a model: the backend lists the techniques the RAG service tied to a sentence of the case, with that sentence. Analysis and Case Ask operations are request-scoped; there is no run resource, job queue, or polling workflow.
 
 Report generation is separate, deterministic, and template-first. It reads a selected validated analysis and what that analysis recorded when it was stored: the sources it read and the follow-up answers it had. Each analysis gets at most one report. The report is stored as a display snapshot, and the HTML and PDF are rendered from that stored copy. No model is called.
 
@@ -49,7 +50,7 @@ The browser calls only the backend. Authentication and per-user Case ownership a
 
 ## Persistence
 
-PostgreSQL stores Cases, uploaded documents, native Case sources (narratives, and the text extracted from each document with its pages and warnings in `provenance_json`), the Case source revision, analysis results, Case-owned chat messages, optional technical retrieval context, and reports. The schema is created by one Alembic migration, `backend/alembic/versions/0001_initial_schema.py`. An analysis result can have `status="assessment"` while a clarification question is pending or `status="validated"` after full analysis and source binding.
+PostgreSQL stores Cases, uploaded documents, native Case sources (narratives, and the text extracted from each document with its pages and warnings in `provenance_json`), the Case source revision, analysis results, Case-owned chat messages, optional technical retrieval context, and reports. The schema is created by the Alembic migrations in `backend/alembic/versions/`: `0001_initial_schema.py`, and `0002_source_deactivation.py`, which lets a source be turned off. An analysis result can have `status="assessment"` while a clarification question is pending or `status="validated"` after full analysis and source binding.
 
 There is no `CaseRun` table. The backend reads a source bundle, releases the database transaction during model or external-service work, and stores the result in a later short transaction. A result is rejected if the Case source revision changed while the request was running.
 
