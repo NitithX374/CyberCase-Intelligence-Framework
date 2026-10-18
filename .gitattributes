@@ -1,2 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# The claim verifier stamps the SHA-256 of these exact bytes on every verdict, so a checkout must not convert its line endings.
+backend/app/trace/b1_lr.json -text
