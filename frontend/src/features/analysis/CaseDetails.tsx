@@ -1,12 +1,41 @@
 "use client";
 
+import { useState, type ReactNode } from "react";
+import Link from "next/link";
+import { analysisPath } from "@/lib/casePaths";
 import type { SourceMessageRef } from "@/features/citations/types";
+import { SourceCitationChip } from "@/features/citations/SourceCitationChip";
+import { UNCONFIRMED_NOTES } from "@/features/citations/unconfirmed";
 import type { CaseImpact, CaseParty, CaseTimelineEvent, ClaimBacked } from "./types";
-import { DetailSection } from "./DetailSection";
-import { FoldedList } from "./FoldedList";
-import { Backing } from "./Backing";
 
-export interface CaseDetailsProps {
+export function ClaimViewReview({ row, caseId }: { row: ClaimBacked; caseId?: string }) {
+  return (
+    <details className="mt-2 text-xs leading-6 text-ink-secondary">
+      <summary className="cursor-pointer font-medium">Related findings</summary>
+      <ul className="mt-2 space-y-2 border-l border-line pl-3" aria-label="Related findings">
+        {(row.linkedClaims ?? []).map((claim) => (
+          <li key={claim.id}>
+            {caseId ? (
+              <Link
+                href={`${analysisPath(caseId, "findings")}?finding=${encodeURIComponent(claim.id)}`}
+                className="font-medium underline underline-offset-2"
+              >
+                View finding
+              </Link>
+            ) : (
+              <span className="font-medium">Finding</span>
+            )}{" "}
+            — {claim.text}
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+const VISIBLE_ROWS = 6;
+
+interface CaseDetailsProps {
   caseId?: string;
   timeline: CaseTimelineEvent[];
   parties: CaseParty[];
@@ -28,6 +57,7 @@ export function CaseDetails({
   activeSourceKey,
 }: CaseDetailsProps) {
   if (!timeline.length && !parties.length && !impacts.length) return null;
+  const hasSide = parties.length > 0 || impacts.length > 0;
   const backing = (row: ClaimBacked, owner: string) => (
     <Backing
       row={row}
@@ -39,71 +69,180 @@ export function CaseDetails({
   );
 
   return (
-    <div className="space-y-10">
+    <div
+      className={`grid gap-10 ${
+        timeline.length > 0 && hasSide ? "md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]" : ""
+      }`}
+    >
       {timeline.length > 0 && (
         <DetailSection id="case-timeline" title="Timeline" count={timeline.length}>
           <FoldedList
             items={timeline}
             label="events"
             as="ol"
-            className="divide-y divide-line border-y border-line"
+            className="space-y-5"
             render={(item, index) => (
-              <li
-                key={index}
-                className="grid gap-x-4 gap-y-0.5 py-3 sm:grid-cols-[9rem_minmax(0,1fr)]"
-              >
-                <p className="text-[13px] leading-7 text-ink-secondary">
+              <li key={index}>
+                <p className="text-[13px] font-medium text-ink-secondary">
                   {item.time ?? "No date or time extracted; check the linked claim"}
                 </p>
-                <div className="min-w-0">
-                  <p className="text-[15px] leading-7 text-ink">{item.event}</p>
-                  {backing(item, `timeline-${index}`)}
-                </div>
+                <p className="mt-0.5 text-[15px] leading-7 text-ink">{item.event}</p>
+                {backing(item, `timeline-${index}`)}
               </li>
             )}
           />
         </DetailSection>
       )}
 
-      {parties.length > 0 && (
-        <DetailSection id="case-parties" title="Parties" count={parties.length}>
-          <FoldedList
-            items={parties}
-            label="parties"
-            className="divide-y divide-line border-y border-line"
-            render={(party, index) => (
-              <li
-                key={index}
-                className="grid gap-x-4 gap-y-0.5 py-3 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]"
-              >
-                <p className="text-[15px] font-semibold leading-7 text-ink">{party.name}</p>
-                <div className="min-w-0">
-                  <p className="text-[15px] leading-7 text-ink-secondary">
-                    {party.role === null ? "No role extracted; check the linked claim" : party.role}
-                  </p>
-                  {backing(party, `party-${index}`)}
-                </div>
-              </li>
-            )}
-          />
-        </DetailSection>
-      )}
+      {hasSide && (
+        <div className="space-y-10">
+          {parties.length > 0 && (
+            <DetailSection id="case-parties" title="Parties" count={parties.length}>
+              <FoldedList
+                items={parties}
+                label="parties"
+                className="divide-y divide-line"
+                render={(party, index) => (
+                  <li key={index} className="py-3 first:pt-0">
+                    <p className="text-[15px] font-semibold text-ink">{party.name}</p>
+                    <p className="mt-0.5 text-[13px] leading-6 text-ink-secondary">
+                      {party.role === null
+                        ? "No role extracted; check the linked claim"
+                        : party.role}
+                    </p>
+                    {backing(party, `party-${index}`)}
+                  </li>
+                )}
+              />
+            </DetailSection>
+          )}
 
-      {impacts.length > 0 && (
-        <DetailSection id="case-impacts" title="Impact" count={impacts.length}>
-          <FoldedList
-            items={impacts}
-            label="impacts"
-            className="divide-y divide-line border-y border-line"
-            render={(impact, index) => (
-              <li key={index} className="py-3">
-                <p className="text-[15px] leading-7 text-ink">{impact.description}</p>
-                {backing(impact, `impact-${index}`)}
-              </li>
-            )}
-          />
-        </DetailSection>
+          {impacts.length > 0 && (
+            <DetailSection id="case-impacts" title="Impact" count={impacts.length}>
+              <FoldedList
+                items={impacts}
+                label="impacts"
+                className="space-y-3"
+                render={(impact, index) => (
+                  <li key={index}>
+                    <p className="text-[15px] leading-7 text-ink">{impact.description}</p>
+                    {backing(impact, `impact-${index}`)}
+                  </li>
+                )}
+              />
+            </DetailSection>
+          )}
+        </div>
       )}
+    </div>
+  );
+}
+
+function DetailSection({
+  id,
+  title,
+  count,
+  children,
+}: {
+  id: string;
+  title: string;
+  count: number;
+  children: ReactNode;
+}) {
+  return (
+    <section aria-labelledby={`${id}-heading`} className="min-w-0">
+      <h2
+        id={`${id}-heading`}
+        className="flex items-baseline gap-2 text-base font-semibold text-ink"
+      >
+        {title} <span className="text-[13px] font-medium text-ink-muted">{count}</span>
+      </h2>
+      <div className="mt-4">{children}</div>
+    </section>
+  );
+}
+
+function FoldedList<T>({
+  items,
+  label,
+  as: List = "ul",
+  className,
+  render,
+}: {
+  items: T[];
+  label: string;
+  as?: "ul" | "ol";
+  className: string;
+  render: (item: T, index: number) => ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const folds = items.length > VISIBLE_ROWS;
+  const shown = expanded || !folds ? items : items.slice(0, VISIBLE_ROWS);
+
+  return (
+    <>
+      <List className={className}>{shown.map(render)}</List>
+      {folds && (
+        <button
+          type="button"
+          onClick={() => setExpanded((open) => !open)}
+          className="mt-3 text-[13px] font-medium text-ink-secondary hover:text-ink"
+        >
+          {expanded ? "Show fewer" : `Show all ${items.length}`}{" "}
+          <span className="sr-only">{label}</span>
+        </button>
+      )}
+    </>
+  );
+}
+
+function Backing({
+  row,
+  caseId,
+  owner,
+  onSelectSource,
+  activeSourceKey,
+}: {
+  row: ClaimBacked;
+  caseId?: string;
+  owner: string;
+  onSelectSource: CaseDetailsProps["onSelectSource"];
+  activeSourceKey: string | null;
+}) {
+  const hasReview = Boolean(row.linkedClaims?.length);
+  if (
+    !row.inferred &&
+    !row.sources.length &&
+    !row.unconfirmed.length &&
+    !row.supportNote &&
+    !hasReview
+  ) {
+    return null;
+  }
+  return (
+    <div className="mt-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {row.inferred && <span className="text-xs text-ink-muted">Inference</span>}
+        {row.unconfirmed.map((status) => (
+          <span key={status} className="text-xs text-ink-muted">
+            {UNCONFIRMED_NOTES[status]}
+          </span>
+        ))}
+        {row.sources.map((source, index) => {
+          const key = `${owner}-${source.id}-${index}`;
+          return (
+            <SourceCitationChip
+              key={key}
+              sourceRef={source}
+              sourceKey={key}
+              isActive={activeSourceKey === key}
+              onSelect={onSelectSource}
+            />
+          );
+        })}
+        {row.supportNote && <span className="text-xs text-ink-muted">{row.supportNote}</span>}
+      </div>
+      {hasReview && <ClaimViewReview row={row} caseId={caseId} />}
     </div>
   );
 }

@@ -69,10 +69,14 @@ function Findings({
 
 describe("Finding traceability", () => {
   it.each([
-    ["supported", "entailed", "Supported by its cited text"],
-    ["not_supported", "lr_not_supported", "Check against the source"],
-    ["unassessed", "input_too_long", "Not checked, not used in the summary"],
-    ["unassessed", "verifier_unavailable", "Check unavailable"],
+    ["supported", "entailed", "Source check: the cited Source passages support this finding"],
+    [
+      "not_supported",
+      "lr_not_supported",
+      "Source check: the cited Source did not clearly support this finding. Check it before relying on it.",
+    ],
+    ["unassessed", "input_too_long", "Support could not be assessed — not used in the summary"],
+    ["unassessed", "verifier_unavailable", "Source check unavailable — not assessed"],
   ] as const)(
     "shows the saved semantic verdict %s independently of Source binding",
     (verdict, reason, label) => {
@@ -84,7 +88,7 @@ describe("Finding traceability", () => {
       render(<Findings result={result} />);
       expect(screen.getByText(label)).toBeVisible();
       expect(screen.queryByText(/directly linked passage/)).not.toBeInTheDocument();
-      expect(screen.queryByText("Not checked")).not.toBeInTheDocument();
+      expect(screen.queryByText("Meaning support not assessed")).not.toBeInTheDocument();
     },
   );
 
@@ -105,7 +109,7 @@ describe("Finding traceability", () => {
   it("shows semantic support without inventing confidence", () => {
     const { container } = render(<Findings />);
     expect(screen.queryByText(/directly linked passage/)).not.toBeInTheDocument();
-    expect(screen.getByText("Not checked")).toBeVisible();
+    expect(screen.getByText("Meaning support not assessed")).toBeVisible();
     expect(container.textContent).not.toMatch(
       /\b\d+(?:\.\d+)?%|semantically verified|confirmed true/i,
     );
@@ -116,7 +120,7 @@ describe("Finding traceability", () => {
     result.trace_json!.claims[0].epistemic_status = "not_confirmed";
     render(<Findings result={result} />);
     expect(screen.queryByText(/directly linked passage/)).not.toBeInTheDocument();
-    expect(screen.getByText("Not checked")).toBeVisible();
+    expect(screen.getByText("Meaning support not assessed")).toBeVisible();
     expect(screen.queryByText("No linked supporting Source passage")).not.toBeInTheDocument();
   });
 
@@ -143,7 +147,7 @@ describe("Finding traceability", () => {
     render(<Findings result={result} />);
     expect(screen.queryByText(/unresolved reference/)).not.toBeInTheDocument();
     expect(screen.queryByText("No linked supporting Source passage")).not.toBeInTheDocument();
-    expect(screen.getByText("Not checked")).toBeVisible();
+    expect(screen.getByText("Meaning support not assessed")).toBeVisible();
     expect(screen.queryByText("Not found word for word in the source.")).not.toBeInTheDocument();
   });
 
@@ -178,7 +182,7 @@ describe("Finding traceability", () => {
     render(<Findings result={result} rows={[thaiSource]} />);
     expect(screen.queryByText(/เชื่อม Source โดยตรง/)).not.toBeInTheDocument();
     expect(screen.queryByText(/ค้นคืนตำแหน่งใน Source/)).not.toBeInTheDocument();
-    expect(screen.getByText("ยังไม่ได้ตรวจ")).toBeVisible();
+    expect(screen.getByText("ยังไม่ได้ตรวจว่า Source รองรับข้อค้นพบนี้หรือไม่")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: /statement\.pdf/ }));
     const passages = within(screen.getByRole("region", { name: "Cited Source passages" }));
     expect(passages.getByText(firstThai)).toBeVisible();

@@ -1,11 +1,86 @@
 "use client";
 
+import { useCallback, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
+import { useDismiss } from "@/lib/useDismiss";
+import { formatBytes, formatDate } from "@/lib/format";
+import type { CaseSourceRead } from "@/lib/api/types";
 import type { SourcesAnalysis } from "./CaseSourcesView";
-import type { RailGroup } from "./railItems";
-import { AnalyzeFooter } from "./AnalyzeFooter";
-import { RailButton } from "./RailButton";
-import { UploadingItem } from "./UploadingItem";
-import { AddSourceMenu } from "./AddSourceMenu";
+import type { FollowupAnswer } from "@/features/citations/types";
+
+export type RailItem =
+  | { id: string; kind: "file"; documentId: string; source: CaseSourceRead }
+  | { id: string; kind: "narrative"; source: CaseSourceRead }
+  | { id: string; kind: "followup_answer"; followup: FollowupAnswer };
+
+interface RailGroup {
+  label: string;
+  items: RailItem[];
+}
+
+export function isTurnedOff(source: CaseSourceRead): boolean {
+  return source.deactivated_at != null;
+}
+
+function currentReadings(sources: CaseSourceRead[]): CaseSourceRead[] {
+  const newest = new Map<string, CaseSourceRead>();
+  for (const source of sources) {
+    if (!source.document_id) continue;
+    const kept = newest.get(source.document_id);
+    if (!kept || Date.parse(source.created_at) >= Date.parse(kept.created_at)) {
+      newest.set(source.document_id, source);
+    }
+  }
+  return sources.filter(
+    (source) => !source.document_id || newest.get(source.document_id) === source,
+  );
+}
+
+function sourceItems(sources: CaseSourceRead[], kind: "file" | "narrative"): RailItem[] {
+  return sources.flatMap((source): RailItem[] => {
+    if (kind === "file" && source.source_kind === "document" && source.document_id) {
+      return [{ id: source.document_id, kind: "file", documentId: source.document_id, source }];
+    }
+    if (kind === "narrative" && source.source_kind === "narrative") {
+      return [{ id: source.id, kind: "narrative", source }];
+    }
+    return [];
+  });
+}
+
+export function railGroups(sources: CaseSourceRead[], followups: FollowupAnswer[]): RailGroup[] {
+  const current = currentReadings(sources);
+  const on = current.filter((source) => !isTurnedOff(source));
+  const off = current.filter(isTurnedOff);
+  return [
+    { label: "Files", items: sourceItems(on, "file") },
+    { label: "Case narrative", items: sourceItems(on, "narrative") },
+    {
+      label: "Follow-up answers",
+      items: followups.map((followup): RailItem => ({
+        id: followup.qaId,
+        kind: "followup_answer",
+        followup,
+      })),
+    },
+    {
+      label: "Turned off",
+      items: [...sourceItems(off, "file"), ...sourceItems(off, "narrative")],
+    },
+  ].filter((group) => group.items.length > 0);
+}
+
+export function itemTitle(item: RailItem): string {
+  if (item.kind === "file") return item.source.filename ?? "Untitled file";
+  if (item.kind === "followup_answer")
+    return firstLine(item.followup.question || item.followup.answer);
+  return firstLine(item.source.exact_text);
+}
+
+function firstLine(text: string): string {
+  const line = text.trim().split("\n")[0] ?? "";
+  return line.length > 80 ? `${line.slice(0, 80)}…` : line || "Untitled source";
+}
 
 interface SourceRailProps {
   groups: RailGroup[];
@@ -67,5 +142,159 @@ export function SourceRail({
 
       {analysis && <AnalyzeFooter analysis={analysis} isUploading={isUploading} />}
     </aside>
+  );
+}
+
+function AnalyzeFooter({
+  analysis,
+  isUploading,
+}: {
+  analysis: SourcesAnalysis;
+  isUploading: boolean;
+}) {
+  const { freshness, isRunning, isWaitingForFollowup, canAnalyze, onAnalyze } = analysis;
+  if (freshness === "current" && !isRunning && !isWaitingForFollowup) return null;
+  const isStale = freshness === "stale";
+
+  return (
+    <div className="shrink-0 border-t border-line p-3">
+      {isWaitingForFollowup && !isRunning && (
+        <p className="mb-2.5 px-1 text-xs leading-5 text-ink-secondary">
+          Answer the follow-up question in Ask to continue automatically.
+        </p>
+      )}
+      {isStale && !isRunning && (
+        <p className="mb-2.5 flex items-center gap-2 px-1 text-xs text-ink-secondary">
+          Sources changed since the last analysis
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={onAnalyze}
+        disabled={!canAnalyze || isRunning || isUploading}
+        className="btn-primary w-full"
+      >
+        {isRunning && <Icon name="spinner" className="h-4 w-4" />}
+        {isRunning ? "Analyzing…" : isStale ? "Analyze latest" : "Analyze"}
+      </button>
+    </div>
+  );
+}
+
+function RailButton({
+  item,
+  selected,
+  onSelect,
+}: {
+  item: RailItem;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const detail =
+    item.kind === "file"
+      ? formatBytes(item.source.size_bytes ?? 0)
+      : item.kind === "followup_answer"
+        ? firstLine(item.followup.answer)
+        : formatDate(item.source.created_at, "day");
+
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onSelect}
+      className={`flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors ${
+        selected
+          ? "bg-surface text-ink shadow-xs ring-1 ring-line"
+          : "text-ink-secondary hover:bg-surface-hover hover:text-ink"
+      }`}
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[13px] font-medium">{itemTitle(item)}</span>
+        <span className="mt-0.5 block truncate text-xs text-ink-muted">{detail}</span>
+      </span>
+    </button>
+  );
+}
+
+function UploadingItem({ filename }: { filename?: string | null }) {
+  return (
+    <div
+      aria-live="polite"
+      className="mx-0.5 flex items-start gap-2.5 rounded-lg border border-dashed border-line-strong bg-surface px-2.5 py-2"
+    >
+      <Icon name="spinner" className="mt-0.5 h-4 w-4 shrink-0 text-ink-muted" />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[13px] font-medium text-ink">
+          {filename || "Uploading file…"}
+        </span>
+        <span className="mt-0.5 block text-xs text-ink-muted">Extracting text…</span>
+      </span>
+    </div>
+  );
+}
+
+function AddSourceMenu({
+  isUploading,
+  isAnalysing,
+  onOpenNarrative,
+  onPickFile,
+}: {
+  isUploading: boolean;
+  isAnalysing: boolean;
+  onOpenNarrative: () => void;
+  onPickFile: () => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const close = useCallback(() => setIsOpen(false), []);
+  useDismiss(containerRef, isOpen, close);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        disabled={isUploading || isAnalysing}
+        onClick={() => setIsOpen((open) => !open)}
+        title={isAnalysing ? "Wait for the analysis to finish" : undefined}
+        className="btn-primary h-8 px-3"
+      >
+        <Icon name="plus" className="h-4 w-4" />
+        Add source
+      </button>
+
+      {isOpen && (
+        <div
+          role="menu"
+          className="absolute right-0 top-9 z-20 w-52 overflow-hidden rounded-xl border border-line bg-surface p-1.5 shadow-lg shadow-black/5"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            disabled={isAnalysing}
+            onClick={() => {
+              setIsOpen(false);
+              onOpenNarrative();
+            }}
+            className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] text-ink hover:bg-surface-hover disabled:text-ink-disabled disabled:hover:bg-transparent"
+          >
+            Case narrative
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={isAnalysing}
+            onClick={() => {
+              setIsOpen(false);
+              onPickFile();
+            }}
+            className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] text-ink hover:bg-surface-hover disabled:text-ink-disabled disabled:hover:bg-transparent"
+          >
+            File
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

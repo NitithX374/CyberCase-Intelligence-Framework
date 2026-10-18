@@ -1,10 +1,8 @@
 "use client";
 
 import { plural } from "@/lib/format";
-import { isTurnedOff, itemTitle, type RailItem } from "./railItems";
-import { FileSourcePreview } from "./FileSourcePreview";
-import { TextSourcePreview } from "./TextSourcePreview";
-import { ViewportMessage } from "./ViewportMessage";
+import { isTurnedOff, itemTitle, type RailItem } from "./SourceRail";
+import { FileSourcePreview, TextSourcePreview, ViewportMessage } from "./SourcePreviews";
 import { documentPages, fileKind } from "./sourcePresentation";
 
 export type PreviewMode = "original" | "ocr" | "split";
@@ -60,17 +58,6 @@ export function SourceViewport({
           </h2>
           {subtitle && <p className="shrink-0 text-xs text-ink-muted">{subtitle}</p>}
         </div>
-
-        {item?.kind === "file" && onRetryDocument && !turnedOff && (
-          <button
-            type="button"
-            onClick={() => void onRetryDocument(item.documentId)}
-            disabled={isRetryingDocument}
-            className="text-[13px] font-medium text-ink-secondary underline decoration-line-strong underline-offset-2 hover:text-ink disabled:opacity-50"
-          >
-            {isRetryingDocument ? "Retrying extraction…" : "Retry extraction"}
-          </button>
-        )}
 
         {source && onSetSourceActive && (
           <button
