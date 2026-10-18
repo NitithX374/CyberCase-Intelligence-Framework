@@ -54,10 +54,19 @@ function TechnicalItem({
         <p className="mt-1 text-sm leading-6 text-ink-secondary">{item.shortPlainMeaning}</p>
       )}
 
-      {item.caseBasisSources.length === 0 && (
+      {item.caseBasisSources.length === 0 && !item.casePassage && (
         <p className="mt-2 text-xs text-ink-muted">
           No case source is recorded for this technique.
         </p>
+      )}
+
+      {item.casePassage && (
+        <div className="mt-3 border-l-2 border-line-strong py-1 pl-3">
+          <p className="text-sm leading-6 text-ink">{item.casePassage}</p>
+          <p className="mt-0.5 text-xs text-ink-muted">
+            Tied to this technique by the retrieval service, not checked
+          </p>
+        </div>
       )}
 
       {item.caseBasisSources.length > 0 && (
@@ -90,7 +99,7 @@ function TechnicalItem({
       {(item.whyRelevantHere || hasDefinition) && (
         <>
           <DisclosureToggle
-            label="Why it applies"
+            label={item.whyRelevantHere ? "Why it applies" : "ATT&CK definition"}
             isOpen={isOpen}
             onToggle={() => setIsOpen((open) => !open)}
             controls={detailsId}

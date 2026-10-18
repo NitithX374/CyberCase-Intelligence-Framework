@@ -110,6 +110,29 @@ describe("buildTechnicalContext", () => {
     expect(result.techniques.map((item) => item.techniqueId)).toEqual(["T1059.001"]);
     expect(result.retrievedOnlyTechniques.map((item) => item.techniqueId)).toEqual(["T1105"]);
     expect(result.techniques[0].caseBasisSources).toHaveLength(1);
+    expect(result.techniques[0].whyRelevantHere).toBe("The claim describes PowerShell activity.");
+    expect(result.techniques[0].casePassage).toBe("");
+  });
+
+  it("reads the reason of an association with no claims as the passage the retrieval service tied to it", () => {
+    const passage = "“The attacker ran a PowerShell script on the clerk's computer.”";
+    const fixture = technicalContextFixture(
+      "retrieved_with_matches",
+      [row],
+      [
+        {
+          association_id: "MA-01",
+          technique_id: "T1059.001",
+          claim_ids: [],
+          reason: passage,
+          plain_meaning: "Someone ran commands through PowerShell.",
+        },
+      ],
+    );
+    const [card] = buildTechnicalContext(fixture.result, fixture.sources).techniques;
+    expect(card.casePassage).toBe(passage);
+    expect(card.whyRelevantHere).toBe("");
+    expect(card.caseBasisSources).toEqual([]);
   });
 
   it("reads a retrieval that came back empty as no supported context", () => {
@@ -294,13 +317,12 @@ describe("mitreAttackUrl", () => {
   });
 
   it("prioritizes customUrl when provided", () => {
-    expect(
-      mitreAttackUrl("T1059", "https://attack.mitre.org/techniques/T1059/custom/"),
-    ).toBe("https://attack.mitre.org/techniques/T1059/custom/");
+    expect(mitreAttackUrl("T1059", "https://attack.mitre.org/techniques/T1059/custom/")).toBe(
+      "https://attack.mitre.org/techniques/T1059/custom/",
+    );
   });
 
   it("falls back gracefully for empty inputs", () => {
     expect(mitreAttackUrl("")).toBe("https://attack.mitre.org/");
   });
 });
-
