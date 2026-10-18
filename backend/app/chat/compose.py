@@ -4,8 +4,8 @@ from collections.abc import Sequence
 from typing import Literal
 
 from app.analysis.language import ResponseLanguage
+from app.analysis.reading_sources import provider_source_payload
 from app.analysis.technical_context.contracts import CaseRagContextPayload
-from app.analysis.write import write_request
 from app.chat.answer_contract import CaseAnalysisOutput, ChatReply
 from app.chat.grounding import answer_from
 from app.config import settings
@@ -14,7 +14,11 @@ from app.llm.settings import configured_pipeline
 from app.models.analysis_result import CaseAnalysisResult
 from app.models.chat_message import ChatMessage
 from app.sources.bundle import CaseSourceBundle
-from app.trace.claims import CLAIM_FIELDS_HIDDEN_FROM_MODELS, CaseFollowupExchange
+from app.trace.claims import (
+    CLAIM_FIELDS_HIDDEN_FROM_MODELS,
+    CaseFollowupExchange,
+    followup_payload,
+)
 from app.trace.trace import CaseAnalysisTrace
 
 AnalysisStatus = Literal["none", "current", "stale"]
@@ -128,20 +132,30 @@ def chat_request(
     trace: CaseAnalysisTrace | None,
     summary: str | None,
 ) -> dict[str, object]:
-    material = write_request(sources, language, followups, technical_context)
     return {
-        "response_language": material["response_language"],
+        "response_language": language,
         "question": question,
         "analysis_status": analysis_status,
         "analysis": analysis_payload(trace, summary) if trace is not None else None,
-        "followup_history": material["followup_history"],
-        "technical_context": material["technical_context"],
-        "case_sources": material["case_sources"],
+        "followup_history": followup_payload(followups),
+        "technical_context": technical_context_payload(technical_context),
+        "case_sources": [provider_source_payload(source) for source in sources.sources],
         "conversation_history": [
             {"id": str(message.id), "role": message.role, "content": message.content}
             for message in history
             if message.content.strip()
         ],
+    }
+
+
+def technical_context_payload(
+    technical_context: CaseRagContextPayload | None,
+) -> dict[str, object] | None:
+    if technical_context is None:
+        return None
+    return {
+        "context": technical_context.context,
+        "mitre_table": list(technical_context.mitre_table),
     }
 
 

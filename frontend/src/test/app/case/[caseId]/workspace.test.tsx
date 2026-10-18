@@ -372,6 +372,6 @@ describe("the case workspace", () => {
     expect(await screen.findByRole("heading", { name: "Summary" })).toBeInTheDocument();
     expect(backend.send).toHaveBeenCalledTimes(2);
     const [first, second] = backend.send.mock.calls;
-    expect(second[2]).toBe(first[2]);
+    expect(second[1].idempotencyKey).toBe(first[1].idempotencyKey);
   });
 });

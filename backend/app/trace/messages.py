@@ -67,7 +67,6 @@ __all__ = [
     "ChatUnitBasis",
     "MessageAnalysisTrace",
     "MessageMetadata",
-    "_metadata_adapter",
     "message_trace",
     "serialize_message_metadata",
 ]

@@ -1,6 +1,6 @@
 import { hasThai } from "@/lib/language";
 
-export type SupportStatus = "bound" | "mixed" | "unbound" | "no_claim";
+type SupportStatus = "bound" | "mixed" | "unbound" | "no_claim";
 
 type Note = Exclude<SupportStatus, "bound">;
 

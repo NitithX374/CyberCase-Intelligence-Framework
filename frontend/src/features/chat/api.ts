@@ -8,9 +8,11 @@ export async function getCaseChat(caseId: string, signal?: AbortSignal): Promise
 
 export async function createCaseChatMessage(
   caseId: string,
-  content: string,
-  idempotencyKey: string,
-  onStep: (step: StreamedStep) => void = () => undefined,
+  {
+    content,
+    idempotencyKey,
+    onStep = () => undefined,
+  }: { content: string; idempotencyKey: string; onStep?: (step: StreamedStep) => void },
 ): Promise<CaseChatResponse> {
   const request = { content, client_request_id: idempotencyKey };
   return postWithProgress<CaseChatResponse>(caseUrl(caseId, "chat", "messages"), request, {

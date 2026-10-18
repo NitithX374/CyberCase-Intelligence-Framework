@@ -42,7 +42,6 @@ ENV/
 env.bak/
 venv.bak/
 
-nli_grounding_experiment/
 # Alembic env.py must be tracked (not matched by env* above)
 !backend/alembic/env.py
 
@@ -177,29 +176,17 @@ deliverables/**/*.pdf
 backend/experiments/*
 /evaluation/
 
-# The offline semantic-verification fixture is intentionally versioned.
-experiments/*
-!experiments/semantic_verification/
-!experiments/semantic_verification/**
-!experiments/context_refinement/
-!experiments/context_refinement/**
-!experiments/representation_analysis/
-!experiments/representation_analysis/**
-!experiments/ctinexus_extraction_benchmark/
-!experiments/ctinexus_extraction_benchmark/**
-experiments/semantic_verification/**/__pycache__/
-experiments/semantic_verification/**/*.pyc
-experiments/context_refinement/**/__pycache__/
-experiments/context_refinement/**/*.pyc
-experiments/representation_analysis/**/__pycache__/
-experiments/representation_analysis/**/*.pyc
-experiments/ctinexus_extraction_benchmark/**/__pycache__/
-experiments/ctinexus_extraction_benchmark/**/*.pyc
-experiments/representation_analysis/outputs/
+# Local research runs at the repository root are not versioned; versioned research lives in research/.
+/experiments/
+# Folders moved into research/ or removed on 2026-10-18; local leftovers at the old paths stay ignored.
+/docs/research/
+/nli_grounding_experiment/
+/research/mitre_gate/
+/research/projection_validation/
 
 .codex-remote-attachments/
 
-# Model weights: ~1.1 GB, distributed separately and copied into the backend image.
+# Model weights: ~1.1 GB, distributed separately and mounted into the backend container (docker-compose.yml).
 backend/models/
 backend/xlmr_ladder_best/
 backend/nli_mdeberta/

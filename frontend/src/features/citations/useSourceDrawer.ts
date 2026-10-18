@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import type { SourceMessageRef } from "./types";
 
-export interface OpenSource {
+interface OpenSource {
   sourceRef: SourceMessageRef;
   anchorElement: HTMLElement;
   key: string;

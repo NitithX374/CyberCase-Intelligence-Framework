@@ -45,7 +45,7 @@ def document(text: str) -> IngestedDocument:
     return IngestedDocument(
         filename="case.pdf",
         media_type="application/pdf",
-        extraction_method=ExtractionMethod.NATIVE_PDF,
+        extraction_method=ExtractionMethod.DOCUMENT_RECOGNITION,
         pages=[
             DocumentPage(
                 page_number=1, text=text, text_method="native", verification_status="native"

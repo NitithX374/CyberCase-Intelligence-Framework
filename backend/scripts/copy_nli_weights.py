@@ -43,4 +43,5 @@ def main() -> None:
     print(f"copied {len(FILES)} files to {target}")
 
 
-main()
+if __name__ == "__main__":
+    main()

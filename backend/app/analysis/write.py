@@ -14,7 +14,7 @@ from app.analysis.claim_gate import (
     usable_reading,
 )
 from app.analysis.prompts import CASE_JUDGEMENT_SYSTEM_PROMPT, CASE_READING_JSON_PROMPT
-from app.analysis.reading_sources import ReadingSources, provider_source_payload
+from app.analysis.reading_sources import ReadingSources
 from app.analysis.stream import announce
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.analysis.views import DerivedCaseViews, derive_claim_views
@@ -176,20 +176,6 @@ def reading_request(
     }
 
 
-def write_request(
-    sources: CaseSourceBundle,
-    language: str,
-    followup_history: Sequence[CaseFollowupExchange],
-    technical_context: CaseRagContextPayload | None,
-) -> dict[str, object]:
-    return {
-        "response_language": language,
-        "case_sources": [provider_source_payload(source) for source in sources.sources],
-        "followup_history": followup_payload(followup_history),
-        "technical_context": technical_context_payload(technical_context),
-    }
-
-
 def summary_sentence_limit(claim_count: int) -> int:
     return max(
         SUMMARY_MIN_SENTENCES,
@@ -211,17 +197,6 @@ def judgement_request(
             if item.is_answered
         ],
         "reading": reading_payload(reading),
-    }
-
-
-def technical_context_payload(
-    technical_context: CaseRagContextPayload | None,
-) -> dict[str, object] | None:
-    if technical_context is None:
-        return None
-    return {
-        "context": technical_context.context,
-        "mitre_table": list(technical_context.mitre_table),
     }
 
 
@@ -264,6 +239,5 @@ __all__ = [
     "reading_payload",
     "reading_request",
     "summary_sentence_limit",
-    "write_request",
     "write_trace",
 ]

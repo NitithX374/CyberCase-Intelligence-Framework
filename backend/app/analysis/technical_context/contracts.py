@@ -12,6 +12,10 @@ from pydantic import (
     model_validator,
 )
 
+from app.trace.retired import without_retired
+
+RETIRED_AUGMENTATION_FIELDS = frozenset({"shadow_applicability"})
+
 
 class QueryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -155,10 +159,8 @@ class CaseTechnicalAugmentation(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def without_retired_shadow(cls, data: object) -> object:
-        if isinstance(data, dict) and "shadow_applicability" in data:
-            data = {key: value for key, value in data.items() if key != "shadow_applicability"}
-        return data
+    def without_retired_fields(cls, data: object) -> object:
+        return without_retired(data, RETIRED_AUGMENTATION_FIELDS)
 
 
 @dataclass(frozen=True)

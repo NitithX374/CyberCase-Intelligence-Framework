@@ -23,3 +23,5 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # The imports here follow logging.basicConfig deliberately; the file says why.
 "app/main.py" = ["E402"]
+# The script puts backend/ on sys.path before it can import app.
+"scripts/copy_nli_weights.py" = ["E402"]

@@ -58,7 +58,13 @@ async def answer_case_question(
             client_request_id=client_request_id,
             session_factory=session_factory,
         )
-        return await reply_to(case_id, user_id, question_id, session_factory, answer_request)
+        return await reply_to(
+            case_id=case_id,
+            user_id=user_id,
+            question_id=question_id,
+            session_factory=session_factory,
+            answer_request=answer_request,
+        )
 
 
 async def answer_recorded_question(
@@ -70,7 +76,13 @@ async def answer_recorded_question(
     answer_request=generate_case_answer,
 ) -> tuple[ChatMessage, ChatMessage]:
     with answering(question_id):
-        return await reply_to(case_id, user_id, question_id, session_factory, answer_request)
+        return await reply_to(
+            case_id=case_id,
+            user_id=user_id,
+            question_id=question_id,
+            session_factory=session_factory,
+            answer_request=answer_request,
+        )
 
 
 async def record_question(
@@ -111,6 +123,7 @@ def message_text(content: str) -> str:
 
 
 async def reply_to(
+    *,
     case_id: UUID,
     user_id: UUID | None,
     question_id: UUID,
@@ -128,7 +141,9 @@ async def reply_to(
             if error.code != "case_sources_missing":
                 raise
             bundle = CaseSourceBundle(revision=case.source_revision, sources=())
-        history = await answer_history(db, case.id, analysis_id, question.ordinal)
+        history = await answer_history(
+            db, case_id=case.id, analysis_result_id=analysis_id, before_ordinal=question.ordinal
+        )
         followups = followup_history_from(await case_messages(db, case.id))
         freshness = analysis_freshness(case, result)
 
@@ -176,7 +191,7 @@ def answer_metadata(output: CaseAnalysisOutput) -> MessageMetadata:
 
 
 async def answer_history(
-    db: AsyncSession, case_id: UUID, analysis_result_id: UUID | None, before_ordinal: int
+    db: AsyncSession, *, case_id: UUID, analysis_result_id: UUID | None, before_ordinal: int
 ) -> list[ChatMessage]:
     query = select(ChatMessage).where(
         ChatMessage.case_id == case_id,

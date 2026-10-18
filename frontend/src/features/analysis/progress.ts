@@ -2,7 +2,7 @@ import { useQuery, type QueryClient } from "@tanstack/react-query";
 import type { StreamedStep } from "@/lib/api/stream";
 import { caseQueryKeys } from "@/lib/queryKeys";
 
-export type AnalysisStepName =
+type AnalysisStepName =
   "warmup" | "assess" | "gate" | "retrieve" | "read" | "judge" | "bind" | "verify" | "views";
 
 export interface ReachedStep {
@@ -11,7 +11,7 @@ export interface ReachedStep {
   reachedAt: number;
 }
 
-export interface ProgressRow {
+interface ProgressRow {
   step: AnalysisStepName;
   label: string;
   state: "done" | "current" | "waiting";

@@ -24,7 +24,7 @@ from app.models.analysis_result import CaseAnalysisResult
 from app.models.case import Case
 from app.models.chat_message import ChatMessage
 from app.models.source import CaseSource
-from app.reports.display import clarification_limitation
+from app.reports.limitations import clarification_limitation
 from app.trace.claims import CaseAnalysisGap, CaseAssessmentTrace
 from app.trace.messages import MessageAnalysisTrace
 from app.trace.trace import CaseAnalysisTrace

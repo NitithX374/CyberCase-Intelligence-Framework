@@ -1,7 +1,7 @@
 import { Icon } from "@/components/icons";
 import type { CaseLibrarySort, CaseLibraryViewMode } from "./caseDisplay";
 
-export interface CaseLibraryToolbarProps {
+interface CaseLibraryToolbarProps {
   query: string;
   sort: CaseLibrarySort;
   viewMode: CaseLibraryViewMode;

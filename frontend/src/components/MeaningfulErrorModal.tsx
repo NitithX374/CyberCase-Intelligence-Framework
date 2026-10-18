@@ -4,7 +4,7 @@ import { Icon } from "./icons";
 import { Dialog } from "./Dialog";
 import type { UserFacingError } from "@/lib/userFacingError";
 
-export interface MeaningfulErrorModalProps {
+interface MeaningfulErrorModalProps {
   isOpen: boolean;
   error: UserFacingError | null;
   onClose: () => void;

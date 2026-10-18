@@ -86,10 +86,9 @@ export function SourceDrawer({
   );
 }
 
-const MARK_OPEN =
-  '<mark class="bg-amber-200/60 dark:bg-amber-400/30 text-ink px-1 py-0.5 rounded font-medium">';
+const MARK_OPEN = '<mark class="bg-amber-200/60 text-ink px-1 py-0.5 rounded font-medium">';
 const MARK_CLOSE = "</mark>";
-const TR_HIGHLIGHT = 'class="bg-amber-100/50 dark:bg-amber-400/15"';
+const TR_HIGHLIGHT = 'class="bg-amber-100/50"';
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -105,7 +104,7 @@ function highlightSnippet(snippet: string): string {
             if (/class=/i.test(part)) {
               return part.replace(
                 /class=["']([^"']*)["']/i,
-                (_, cls) => `class="${cls} bg-amber-100/50 dark:bg-amber-400/15"`,
+                (_, cls) => `class="${cls} bg-amber-100/50"`,
               );
             }
             return part.replace(/^<tr/i, `<tr ${TR_HIGHLIGHT}`);
@@ -174,7 +173,7 @@ function highlightSingleQuote(text: string, quote: string): string {
         return `${before}${highlightSnippet(matched)}${after}`;
       }
     } catch {
-      // Fall through if regex fails
+      return text;
     }
   } else if (chunks.length === 1 && chunks[0].length > 1) {
     const chunk = chunks[0];
@@ -190,7 +189,7 @@ function highlightSingleQuote(text: string, quote: string): string {
   return text;
 }
 
-export function highlightQuote(text: string, quoteOrQuotes: string | string[] | null): string {
+function highlightQuote(text: string, quoteOrQuotes: string | string[] | null): string {
   if (!quoteOrQuotes) return text;
   const quotes = (Array.isArray(quoteOrQuotes) ? quoteOrQuotes : [quoteOrQuotes])
     .map((q) => q?.trim())

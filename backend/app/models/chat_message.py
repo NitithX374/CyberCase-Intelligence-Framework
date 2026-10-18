@@ -119,9 +119,6 @@ class ChatMessage(Base):
         back_populates="chat_messages",
         foreign_keys=[case_id],
     )
-    in_reply_to_message: Mapped[ChatMessage | None] = relationship(
-        "ChatMessage", remote_side=[id], foreign_keys=[in_reply_to_message_id]
-    )
 
 
 __all__ = ["ChatMessage"]

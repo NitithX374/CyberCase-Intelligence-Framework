@@ -34,14 +34,14 @@ class CaseService:
     async def create_case(
         self,
         request: CaseCreate,
-        user_id: UUID | None = None,
+        user_id: UUID | None,
     ) -> CaseRead:
         case = Case(title=request.title, user_id=user_id)
         self.db.add(case)
         await self.db.commit()
         return await self.get_case(case.id, user_id=user_id)
 
-    async def list_cases(self, user_id: UUID | None = None) -> list[CaseRead]:
+    async def list_cases(self, user_id: UUID | None) -> list[CaseRead]:
         statement = select(Case).options(*WITH_LATEST_ANALYSIS).order_by(Case.updated_at.desc())
         if user_id is None:
             statement = statement.where(Case.user_id.is_(None))
@@ -53,7 +53,7 @@ class CaseService:
     async def get_case(
         self,
         case_id: UUID,
-        user_id: UUID | None = None,
+        user_id: UUID | None,
     ) -> CaseRead:
         case = await owned_case(self.db, case_id, user_id, options=WITH_LATEST_ANALYSIS)
         return serialize_case(case)
@@ -62,7 +62,7 @@ class CaseService:
         self,
         case_id: UUID,
         request: CaseUpdate,
-        user_id: UUID | None = None,
+        user_id: UUID | None,
     ) -> CaseRead:
         case = await owned_case(self.db, case_id, user_id, lock=True)
         case.title = request.title
@@ -72,7 +72,7 @@ class CaseService:
     async def delete_case(
         self,
         case_id: UUID,
-        user_id: UUID | None = None,
+        user_id: UUID | None,
     ) -> None:
         case = await owned_case(self.db, case_id, user_id, lock=True)
         await self.db.execute(delete(CaseReport).where(CaseReport.case_id == case.id))

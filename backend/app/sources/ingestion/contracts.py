@@ -15,10 +15,8 @@ def strip_unstorable(text: str) -> str:
 
 
 class ExtractionMethod(StrEnum):
-    NATIVE_PDF = "native_pdf"
     NATIVE_DOCX = "native_docx"
     DOCUMENT_RECOGNITION = "document_recognition"
-    HYBRID = "hybrid"
 
 
 VerificationStatus = Literal["native", "machine_read", "needs_review"]

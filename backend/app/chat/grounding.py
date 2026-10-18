@@ -180,7 +180,14 @@ def drafted_unit(
                 )
         if matched:
             verified_count += 1
-    return DraftUnit(text, item.basis, claim_ids, tuple(quotes), len(item.quotes), verified_count)
+    return DraftUnit(
+        text=text,
+        basis=item.basis,
+        claim_ids=claim_ids,
+        quotes=tuple(quotes),
+        offered_quotes=len(item.quotes),
+        verified_quotes=verified_count,
+    )
 
 
 def finished_unit(draft: DraftUnit, bound: Mapping[str, CaseAnalysisClaim]) -> ChatAnswerUnit:

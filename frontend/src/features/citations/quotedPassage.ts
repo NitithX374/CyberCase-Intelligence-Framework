@@ -5,7 +5,7 @@ const OCR_MARKUP =
 const CELL_BOUNDARY = /<\/(?:td|th)\s*>\s*<(?:td|th)\b[^<>]*>/gi;
 const ROW_BOUNDARY = /<\/tr\s*>|<br\b[^<>]*>/gi;
 
-export interface QuotedPassage {
+interface QuotedPassage {
   before: string;
   quote: string;
   after: string;

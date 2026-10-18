@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CyberCase Intelligence Framework** provides whole-Case summarization and analysis, with conditional MITRE ATT&CK augmentation. The case owns multiple documents and narratives, the analysis, its conversation and reports. A cheap gap assessment can pause before expensive work. Otherwise Reading writes canonical claims only, selecting source-unit IDs; the backend derives source lists and resolves those IDs to original source spans. After binding, frozen B1-LR selects resolved Source units with MPNet cosine >=0.20 (first maximum retained if none pass), concatenates retained original text with a single newline, runs pinned mDeBERTa with longest-first truncation at512 tokens, and applies the WiCE TRAIN-fitted LR to ordered E/N/C probabilities. The verdict is a warning label, not a filter: every Claim that passes the structural checks reaches Judgement and the batched Parties/Timeline/Impacts extractor, a Claim scored below 0.50 (`not_supported`) is shown with a plain warning in the analysis view and the report, and the verdict never enters a model prompt. The check runs concurrently with Judgement and the views. Verifier unavailability is logged and marks the Claims not assessed without failing the analysis; an analysis abstains without downstream model calls only when no Claim passes the structural checks. Raw follow-up questions/answers are excluded from Judgement; QA IDs, gap keys and answered flags remain. One batched structured LLM call extracts Parties, Timeline and Impacts from exactly the Claims Judgement receives, for display and reports. The two calls run independently in parallel; extractor failure records a warning and empty views without failing Judgement. Judgement receives claims and follow-up history only, never the technical context, and names no ATT&CK technique. The ATT&CK associations come from the RAG service instead: a table row it tied to a sentence of the case (its re-read evidence) is listed as an association with that sentence, shown as the service sent it, with no further check and no Claim attached (`trace/associations.py`). Extracted views never enter Judgement or chat as factual input. No projection-specific NLI checks run; historical saved views remain readable. Every summary sentence ends with supporting claim IDs, and the Judgement request tells it the most sentences it may write (`summary_sentence_limit`, one for every three claims, from 2 to 8, computed by the backend; asked for, not enforced). All structured model stages use a complete JSON contract in the system prompt, with strict local Pydantic validation before DTO normalization and at most one generation retry for invalid or truncated output; no provider schema grammar is sent. There is no run row or queue. The existing agentic RAG pipeline supplies conditional external interpretation and never Case evidence. Reports are deterministic snapshots of stored analysis. [The production verifier contract](research/attribution_benchmark/B1_INTEGRATION.md) records schemas, examples, state semantics and validation.
+**CyberCase Intelligence Framework** provides whole-Case summarization and analysis, with conditional MITRE ATT&CK augmentation. The case owns multiple documents and narratives, the analysis, its conversation and reports. A cheap gap assessment can pause before expensive work. Otherwise Reading writes canonical claims only, selecting source-unit IDs; the backend derives source lists and resolves those IDs to original source spans. After binding, frozen B1-LR selects resolved Source units with MPNet cosine >=0.20 (first maximum retained if none pass), concatenates retained original text with a single newline, runs pinned mDeBERTa with longest-first truncation at512 tokens, and applies the WiCE TRAIN-fitted LR to ordered E/N/C probabilities. The verdict is a warning label, not a filter: every Claim that passes the structural checks reaches Judgement and the batched Parties/Timeline/Impacts extractor, a Claim scored below 0.50 (`not_supported`) is shown with a plain warning in the analysis view and the report, and the verdict never enters a model prompt. The check runs concurrently with Judgement and the views. Verifier unavailability is logged and marks the Claims not assessed without failing the analysis; an analysis abstains without downstream model calls only when no Claim passes the structural checks. Raw follow-up questions/answers are excluded from Judgement; QA IDs, gap keys and answered flags remain. One batched structured LLM call extracts Parties, Timeline and Impacts from exactly the Claims Judgement receives, for display and reports. The two calls run independently in parallel; extractor failure records a warning and empty views without failing Judgement. Judgement receives claims and follow-up history only, never the technical context, and names no ATT&CK technique. The ATT&CK associations come from the RAG service instead: a table row it tied to a sentence of the case (its re-read evidence) is listed as an association with that sentence, shown as the service sent it, with no further check and no Claim attached (`trace/associations.py`). Extracted views never enter Judgement or chat as factual input. No projection-specific NLI checks run; historical saved views remain readable. Every summary sentence ends with supporting claim IDs, and the Judgement request tells it the most sentences it may write (`summary_sentence_limit`, one for every three claims, from 2 to 8, computed by the backend; asked for, not enforced). All structured model stages use a complete JSON contract in the system prompt, with strict local Pydantic validation before DTO normalization and at most one generation retry for invalid or truncated output; no provider schema grammar is sent. There is no run row or queue. The existing agentic RAG pipeline supplies conditional external interpretation and never Case evidence. Reports are deterministic snapshots of stored analysis. The production verifier contract is in [backend/ARCHITECTURE.md](backend/ARCHITECTURE.md), under "The claim verifier"; [B1_INTEGRATION.md](research/attribution_benchmark/B1_INTEGRATION.md) records how it was integrated and measured.
 
 ## Service Layout
 
@@ -201,6 +201,9 @@ errors.py               AppError, the one service error (code, message,
                         status), and its two kinds: CaseAnalysisFailure (a
                         model stage failed) and CaseWorkflowError
 health.py               GET /health
+config.py               settings, read from the environment
+database.py             the engine and the session; DATABASE_URL, when set,
+                        wins over the POSTGRES_* parts
 models/                 SQLAlchemy tables, one per file: case, source,
                         document, analysis_result, chat_message, report, user
 llm/                    calling a model
@@ -220,9 +223,7 @@ llm/                    calling a model
                         serialization/budgets), response.py (provider envelopes)
 trace/                  what the analysis, chat and reports share
   claims.py             claim fields/provider boundaries, gaps and follow-up
-                        exchanges; reexports historical citation names
-  claim_validation.py   full Claim/Source NLI assessment and the saved verdict;
-                        never truncates the pair
+                        exchanges; re-exports CaseSourceCitation
   citations.py          evidence references, resolved citations and invalid
                         pointers; the keys of removed quote-era fields are
                         dropped on read
@@ -249,7 +250,10 @@ trace/                  what the analysis, chat and reports share
                         in use
   bind.py               stable orchestration: resolve claim source references
                         before Judgement; check final references and
-                        derive summary units afterwards
+                        derive summary units afterwards; item_support gives
+                        bound/mixed/unbound/no_claim, which describe evidence
+                        binding of linked claims, never semantic or factual
+                        confirmation
   associations.py       mapped_associations: the RAG service's table rows with
                         a re-read span become ATT&CK associations, each showing
                         that sentence as the service sent it: no check, no
@@ -257,10 +261,10 @@ trace/                  what the analysis, chat and reports share
   evidence_binding.py   validate selected IDs, materialize original source spans
                         and page locators, reject duplicate references; a
                         citation that names no unit is an invalid reference
+  quotes.py             find_document_locator: the page or pages a quote sits
+                        on in a document
   retired.py            without_retired: drops the keys of removed fields from a
                         stored record before it is validated
-  support.py            bound/mixed/unbound/no_claim describe evidence binding
-                        of linked claims, never semantic or factual confirmation
   messages.py           what a chat message carries: the trace attached to it,
                         an answer's units and its suggestion
 followup/               the bounded clarification the analysis and chat share
@@ -280,23 +284,25 @@ sources/                routes (sources and documents), schemas, service, and
                         bundle.py: the one bundle an analysis reads from
   evidence.py           analysis-time exact-offset units, with source-scoped and
                         text-fingerprinted IDs; no evidence table or migration
+  markup.py             source_tables: the tables in an extracted text;
+                        evidence.py starts a unit at each table row
   ingestion/            upload to text: service, files (detect, count and
                         render PDF pages, turn a photo upright by its EXIF
-                        orientation), parsers (DOCX), text (strip_unstorable,
-                        the one strip of NUL and lone surrogates that every
-                        extracted text and the filename pass through),
-                        recognition (Typhoon OCR: every PDF page is rendered to
-                        an image and read, never taken from the PDF's text
-                        layer), contracts (types and errors), provenance
+                        orientation), parsers (DOCX), recognition (Typhoon
+                        OCR: every PDF page is rendered to an image and read,
+                        never taken from the PDF's text layer), contracts
+                        (types and errors, and strip_unstorable, the one strip
+                        of NUL and lone surrogates that every extracted text
+                        and the filename pass through), provenance
 analysis/               producing an analysis of a case; routes, schemas
   run.py                one step of the bounded loop: read, think, write
   store.py              what a step writes: an assessment that asks, or a
                         finished analysis
   latest.py             the read side: the latest analysis and the technical
                         context it recorded
-  pipeline.py           advance_case(): assess first, then analyse only if
-                        there is nothing worth asking
-  assess.py             the cheap gaps-only call that runs first
+  pipeline.py           advance_case(): assess first (assess_gaps, the cheap
+                        gaps-only call), then analyse only if there is
+                        nothing worth asking
   write.py              write_trace: a claims-only reading call (selected Source
                         unit IDs; prompt JSON, no grammar), deterministic source
                         binding (bound_claims), the Claim/Source warning check,
@@ -311,21 +317,21 @@ analysis/               producing an analysis of a case; routes, schemas
                         checks
   language.py           which language to write in: Thai when any source has
                         a Thai character; a chat question in its own language
-  progress.py           announce(step): the steps write, retrieve and the
-                        pipeline report, heard only by a request that listens
-  stream.py             the progress stream: steps, heartbeats, then the result
-  prompts.py            assessment and Judgement prompts; Reading reexports
-  reading_prompt.py     contextual claim construction with Source unit selection;
-                        attribution, uncertainty and whole-Case consolidation
+  stream.py             the progress stream: steps, heartbeats, then the
+                        result; announce(step) reports a step, heard only by
+                        a request that listens
+  prompts.py            the reading prompt (claims with Source unit selection;
+                        attribution, uncertainty and whole-Case
+                        consolidation), the views, assessment and Judgement
+                        prompts, and CASE_CHECKLIST
   reading_sources.py    compact local unit IDs for the Reader; request-owned
-                        revision mapping back to canonical IDs before binding
-  source_payload.py     shared Source/document extraction-quality header
+                        revision mapping back to canonical IDs before binding;
+                        provider_source_payload, the Source/document
+                        extraction-quality header
   views.py              one structured LLM call over Judgement's canonical
-                        Claims; validate links, record failures, save views
-                        for presentation only
-  view_schema.py        typed extraction records using the existing claim_ids
-                        contract; nullable role and combined date/time
-  view_prompt.py        extraction-only generation contract
+                        Claims; typed records with a nullable role and a
+                        combined date/time; validate links, record failures,
+                        save views for presentation only
   technical_context/    whether and how the case gets ATT&CK context
     contracts.py        the augmentation and applicability records, and the
                         RAG service's request and response
@@ -429,10 +435,10 @@ all. `MITRE_GATE_MODE` picks the gate in
 | `llm` (default) | one prompt over the case, each source cut to at most 4,000 characters (20,000 across all sources); `input_truncated` on the record says whether anything was cut | `technical_context/gate_llm.py`, model from `CASE_ANALYSIS_MODEL`, sent through `request_stage` like every other model call |
 | `never` | nothing — always SKIP | the ablation, for measuring what technical context is worth |
 
-The XLM-R encoder gate and its shadow mode were removed. Their measurements stay in
-`research/mitre_gate/README.md`, and the weights in `backend/models/xlmr_ladder_best` are no
-longer loaded. A stored technical-augmentation record that carries `shadow_applicability`
-still reads: the key is dropped when the record is validated.
+The XLM-R encoder gate and its shadow mode were removed, and the weights in
+`backend/models/xlmr_ladder_best` are no longer loaded. A stored technical-augmentation
+record that carries `shadow_applicability` still reads: the key is dropped when the record
+is validated.
 
 The `llm` gate does not split sentences: it reads each source cut to its share of the
 budget, and the `trigger_text` it returns is checked. `validate_mitre_applicability` keeps
@@ -495,7 +501,7 @@ There is no cross-analysis cache or new revision system. Historical extractor
 metadata, offsets and projection verdicts are dropped when a stored record is read. Local model loaders,
 per-Claim inference, the provisioner and Compose sidecar/config/mount are removed;
 Torch/Transformers remain for the pinned Claim/Source NLI and its source selector. The full
-contract is in [B1-LR integration](research/attribution_benchmark/B1_INTEGRATION.md).
+contract is in [backend/ARCHITECTURE.md](backend/ARCHITECTURE.md), under "The claim verifier".
 
 ### Historical pointer compatibility
 

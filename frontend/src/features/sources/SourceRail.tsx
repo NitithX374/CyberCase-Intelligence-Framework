@@ -22,7 +22,7 @@ export function isTurnedOff(source: CaseSourceRead): boolean {
   return source.deactivated_at != null;
 }
 
-export function currentReadings(sources: CaseSourceRead[]): CaseSourceRead[] {
+function currentReadings(sources: CaseSourceRead[]): CaseSourceRead[] {
   const newest = new Map<string, CaseSourceRead>();
   for (const source of sources) {
     if (!source.document_id) continue;

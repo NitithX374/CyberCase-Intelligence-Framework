@@ -13,7 +13,7 @@ import { FindingTraceability } from "./FindingTraceability";
 
 const INITIAL_FINDINGS = 5;
 
-export interface FindingSourceActions {
+interface FindingSourceActions {
   onSelectSource: (
     sourceRef: SourceMessageRef,
     anchorElement: HTMLElement,
@@ -23,7 +23,7 @@ export interface FindingSourceActions {
   activeSourceKey?: string | null;
 }
 
-export function FindingSources({
+function FindingSources({
   sources,
   findingId,
   role,
@@ -85,7 +85,7 @@ function FindingRow({
         isNotConfirmed
           ? "border-unresolved/30 bg-surface shadow-xs"
           : isUnknown
-            ? "border-amber-500/25 bg-amber-500/[0.02] dark:bg-amber-500/[0.04] shadow-xs"
+            ? "border-amber-500/25 bg-amber-500/[0.02] shadow-xs"
             : isContradicted
               ? "border-critical/30 bg-critical/[0.02] shadow-xs"
               : isSupported
@@ -112,7 +112,7 @@ function FindingRow({
             <span
               className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
                 finding.claimType === "unknown"
-                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                  ? "bg-amber-500/10 text-amber-700"
                   : "bg-surface-nested text-ink-secondary"
               }`}
             >

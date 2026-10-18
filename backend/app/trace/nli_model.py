@@ -31,12 +31,6 @@ class NliUnavailable(Exception):
 
 
 @dataclass(frozen=True)
-class Judgement:
-    label: str
-    entailment: float
-
-
-@dataclass(frozen=True)
 class NliProbabilities:
     entailment: float
     neutral: float
@@ -66,16 +60,6 @@ class MdebertaNli:
         return self.tokenizer(
             premise, hypothesis, truncation=False, return_tensors="pt", verbose=False
         )
-
-    def fits(self, premise: str, hypothesis: str) -> bool:
-        return int(self.encoded(premise, hypothesis)["input_ids"].shape[-1]) <= MAX_TOKENS
-
-    def judge(self, premise: str, hypothesis: str) -> Judgement:
-        batch = self.encoded(premise, hypothesis)
-        with inference, self.torch.no_grad():
-            probabilities = self.torch.softmax(self.model(**batch).logits, dim=-1)[0].tolist()
-        scores = dict(zip(self.order, probabilities, strict=True))
-        return Judgement(label=max(scores, key=scores.__getitem__), entailment=scores["entailment"])
 
     def predict(self, premise: str, hypothesis: str) -> NliProbabilities:
         raw_tokens = int(self.encoded(premise, hypothesis)["input_ids"].shape[-1])
@@ -162,7 +146,6 @@ def forget() -> None:
 
 
 __all__ = [
-    "Judgement",
     "LABEL_ORDER",
     "MAX_TOKENS",
     "MODEL_NAME",

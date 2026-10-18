@@ -52,9 +52,9 @@ and projection metadata remain readable through generic records. B1-LR
 checks Claims against selected Source units beside both calls and only labels them;
 its LR boundary is0.50 with longest-first NLI truncation512. If a pinned model is
 unavailable the Claims are marked not assessed and the analysis completes; it
-abstains only if no Claim passes the structural checks. See [the verifier contract](../research/attribution_benchmark/B1_INTEGRATION.md).
+abstains only if no Claim passes the structural checks. See [the verifier contract](ARCHITECTURE.md), under "The claim verifier".
 
-`CASE_READING_THINKING_TOKENS` can override Reading reasoning without changing Judgement or assessment. Use 0 to disable, or at least 1,024; absent historical pipeline fields inherit the shared budget. Compose keeps 8,192 following the small matched pilot: faster reasoning-off generations did not consistently satisfy the strict Reader schema. Output limits, retries and production timeouts are unchanged. From `backend`, `python -m experiments.reading_load_pilot --output-dir <new-folder>` measures payload sizes; add `--execute` explicitly to call the configured provider on two prelabelled fixtures. The pilot records raw replies, retries, binding and a separate experiment-only 300-second wall limit; it never writes Cases or calls Judgement, derived-view extraction or RAG.
+`CASE_READING_THINKING_TOKENS` can override Reading reasoning without changing Judgement or assessment. Use 0 to disable, or at least 1,024; absent historical pipeline fields inherit the shared budget. Compose keeps 8,192 following the small matched pilot: faster reasoning-off generations did not consistently satisfy the strict Reader schema. Output limits, retries and production timeouts are unchanged. From `backend`, the local pilot `experiments/reading_load_pilot.py` (the repository tracks nothing in `backend/experiments/`) measures payload sizes with `python -m experiments.reading_load_pilot --output-dir <new-folder>`; add `--execute` explicitly to call the configured provider on two prelabelled fixtures. The pilot records raw replies, retries, binding and a separate experiment-only 300-second wall limit; it never writes Cases or calls Judgement, derived-view extraction or RAG.
 
 The `case_views` call reuses the configured analysis model/provider order, with
 thinking disabled, output capped at 4,096 tokens and an overall deadline of at most
@@ -66,7 +66,7 @@ warning code and dropped-row count. The existing analysis snapshot caches views
 for reads/reports. New analysis runs extract again; no second revision system or
 cross-analysis cache is introduced. The local extractor service/config/mount,
 loader, per-Claim runtime and weight provisioner are removed. Torch/Transformers
-are still required by the encoder gate and the pinned Claim verifier and MPNet selector. Existing model assets
+are still required by the pinned Claim verifier and its MPNet selector. Existing model assets
 and historical diagnostic artifacts are retained.
 
 Every structured model stage (assessment, Reading, Judgement, Views, Chat and

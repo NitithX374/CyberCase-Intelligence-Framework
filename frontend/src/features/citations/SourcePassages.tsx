@@ -39,11 +39,11 @@ export function SourcePassages({ sourceRef }: { sourceRef: SourceMessageRef }) {
             <p className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
               {passage.before}
               {passage.before || passage.after ? (
-                <strong className="font-semibold bg-amber-200/60 dark:bg-amber-400/30 text-ink px-1 py-0.5 rounded">
+                <strong className="font-semibold bg-amber-200/60 text-ink px-1 py-0.5 rounded">
                   {passage.quote}
                 </strong>
               ) : (
-                <mark className="bg-amber-200/60 dark:bg-amber-400/30 text-ink px-1 py-0.5 rounded font-semibold not-italic">
+                <mark className="bg-amber-200/60 text-ink px-1 py-0.5 rounded font-semibold not-italic">
                   {passage.quote}
                 </mark>
               )}

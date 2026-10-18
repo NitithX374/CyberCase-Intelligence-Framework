@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.latest import get_latest_case_analysis
-from app.analysis.run import AnalysisStep, run_case_analysis
+from app.analysis.run import run_case_analysis
 from app.analysis.schemas import AnalysisStepRead, CaseAnalysisResultRead
+from app.analysis.store import AnalysisStep
 from app.analysis.stream import STREAMED_RESPONSE, progress_response, wants_progress
 from app.auth.guard import get_current_user
 from app.cases.running import sole_analysis
