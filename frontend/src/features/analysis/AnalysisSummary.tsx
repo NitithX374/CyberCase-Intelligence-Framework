@@ -72,7 +72,7 @@ export function AnalysisSummary() {
         </div>
       </section>
 
-      <section aria-labelledby="overview-glance-heading" className="mt-10">
+      <section aria-labelledby="overview-glance-heading" className="mt-8">
         <h2 id="overview-glance-heading" className="text-base font-semibold text-ink">
           At a glance
         </h2>
@@ -81,8 +81,7 @@ export function AnalysisSummary() {
             <GlanceRow label="Parties">
               {parties.slice(0, PARTIES_SHOWN).map((party, index) => (
                 <p key={index}>
-                  {party.name}
-                  {party.role && <span className="text-ink-secondary"> · {party.role}</span>}
+                  {party.name} <span className="text-ink-secondary">{party.role}</span>
                 </p>
               ))}
               {parties.length > PARTIES_SHOWN && (
@@ -96,9 +95,8 @@ export function AnalysisSummary() {
           {events.length > 0 && (
             <GlanceRow label={timeline.length > 1 ? "From first to last" : "When"}>
               {events.map((event, index) => (
-                <p key={index} className="grid gap-x-4 sm:grid-cols-[8rem_minmax(0,1fr)]">
-                  <span className="text-ink-secondary">{event.time ?? "Time not stated"}</span>
-                  <span>{event.event}</span>
+                <p key={index}>
+                  <span className="text-ink-secondary">{event.time}</span> {event.event}
                 </p>
               ))}
               {timeline.length > events.length && (

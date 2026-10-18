@@ -1,8 +1,0 @@
-      <section id="system_limitations">
-        <h2>7. ข้อจำกัดและข้อสงวนของรายงาน</h2>
-        <ol class="numbered">
-          {% for item in report.limitations %}
-          <li><span class="n">7.{{ loop.index }}</span><span>{{ item | clean_report_text }}</span></li>
-          {% endfor %}
-        </ol>
-      </section>
