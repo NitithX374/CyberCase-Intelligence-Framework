@@ -50,11 +50,9 @@ function sourceItems(sources: CaseSourceRead[], kind: "file" | "narrative"): Rai
 
 export function railGroups(sources: CaseSourceRead[], followups: FollowupAnswer[]): RailGroup[] {
   const current = currentReadings(sources);
-  const on = current.filter((source) => !isTurnedOff(source));
-  const off = current.filter(isTurnedOff);
   return [
-    { label: "Files", items: sourceItems(on, "file") },
-    { label: "Case narrative", items: sourceItems(on, "narrative") },
+    { label: "Files", items: sourceItems(current, "file") },
+    { label: "Case narrative", items: sourceItems(current, "narrative") },
     {
       label: "Follow-up answers",
       items: followups.map((followup): RailItem => ({
@@ -62,10 +60,6 @@ export function railGroups(sources: CaseSourceRead[], followups: FollowupAnswer[
         kind: "followup_answer",
         followup,
       })),
-    },
-    {
-      label: "Turned off",
-      items: [...sourceItems(off, "file"), ...sourceItems(off, "narrative")],
     },
   ].filter((group) => group.items.length > 0);
 }
@@ -90,6 +84,8 @@ interface SourceRailProps {
   onSelect: (id: string) => void;
   onOpenNarrative: () => void;
   onPickFile: () => void;
+  onSetSourceActive?: (sourceId: string, active: boolean) => Promise<void>;
+  isSwitchingSource?: boolean;
   analysis?: SourcesAnalysis;
 }
 
@@ -101,10 +97,13 @@ export function SourceRail({
   onSelect,
   onOpenNarrative,
   onPickFile,
+  onSetSourceActive,
+  isSwitchingSource = false,
   analysis,
 }: SourceRailProps) {
   const total = groups.reduce((count, group) => count + group.items.length, 0);
   const shown = total + (isUploading ? 1 : 0);
+  const isAnalysing = analysis?.isRunning ?? false;
 
   return (
     <aside className="flex max-h-72 w-full shrink-0 flex-col border-b border-line bg-sidebar md:max-h-none md:w-72 md:border-r md:border-b-0">
@@ -114,7 +113,7 @@ export function SourceRail({
         </h2>
         <AddSourceMenu
           isUploading={isUploading}
-          isAnalysing={analysis?.isRunning ?? false}
+          isAnalysing={isAnalysing}
           onOpenNarrative={onOpenNarrative}
           onPickFile={onPickFile}
         />
@@ -127,7 +126,19 @@ export function SourceRail({
             <h3 className="px-2 pb-1 text-xs font-medium text-ink-muted">{group.label}</h3>
             <ul className="space-y-0.5">
               {group.items.map((item) => (
-                <li key={item.id}>
+                <li key={item.id} className="flex items-center">
+                  {onSetSourceActive &&
+                    (item.kind === "followup_answer" ? (
+                      <span aria-hidden="true" className="w-7 shrink-0" />
+                    ) : (
+                      <SourceCheckbox
+                        source={item.source}
+                        title={itemTitle(item)}
+                        isAnalysing={isAnalysing}
+                        disabled={isSwitchingSource || isAnalysing}
+                        onChange={onSetSourceActive}
+                      />
+                    ))}
                   <RailButton
                     item={item}
                     selected={item.id === selectedId}
@@ -181,6 +192,35 @@ function AnalyzeFooter({
   );
 }
 
+function SourceCheckbox({
+  source,
+  title,
+  isAnalysing,
+  disabled,
+  onChange,
+}: {
+  source: CaseSourceRead;
+  title: string;
+  isAnalysing: boolean;
+  disabled: boolean;
+  onChange: (sourceId: string, active: boolean) => Promise<void>;
+}) {
+  const included = !isTurnedOff(source);
+  return (
+    <span className="flex w-7 shrink-0 justify-center">
+      <input
+        type="checkbox"
+        checked={included}
+        disabled={disabled}
+        onChange={() => void onChange(source.id, !included)}
+        aria-label={`Include in the analysis: ${title}`}
+        title={isAnalysing ? "Wait for the analysis to finish" : "Include in the analysis"}
+        className="h-4 w-4 cursor-pointer accent-ink disabled:cursor-not-allowed"
+      />
+    </span>
+  );
+}
+
 function RailButton({
   item,
   selected,
@@ -196,16 +236,19 @@ function RailButton({
       : item.kind === "followup_answer"
         ? firstLine(item.followup.answer)
         : formatDate(item.source.created_at, "day");
+  const leftOut = item.kind !== "followup_answer" && isTurnedOff(item.source);
 
   return (
     <button
       type="button"
       aria-pressed={selected}
       onClick={onSelect}
-      className={`flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors ${
+      className={`flex min-w-0 flex-1 items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors ${
         selected
           ? "bg-surface text-ink shadow-xs ring-1 ring-line"
-          : "text-ink-secondary hover:bg-surface-hover hover:text-ink"
+          : leftOut
+            ? "text-ink-muted hover:bg-surface-hover hover:text-ink"
+            : "text-ink-secondary hover:bg-surface-hover hover:text-ink"
       }`}
     >
       <span className="min-w-0 flex-1">

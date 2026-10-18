@@ -20,9 +20,6 @@ interface SourceViewportProps {
   onModeChange: (mode: PreviewMode) => void;
   onRetryDocument?: (documentId: string) => Promise<void>;
   isRetryingDocument?: boolean;
-  onSetSourceActive?: (sourceId: string, active: boolean) => Promise<void>;
-  isSwitchingSource?: boolean;
-  isAnalysing?: boolean;
 }
 
 export function SourceViewport({
@@ -32,12 +29,8 @@ export function SourceViewport({
   onModeChange,
   onRetryDocument,
   isRetryingDocument = false,
-  onSetSourceActive,
-  isSwitchingSource = false,
-  isAnalysing = false,
 }: SourceViewportProps) {
-  const source = item && item.kind !== "followup_answer" ? item.source : null;
-  const turnedOff = source !== null && isTurnedOff(source);
+  const turnedOff = item !== null && item.kind !== "followup_answer" && isTurnedOff(item.source);
   const subtitle = !item
     ? null
     : item.kind === "file"
@@ -58,18 +51,6 @@ export function SourceViewport({
           </h2>
           {subtitle && <p className="shrink-0 text-xs text-ink-muted">{subtitle}</p>}
         </div>
-
-        {source && onSetSourceActive && (
-          <button
-            type="button"
-            onClick={() => void onSetSourceActive(source.id, turnedOff)}
-            disabled={isSwitchingSource || isAnalysing}
-            title={isAnalysing ? "Wait for the analysis to finish" : undefined}
-            className="btn-secondary h-8 px-3"
-          >
-            {turnedOff ? "Turn on" : "Turn off"}
-          </button>
-        )}
 
         {item?.kind === "file" && (
           <div

@@ -91,7 +91,7 @@ describe("SourcesPage", () => {
     state.update.mockResolvedValue({ ...narrative, deactivated_at: "2026-10-17T02:00:00Z" });
     renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: "Turn off" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Include in the analysis/ }));
 
     await waitFor(() =>
       expect(state.update).toHaveBeenCalledWith(caseId, "source-1", { active: false }),
@@ -105,7 +105,7 @@ describe("SourcesPage", () => {
     );
     renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: "Turn on" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Include in the analysis/ }));
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog.querySelector("#meaningful-error-message")).toHaveTextContent("แบ่งไฟล์");

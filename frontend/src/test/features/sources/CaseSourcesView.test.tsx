@@ -164,7 +164,7 @@ describe("CaseSourcesView", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Sources 3" })).toBeInTheDocument();
   });
 
-  it("lists each file once, by its latest reading, and the turned-off sources apart", () => {
+  it("lists each file once, by its latest reading, and keeps a turned-off source in its group", () => {
     const earlier = {
       ...documentSource(document, "First reading"),
       id: "reading-1",
@@ -177,15 +177,19 @@ describe("CaseSourcesView", () => {
     };
     renderSources({
       sources: [earlier, latest, caseSource({ deactivated_at: "2026-10-17T02:00:00Z" })],
+      onSetSourceActive: vi.fn().mockResolvedValue(undefined),
     });
 
     const files = screen.getByRole("heading", { level: 3, name: "Files" }).parentElement!;
-    const off = screen.getByRole("heading", { level: 3, name: "Turned off" }).parentElement!;
+    const narratives = screen.getByRole("heading", {
+      level: 3,
+      name: "Case narrative",
+    }).parentElement!;
     expect(within(files).getAllByRole("button")).toHaveLength(1);
-    expect(within(off).getAllByRole("button")).toHaveLength(1);
-    expect(
-      screen.queryByRole("heading", { level: 3, name: "Case narrative" }),
-    ).not.toBeInTheDocument();
+    expect(within(files).getByRole("checkbox")).toBeChecked();
+    expect(within(narratives).getAllByRole("button")).toHaveLength(1);
+    expect(within(narratives).getByRole("checkbox")).not.toBeChecked();
+    expect(screen.queryByRole("heading", { level: 3, name: "Turned off" })).not.toBeInTheDocument();
 
     fireEvent.click(within(files).getByRole("button"));
     fireEvent.click(screen.getByRole("tab", { name: "Text" }));
@@ -193,16 +197,57 @@ describe("CaseSourcesView", () => {
     expect(screen.queryByText("First reading")).not.toBeInTheDocument();
   });
 
-  it("turns the selected source off from its preview", () => {
+  it("turns a source off with its checkbox in the rail", () => {
     const onSetSourceActive = vi.fn().mockResolvedValue(undefined);
     renderSources({ sources: [caseSource()], onSetSourceActive });
 
     expect(
       screen.queryByText("This source is turned off. The next analysis will not read it."),
     ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Turn off" }));
+    const checkbox = screen.getByRole("checkbox", {
+      name: "Include in the analysis: Files on the shared drive were reported encrypted.",
+    });
+    expect(checkbox).toBeChecked();
+    fireEvent.click(checkbox);
 
     expect(onSetSourceActive).toHaveBeenCalledWith("source-1", false);
+  });
+
+  it("switches a source that is not the one being read without changing the preview", () => {
+    const onSetSourceActive = vi.fn().mockResolvedValue(undefined);
+    renderSources({
+      sources: [
+        caseSource(),
+        caseSource({ id: "source-2", exact_text: "The help desk logged a call." }),
+      ],
+      onSetSourceActive,
+    });
+
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: "Include in the analysis: The help desk logged a call.",
+      }),
+    );
+
+    expect(onSetSourceActive).toHaveBeenCalledWith("source-2", false);
+    expect(
+      screen.getByRole("heading", { level: 2, name: /Files on the shared drive/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("has no checkbox for a follow-up answer, which is not a source", () => {
+    renderSources({
+      sources: [caseSource()],
+      followups: [{ qaId: "QA-01", question: "Were backups kept?", answer: "Offline." }],
+      onSetSourceActive: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const answers = screen.getByRole("heading", {
+      level: 3,
+      name: "Follow-up answers",
+    }).parentElement!;
+    expect(within(answers).queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
   });
 
   it("keeps showing the source it turned off once the sources reload", () => {
@@ -225,7 +270,9 @@ describe("CaseSourcesView", () => {
       </QueryClientProvider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Turn off" }));
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /Include in the analysis: Files on the shared drive/ }),
+    );
     rerender(
       <QueryClientProvider client={queryClient}>
         <CaseSourcesView
@@ -241,9 +288,10 @@ describe("CaseSourcesView", () => {
     expect(
       screen.getByText("This source is turned off. The next analysis will not read it."),
     ).toBeInTheDocument();
+    expect(screen.getAllByRole("checkbox")[0]).not.toBeChecked();
   });
 
-  it("says a turned-off source is left out of the next analysis and offers to turn it on", () => {
+  it("says a turned-off source is left out of the next analysis and turns it on when ticked", () => {
     const onSetSourceActive = vi.fn().mockResolvedValue(undefined);
     renderSources({
       sources: [caseSource({ deactivated_at: "2026-10-17T02:00:00Z" })],
@@ -253,7 +301,9 @@ describe("CaseSourcesView", () => {
     expect(
       screen.getByText("This source is turned off. The next analysis will not read it."),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Turn on" }));
+    const checkbox = screen.getByRole("checkbox", { name: /Include in the analysis/ });
+    expect(checkbox).not.toBeChecked();
+    fireEvent.click(checkbox);
 
     expect(onSetSourceActive).toHaveBeenCalledWith("source-1", true);
   });
@@ -287,7 +337,7 @@ describe("CaseSourcesView", () => {
       },
     });
 
-    expect(screen.getByRole("button", { name: "Turn off" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: /Include in the analysis/ })).toBeDisabled();
   });
 
   it("reads a follow-up answer beside the question it answers", () => {

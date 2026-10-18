@@ -70,12 +70,6 @@ export function CaseSourcesView({
   };
   const openNarrative = () => setIsNarrativeOpen(true);
   const pickFile = () => fileInputRef.current?.click();
-  const switchSource = onSetSourceActive
-    ? (sourceId: string, active: boolean) => {
-        setSelectedId(selected?.id ?? null);
-        return onSetSourceActive(sourceId, active);
-      }
-    : undefined;
 
   return (
     <div
@@ -96,6 +90,8 @@ export function CaseSourcesView({
             onSelect={setSelectedId}
             onOpenNarrative={openNarrative}
             onPickFile={pickFile}
+            onSetSourceActive={onSetSourceActive}
+            isSwitchingSource={isSwitchingSource}
             analysis={analysis}
           />
 
@@ -106,9 +102,6 @@ export function CaseSourcesView({
             onModeChange={setPreviewMode}
             onRetryDocument={onRetryDocument}
             isRetryingDocument={isRetryingDocument}
-            onSetSourceActive={switchSource}
-            isSwitchingSource={isSwitchingSource}
-            isAnalysing={analysis?.isRunning ?? false}
           />
         </div>
       )}
