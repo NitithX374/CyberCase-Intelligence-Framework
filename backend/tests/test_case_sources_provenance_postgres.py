@@ -20,7 +20,7 @@ def ingested(filename: str, *pages: tuple[str, str], warnings: list[str] | None 
     return IngestedDocument(
         filename=filename,
         media_type="application/pdf",
-        extraction_method=ExtractionMethod.NATIVE_PDF,
+        extraction_method=ExtractionMethod.DOCUMENT_RECOGNITION,
         pages=[
             DocumentPage(
                 page_number=number,
@@ -67,7 +67,7 @@ def test_document_receive_binds_page_spans_to_the_case_source():
                     "verification_status",
                     "warnings",
                 }
-                assert provenance["extraction_method"] == "native_pdf"
+                assert provenance["extraction_method"] == "document_recognition"
                 assert provenance["verification_status"] == "machine_read"
                 assert provenance["warnings"] == ["Page 2 was read by OCR."]
                 pages = provenance["pages"]

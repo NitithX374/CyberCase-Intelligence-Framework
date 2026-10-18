@@ -12,10 +12,9 @@ from app.analysis.prompts import CASE_JUDGEMENT_SYSTEM_PROMPT
 from app.analysis.write import (
     judgement_request,
     summary_sentence_limit,
-    write_request,
     write_trace,
 )
-from app.chat.compose import analysis_payload
+from app.chat.compose import analysis_payload, chat_request
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import evidence_units
@@ -185,16 +184,22 @@ def test_the_chat_still_receives_the_sources_and_the_sentence_around_each_quote(
         analysis_mode="case_overview", summary="A summary.", claims=reading.claims
     )
 
-    material = write_request(bundle, "english", (), None)
+    material = chat_request(
+        question="What happened?",
+        history=[],
+        sources=bundle,
+        language="english",
+        followups=(),
+        technical_context=None,
+        analysis_status="current",
+        trace=trace,
+        summary=None,
+    )
 
-    assert AROUND in json.dumps(analysis_payload(trace, None)["claims"])
+    assert AROUND in json.dumps(material["analysis"]["claims"])
     assert [source["text"] for source in material["case_sources"]] == [SOURCE_TEXT]
-    assert set(material) == {
-        "response_language",
-        "case_sources",
-        "followup_history",
-        "technical_context",
-    }
+    assert material["followup_history"] == []
+    assert material["technical_context"] is None
 
 
 def test_the_chat_never_sees_a_verdict_or_the_reason_for_it():

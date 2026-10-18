@@ -5,7 +5,7 @@ import json
 import threading
 
 import pytest
-from fake_nli import FakeNli
+from fake_nli import FakeNli, Judgement
 
 from app.analysis import write
 from app.analysis.claim_gate import check_judgement_references, checked_claim_support
@@ -16,7 +16,7 @@ from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import evidence_units
 from app.trace import claim_validation
 from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, CaseSourceCitation
-from app.trace.nli_model import Judgement, NliUnavailable
+from app.trace.nli_model import NliUnavailable
 from app.trace.trace import (
     CaseProviderJudgement,
     CaseProviderReading,

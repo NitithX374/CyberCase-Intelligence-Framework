@@ -2,15 +2,21 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
 
 from app.trace.messages import ChatAnswerUnit, ChatSuggestion
 from app.trace.trace import CaseAnalysisTrace
 
 BASES = ("case_fact", "interpretation", "technical", "general")
 SUGGESTIONS = ("none", "add_source", "run_analysis")
+
+
+def records(value: object) -> list[object]:
+    if not isinstance(value, (list, tuple)):
+        return []
+    return [item for item in value if isinstance(item, Mapping)]
 
 
 @dataclass(frozen=True)
@@ -34,7 +40,7 @@ class ChatReplyUnit(BaseModel):
     text: str = ""
     basis: Literal["case_fact", "interpretation", "technical", "general"] = "case_fact"
     claim_ids: list[str] = Field(default_factory=list)
-    quotes: list[ChatReplyQuote] = Field(default_factory=list)
+    quotes: Annotated[list[ChatReplyQuote], BeforeValidator(records)] = Field(default_factory=list)
 
     @field_validator("text", mode="before")
     @classmethod
@@ -56,26 +62,12 @@ class ChatReplyUnit(BaseModel):
             return []
         return [item for item in value if isinstance(item, str) and item.strip()]
 
-    @field_validator("quotes", mode="before")
-    @classmethod
-    def quote_records(cls, value: object) -> list[object]:
-        if not isinstance(value, (list, tuple)):
-            return []
-        return [item for item in value if isinstance(item, Mapping)]
-
 
 class ChatReply(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    units: list[ChatReplyUnit] = Field(default_factory=list)
+    units: Annotated[list[ChatReplyUnit], BeforeValidator(records)] = Field(default_factory=list)
     suggestion: Literal["none", "add_source", "run_analysis"] = "none"
-
-    @field_validator("units", mode="before")
-    @classmethod
-    def unit_records(cls, value: object) -> list[object]:
-        if not isinstance(value, (list, tuple)):
-            return []
-        return [item for item in value if isinstance(item, Mapping)]
 
     @field_validator("suggestion", mode="before")
     @classmethod

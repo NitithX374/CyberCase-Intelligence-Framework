@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 
 from app.trace.b1_verifier import ClaimVerification, supported_probability
-from app.trace.nli_model import Judgement, NliProbabilities
+from app.trace.nli_model import NliProbabilities
+
+
+@dataclass(frozen=True)
+class Judgement:
+    label: str
+    entailment: float
+
 
 NEUTRAL = Judgement(label="neutral", entailment=0.1)
 

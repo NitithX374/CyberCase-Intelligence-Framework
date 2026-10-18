@@ -66,10 +66,6 @@ def tokenize_sentences(segment_text: str) -> list[str]:
     return segmenter.split(segment_text, threshold=SAT_THRESHOLD)
 
 
-def split_text(text: str) -> list[str]:
-    return [text[start:end] for start, end in sentence_spans(text)]
-
-
 def sentence_spans(text: str) -> list[tuple[int, int]]:
     return [span for start, end in line_spans(text) for span in line_sentences(text, start, end)]
 
@@ -172,6 +168,5 @@ __all__ = [
     "quote_context",
     "segmenter_identity",
     "sentence_spans",
-    "split_text",
     "tokenize_sentences",
 ]

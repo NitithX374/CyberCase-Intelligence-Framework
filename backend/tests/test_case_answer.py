@@ -15,7 +15,7 @@ from app.chat.compose import CHAT_OUTPUT_TOKENS, generate_case_answer
 from app.chat.grounding import UNANSWERED
 from app.config import settings
 from app.errors import CaseAnalysisFailure
-from app.llm.request import thinking_option
+from app.llm.payload import thinking_option
 from app.llm.settings import configured_pipeline
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import (

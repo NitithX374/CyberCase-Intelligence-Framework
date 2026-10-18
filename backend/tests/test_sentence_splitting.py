@@ -3,7 +3,12 @@ from __future__ import annotations
 import pytest
 
 from app.trace import sentences
-from app.trace.sentences import get_sat_segmenter, split_text, tokenize_sentences
+from app.trace.sentences import get_sat_segmenter, sentence_spans, tokenize_sentences
+
+
+def split_text(text: str) -> list[str]:
+    return [text[start:end] for start, end in sentence_spans(text)]
+
 
 THAI_REPORT = """เมื่อวันที่ 4 พฤศจิกายน 2563 ผู้เสียหายเข้าแจ้งความ
 ตรวจพบ PowerShell.exe เชื่อมต่อออกไปยังไอพี 198.51.100.23 เมื่อเวลา 03.00 น.

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from fake_nli import FakeNli
+from fake_nli import FakeNli, Judgement
 
 from app.trace.b1_verifier import ARTIFACT_SHA256, METHOD
 from app.trace.claim_validation import (
@@ -11,7 +11,7 @@ from app.trace.claim_validation import (
     validate_claims,
 )
 from app.trace.claims import CaseAnalysisClaim, CaseInvalidEvidence, CaseSourceCitation
-from app.trace.nli_model import Judgement, NliUnavailable
+from app.trace.nli_model import NliUnavailable
 
 
 def claim(text="John sent an email.", citations=None, **changes):

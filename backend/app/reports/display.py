@@ -9,7 +9,7 @@ from app.reports.findings import (
     report_findings,
     source_labels_for_report,
 )
-from app.reports.limitations import clarification_limitation, report_limitations
+from app.reports.limitations import report_limitations
 from app.reports.schemas import (
     CaseReportContent,
     ReportEvent,
@@ -221,8 +221,6 @@ __all__ = [
     "GAP_STATUS_LABELS",
     "PRIORITY_LABELS",
     "build_case_report_content",
-    "clarification_limitation",
     "recommendation_items",
-    "report_limitations",
     "thai_date",
 ]

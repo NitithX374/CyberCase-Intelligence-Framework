@@ -14,13 +14,11 @@ from pydantic import BaseModel, ValidationError
 from app.config import settings
 from app.errors import CaseAnalysisFailure
 from app.llm.openrouter import CoreLlmTarget, resolve_core_llm_target
-from app.llm.payload import input_budget, stage_payload, thinking_option, token_count
+from app.llm.payload import input_budget, stage_payload, token_count
 from app.llm.response import (
     check_response_payload,
     decode_response,
-    extract_text_value,
     extract_visible_text,
-    log_response_shape,
     usage_summary,
 )
 from app.llm.schema import validate_structured_json
@@ -241,14 +239,11 @@ async def request_stage(
 __all__ = [
     "check_response_payload",
     "decode_response",
-    "extract_text_value",
     "extract_visible_text",
     "input_budget",
-    "log_response_shape",
     "post_stage",
     "request_stage",
     "stage_payload",
-    "thinking_option",
     "token_count",
     "usage_summary",
     "validated_reply",

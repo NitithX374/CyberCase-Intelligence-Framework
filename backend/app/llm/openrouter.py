@@ -9,7 +9,6 @@ from app.llm.registry import resolve_openrouter_model
 class CoreLlmConfigurationError(RuntimeError):
     def __init__(self, key_env_name: str) -> None:
         super().__init__(f"OpenRouter requires {key_env_name}; no provider fallback is configured")
-        self.key_env_name = key_env_name
 
 
 @dataclass(frozen=True)

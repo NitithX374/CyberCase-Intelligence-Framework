@@ -82,29 +82,14 @@ async def run_case_mitre_augmentation(
     reused_context: CaseRagContextPayload | None = None,
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseMitreAugmentation:
-    return await gated_augmentation(
-        source_bundle=source_bundle,
-        applicability_gate=applicability_gate,
-        rag_request=rag_request,
-        reused_context=reused_context,
-        followup_history=followup_history,
-    )
-
-
-async def gated_augmentation(
-    *,
-    source_bundle: CaseSourceBundle,
-    applicability_gate,
-    rag_request,
-    reused_context: CaseRagContextPayload | None,
-    followup_history: Sequence[CaseFollowupExchange],
-) -> CaseMitreAugmentation:
     announce("gate")
     applicability = await evaluate_gate(source_bundle.sources, applicability_gate)
     if applicability.failure_code is not None:
         return failed_augmentation(applicability.failure_code, applicability)
     if applicability.decision == "SKIP":
-        return CaseMitreAugmentation("not_applicable", applicability, None)
+        return CaseMitreAugmentation(
+            status="not_applicable", applicability=applicability, context=None
+        )
 
     is_reused = False
     if reused_context is not None:
@@ -124,9 +109,14 @@ async def gated_augmentation(
 
     if not context.retrieval_context_id or not context.mitre_table:
         return CaseMitreAugmentation(
-            "insufficient_context", applicability, context, reused=is_reused
+            status="insufficient_context",
+            applicability=applicability,
+            context=context,
+            reused=is_reused,
         )
-    return CaseMitreAugmentation("retrieved_from_rag", applicability, context, reused=is_reused)
+    return CaseMitreAugmentation(
+        status="retrieved_from_rag", applicability=applicability, context=context, reused=is_reused
+    )
 
 
 async def evaluate_gate(case_sources, gate):
@@ -141,7 +131,9 @@ async def evaluate_gate(case_sources, gate):
 def failed_augmentation(
     code: str, applicability: MitreApplicabilityRecord
 ) -> CaseMitreAugmentation:
-    return CaseMitreAugmentation("failed", applicability, None, code)
+    return CaseMitreAugmentation(
+        status="failed", applicability=applicability, context=None, failure_code=code
+    )
 
 
 def validated_case_rag_context(response: QueryResponse) -> CaseRagContextPayload:

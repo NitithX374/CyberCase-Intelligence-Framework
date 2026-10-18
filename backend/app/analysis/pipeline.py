@@ -117,14 +117,13 @@ async def assess_gaps(
     data: AnalysisInput,
     *,
     request: Callable = assess_case,
-    config: Callable[[], AnalysisPipelineConfig] = configured_pipeline,
 ) -> CaseAssessmentTrace:
     announce("assess")
     return await request(
         source_bundle=data.sources,
         followup_history=data.followup_history,
         response_language=data.response_language,
-        config=config(),
+        config=configured_pipeline(),
     )
 
 

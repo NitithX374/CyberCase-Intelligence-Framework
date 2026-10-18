@@ -20,7 +20,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 if TYPE_CHECKING:
-    from app.models.analysis_result import CaseAnalysisResult
     from app.models.case import Case
 
 
@@ -58,7 +57,6 @@ class CaseReport(Base):
     )
 
     case: Mapped[Case] = relationship("Case", back_populates="reports")
-    analysis_result: Mapped[CaseAnalysisResult] = relationship("CaseAnalysisResult")
 
 
 __all__ = ["CaseReport"]

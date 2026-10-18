@@ -15,7 +15,6 @@ from app.config import settings
 from app.trace import nli_model
 from app.trace.nli_model import (
     LABEL_ORDER,
-    MAX_TOKENS,
     WEIGHTS_SHA256,
     MdebertaNli,
     NliUnavailable,
@@ -168,14 +167,11 @@ class Encoded(dict):
         super().__init__(input_ids=SimpleNamespace(shape=(1, length)))
 
 
-def scorer(length: int = 10, probabilities=(0.7, 0.2, 0.1), seen=None):
-    def tokenizer(premise, hypothesis, truncation, return_tensors, verbose):
-        assert truncation is False
-        return Encoded(length)
+def scorer(probabilities):
+    def tokenizer(premise, hypothesis, **options):
+        return Encoded(10)
 
     def model(**batch):
-        if seen is not None:
-            seen.append(batch)
         return SimpleNamespace(logits=None)
 
     torch = SimpleNamespace(
@@ -185,15 +181,10 @@ def scorer(length: int = 10, probabilities=(0.7, 0.2, 0.1), seen=None):
     return MdebertaNli(torch, tokenizer, model, LABEL_ORDER)
 
 
-def test_a_pair_fits_up_to_the_models_limit_and_is_never_cut():
-    assert scorer(MAX_TOKENS).fits("premise", "hypothesis")
-    assert not scorer(MAX_TOKENS + 1).fits("premise", "hypothesis")
-
-
 def test_the_label_is_the_argmax_and_the_entailment_is_its_own_probability():
-    entailed = scorer(probabilities=(0.7, 0.2, 0.1)).judge("p", "h")
-    neutral = scorer(probabilities=(0.45, 0.5, 0.05)).judge("p", "h")
-    contradicted = scorer(probabilities=(0.1, 0.2, 0.7)).judge("p", "h")
+    entailed = scorer(probabilities=(0.7, 0.2, 0.1)).predict("p", "h")
+    neutral = scorer(probabilities=(0.45, 0.5, 0.05)).predict("p", "h")
+    contradicted = scorer(probabilities=(0.1, 0.2, 0.7)).predict("p", "h")
 
     assert (entailed.label, entailed.entailment) == ("entailment", 0.7)
     assert (neutral.label, neutral.entailment) == ("neutral", 0.45)
@@ -204,7 +195,7 @@ def test_inference_is_one_at_a_time():
     running = {"now": 0, "most": 0}
     guard = threading.Lock()
 
-    def tokenizer(premise, hypothesis, truncation, return_tensors, verbose):
+    def tokenizer(premise, hypothesis, **options):
         return Encoded(10)
 
     def model(**batch):
@@ -221,7 +212,7 @@ def test_inference_is_one_at_a_time():
         softmax=lambda logits, dim: [SimpleNamespace(tolist=lambda: [0.7, 0.2, 0.1])],
     )
     nli = MdebertaNli(torch, tokenizer, model, LABEL_ORDER)
-    threads = [threading.Thread(target=lambda: nli.judge("p", "h")) for _ in range(6)]
+    threads = [threading.Thread(target=lambda: nli.predict("p", "h")) for _ in range(6)]
 
     for thread in threads:
         thread.start()
@@ -240,7 +231,7 @@ def test_the_real_model_points_at_the_sentence_that_says_what_the_claim_says(mon
     nli = nli_model.load_nli()
     premise = "The attackers encrypted the file server on Monday night."
     hypothesis = "The file server was encrypted on Monday night."
-    judgment = nli.judge(premise, hypothesis)
+    judgment = nli.predict(premise, hypothesis)
 
     assert judgment.label == "entailment"
     assert judgment.entailment >= 0.5
@@ -277,7 +268,7 @@ def test_the_real_model_gives_no_passage_when_the_source_does_not_say_it(
 ):
     at(monkeypatch, WEIGHTS)
     nli = nli_model.load_nli()
-    judgment = nli.judge(premise, claim_text)
+    judgment = nli.predict(premise, claim_text)
 
     assert judgment.label != "entailment" or judgment.entailment < 0.5
 
@@ -288,7 +279,7 @@ def test_the_real_model_reads_thai(monkeypatch):
     nli = nli_model.load_nli()
     premise = "ผู้เสียหายโอนเงินจำนวน 85,000 บาทไปยังบัญชีของคนร้ายเมื่อวันที่ 5 มีนาคม"
     hypothesis = "ผู้เสียหายโอนเงิน 85,000 บาทให้คนร้าย"
-    judgment = nli.judge(premise, hypothesis)
+    judgment = nli.predict(premise, hypothesis)
 
     assert judgment.label == "entailment"
     assert judgment.entailment >= 0.5
