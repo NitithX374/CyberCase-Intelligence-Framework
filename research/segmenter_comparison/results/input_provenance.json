@@ -1,0 +1,19 @@
+{
+  "snapshot": "C:\\Users\\kkham\\.cache\\huggingface\\hub\\datasets--csebuetnlp--xlsum\\snapshots\\ab04842511fc357feae53281fd104aa3c36dff07",
+  "per_language": 100,
+  "files": {
+    "th": {
+      "path": "C:\\Users\\kkham\\.cache\\huggingface\\hub\\datasets--csebuetnlp--xlsum\\snapshots\\ab04842511fc357feae53281fd104aa3c36dff07\\thai\\test\\0000.parquet",
+      "sha256": "788a933a73e3502d1a7af6322cd8c576bb3a49f8d2e19a1473a02d5da1326cc7"
+    },
+    "en": {
+      "path": "C:\\Users\\kkham\\.cache\\huggingface\\hub\\datasets--csebuetnlp--xlsum\\snapshots\\ab04842511fc357feae53281fd104aa3c36dff07\\english\\test\\0000.parquet",
+      "sha256": "eb4e684461594f8245d4e842579ad62c4e543d031270ee113bbff4624b6f9f1d"
+    }
+  },
+  "output": {
+    "path": "C:\\Users\\kkham\\AppData\\Local\\Temp\\claude\\F--Cybercase-Framework\\39a467bc-4cd2-48b2-a946-cd2e9c44a38f\\scratchpad\\segcmp\\xlsum_th_en_100.jsonl",
+    "rows": 200,
+    "sha256": "008f62fe338cc40fb1a258d09dc3cc3aa4e96b2a36a5a96a52872cc118d093b8"
+  }
+}

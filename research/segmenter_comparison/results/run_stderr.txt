@@ -1,0 +1,21 @@
+Loading weights:   0%|          | 0/55 [00:00<?, ?it/s]Loading weights: 100%|██████████| 55/55 [00:00<00:00, 1730.66it/s]
+10/200 docs, 167 s
+20/200 docs, 282 s
+30/200 docs, 316 s
+40/200 docs, 397 s
+50/200 docs, 493 s
+60/200 docs, 587 s
+70/200 docs, 607 s
+80/200 docs, 625 s
+90/200 docs, 646 s
+100/200 docs, 657 s
+110/200 docs, 663 s
+120/200 docs, 672 s
+130/200 docs, 684 s
+140/200 docs, 687 s
+150/200 docs, 697 s
+160/200 docs, 713 s
+170/200 docs, 718 s
+180/200 docs, 747 s
+190/200 docs, 767 s
+200/200 docs, 790 s

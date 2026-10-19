@@ -1,0 +1,918 @@
+{
+  "repeats": 3,
+  "per_language": 20,
+  "summary": {
+    "th": {
+      "sat": {
+        "docs": 20,
+        "chars": 79451,
+        "ms_per_1000_chars_min_of_repeats": 1257.0,
+        "ms_per_1000_chars_median_of_repeats": 1461.2
+      },
+      "crfcut": {
+        "docs": 20,
+        "chars": 79451,
+        "ms_per_1000_chars_min_of_repeats": 29.6,
+        "ms_per_1000_chars_median_of_repeats": 36.6
+      },
+      "sat_over_crfcut_min": 42.5
+    },
+    "en": {
+      "sat": {
+        "docs": 20,
+        "chars": 54054,
+        "ms_per_1000_chars_min_of_repeats": 903.2,
+        "ms_per_1000_chars_median_of_repeats": 1018.6
+      },
+      "crfcut": {
+        "docs": 20,
+        "chars": 54054,
+        "ms_per_1000_chars_min_of_repeats": 19.3,
+        "ms_per_1000_chars_median_of_repeats": 21.6
+      },
+      "sat_over_crfcut_min": 46.8
+    }
+  },
+  "rows": [
+    {
+      "id": "international-50289913",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 5479,
+      "seconds": [
+        4.4445,
+        3.2242,
+        4.7357
+      ]
+    },
+    {
+      "id": "international-39908835",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 2451,
+      "seconds": [
+        1.5461,
+        0.8435,
+        2.9686
+      ]
+    },
+    {
+      "id": "thailand-40390636",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 8039,
+      "seconds": [
+        24.3095,
+        7.176,
+        7.2975
+      ]
+    },
+    {
+      "id": "features-44289580",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 2096,
+      "seconds": [
+        1.2513,
+        1.1877,
+        0.7556
+      ]
+    },
+    {
+      "id": "international-49226327",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 2311,
+      "seconds": [
+        1.4872,
+        0.5535,
+        0.5739
+      ]
+    },
+    {
+      "id": "thailand-53830479",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 7207,
+      "seconds": [
+        5.1262,
+        4.082,
+        5.9311
+      ]
+    },
+    {
+      "id": "thailand-40713382",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 4092,
+      "seconds": [
+        4.1593,
+        2.3598,
+        1.9883
+      ]
+    },
+    {
+      "id": "international-49855455",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 1833,
+      "seconds": [
+        0.2241,
+        0.2563,
+        0.1662
+      ]
+    },
+    {
+      "id": "thailand-48061691",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 7472,
+      "seconds": [
+        7.9404,
+        5.9958,
+        10.287
+      ]
+    },
+    {
+      "id": "international-52787382",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 3066,
+      "seconds": [
+        1.2894,
+        1.6633,
+        1.2148
+      ]
+    },
+    {
+      "id": "features-44510708",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 3162,
+      "seconds": [
+        2.0777,
+        1.1572,
+        1.2132
+      ]
+    },
+    {
+      "id": "features-46612532",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 1596,
+      "seconds": [
+        0.5521,
+        1.2495,
+        2.0788
+      ]
+    },
+    {
+      "id": "international-56720001",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 2137,
+      "seconds": [
+        2.3051,
+        1.999,
+        3.9928
+      ]
+    },
+    {
+      "id": "thailand-51254826",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 4113,
+      "seconds": [
+        7.1989,
+        7.8283,
+        8.6494
+      ]
+    },
+    {
+      "id": "thailand-51797196",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 4552,
+      "seconds": [
+        19.1327,
+        16.9805,
+        21.3006
+      ]
+    },
+    {
+      "id": "international-42470282",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 6292,
+      "seconds": [
+        23.4241,
+        22.0004,
+        23.2148
+      ]
+    },
+    {
+      "id": "thailand-52408192",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 2952,
+      "seconds": [
+        6.4761,
+        3.9675,
+        7.1747
+      ]
+    },
+    {
+      "id": "48508182",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 6042,
+      "seconds": [
+        15.42,
+        17.2467,
+        28.3303
+      ]
+    },
+    {
+      "id": "international-49108988",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 2737,
+      "seconds": [
+        6.7278,
+        3.3789,
+        2.9309
+      ]
+    },
+    {
+      "id": "international-47751908",
+      "lang": "th",
+      "engine": "sat",
+      "chars": 1822,
+      "seconds": [
+        2.8093,
+        2.062,
+        1.6623
+      ]
+    },
+    {
+      "id": "international-50289913",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 5479,
+      "seconds": [
+        1.9379,
+        0.2309,
+        0.2078
+      ]
+    },
+    {
+      "id": "international-39908835",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 2451,
+      "seconds": [
+        1.3946,
+        0.0811,
+        0.0956
+      ]
+    },
+    {
+      "id": "thailand-40390636",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 8039,
+      "seconds": [
+        1.477,
+        0.5191,
+        0.3238
+      ]
+    },
+    {
+      "id": "features-44289580",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 2096,
+      "seconds": [
+        0.1541,
+        0.0768,
+        0.1243
+      ]
+    },
+    {
+      "id": "international-49226327",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 2311,
+      "seconds": [
+        0.3955,
+        0.0787,
+        0.0818
+      ]
+    },
+    {
+      "id": "thailand-53830479",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 7207,
+      "seconds": [
+        2.6725,
+        0.3408,
+        0.2401
+      ]
+    },
+    {
+      "id": "thailand-40713382",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 4092,
+      "seconds": [
+        0.2619,
+        0.1465,
+        0.1875
+      ]
+    },
+    {
+      "id": "international-49855455",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 1833,
+      "seconds": [
+        0.1097,
+        0.0456,
+        0.0505
+      ]
+    },
+    {
+      "id": "thailand-48061691",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 7472,
+      "seconds": [
+        0.2408,
+        0.2371,
+        0.2557
+      ]
+    },
+    {
+      "id": "international-52787382",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 3066,
+      "seconds": [
+        0.1492,
+        0.0716,
+        0.0548
+      ]
+    },
+    {
+      "id": "features-44510708",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 3162,
+      "seconds": [
+        0.141,
+        0.0709,
+        0.0966
+      ]
+    },
+    {
+      "id": "features-46612532",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 1596,
+      "seconds": [
+        0.0505,
+        0.024,
+        0.0244
+      ]
+    },
+    {
+      "id": "international-56720001",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 2137,
+      "seconds": [
+        0.0701,
+        0.0382,
+        0.0315
+      ]
+    },
+    {
+      "id": "thailand-51254826",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 4113,
+      "seconds": [
+        0.1149,
+        0.1069,
+        0.1371
+      ]
+    },
+    {
+      "id": "thailand-51797196",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 4552,
+      "seconds": [
+        0.3327,
+        0.136,
+        0.1842
+      ]
+    },
+    {
+      "id": "international-42470282",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 6292,
+      "seconds": [
+        0.2447,
+        0.1685,
+        0.166
+      ]
+    },
+    {
+      "id": "thailand-52408192",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 2952,
+      "seconds": [
+        0.086,
+        0.0706,
+        0.07
+      ]
+    },
+    {
+      "id": "48508182",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 6042,
+      "seconds": [
+        0.1761,
+        0.1559,
+        0.1505
+      ]
+    },
+    {
+      "id": "international-49108988",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 2737,
+      "seconds": [
+        0.07,
+        0.0631,
+        0.0692
+      ]
+    },
+    {
+      "id": "international-47751908",
+      "lang": "th",
+      "engine": "crfcut",
+      "chars": 1822,
+      "seconds": [
+        0.0541,
+        0.0374,
+        0.0408
+      ]
+    },
+    {
+      "id": "world-us-canada-38697908",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 4072,
+      "seconds": [
+        9.3947,
+        13.6197,
+        9.1489
+      ]
+    },
+    {
+      "id": "uk-wales-politics-48586353",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 2437,
+      "seconds": [
+        2.9759,
+        0.9714,
+        0.7776
+      ]
+    },
+    {
+      "id": "uk-england-norfolk-40306087",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 2072,
+      "seconds": [
+        0.8753,
+        0.5258,
+        0.9997
+      ]
+    },
+    {
+      "id": "science-environment-44141840",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 2821,
+      "seconds": [
+        3.1184,
+        3.0411,
+        4.0553
+      ]
+    },
+    {
+      "id": "business-47891982",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 3724,
+      "seconds": [
+        9.3601,
+        4.1912,
+        4.6853
+      ]
+    },
+    {
+      "id": "world-europe-53801230",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 2917,
+      "seconds": [
+        2.6303,
+        2.511,
+        3.3046
+      ]
+    },
+    {
+      "id": "uk-politics-30142579",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 2575,
+      "seconds": [
+        2.2442,
+        1.7396,
+        2.1025
+      ]
+    },
+    {
+      "id": "uk-scotland-north-east-orkney-shetland-55564441",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 721,
+      "seconds": [
+        0.3139,
+        0.212,
+        0.5012
+      ]
+    },
+    {
+      "id": "uk-england-south-yorkshire-55768636",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 895,
+      "seconds": [
+        0.6449,
+        0.8419,
+        0.3612
+      ]
+    },
+    {
+      "id": "uk-england-cambridgeshire-13640487",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 2083,
+      "seconds": [
+        0.947,
+        0.8915,
+        0.545
+      ]
+    },
+    {
+      "id": "entertainment-arts-26706229",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 1887,
+      "seconds": [
+        2.223,
+        0.4114,
+        0.8595
+      ]
+    },
+    {
+      "id": "education-56213402",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 3856,
+      "seconds": [
+        8.4734,
+        7.1383,
+        7.242
+      ]
+    },
+    {
+      "id": "business-38842721",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 4229,
+      "seconds": [
+        4.6951,
+        3.2538,
+        4.7384
+      ]
+    },
+    {
+      "id": "uk-politics-36836980",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 3063,
+      "seconds": [
+        2.6703,
+        2.3465,
+        2.6496
+      ]
+    },
+    {
+      "id": "uk-politics-12657524",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 3823,
+      "seconds": [
+        6.3585,
+        3.8372,
+        3.9764
+      ]
+    },
+    {
+      "id": "technology-19700791",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 1933,
+      "seconds": [
+        1.0433,
+        0.3795,
+        0.5125
+      ]
+    },
+    {
+      "id": "business-40666236",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 2849,
+      "seconds": [
+        2.7812,
+        2.3897,
+        3.5978
+      ]
+    },
+    {
+      "id": "business-22689987",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 1254,
+      "seconds": [
+        0.6165,
+        0.2724,
+        0.2906
+      ]
+    },
+    {
+      "id": "business-42226808",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 3281,
+      "seconds": [
+        4.2628,
+        3.6929,
+        3.1044
+      ]
+    },
+    {
+      "id": "technology-54360612",
+      "lang": "en",
+      "engine": "sat",
+      "chars": 3562,
+      "seconds": [
+        3.8707,
+        2.7296,
+        2.6374
+      ]
+    },
+    {
+      "id": "world-us-canada-38697908",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 4072,
+      "seconds": [
+        0.1399,
+        0.1365,
+        0.1295
+      ]
+    },
+    {
+      "id": "uk-wales-politics-48586353",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 2437,
+      "seconds": [
+        0.0665,
+        0.061,
+        0.0553
+      ]
+    },
+    {
+      "id": "uk-england-norfolk-40306087",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 2072,
+      "seconds": [
+        0.0475,
+        0.0558,
+        0.0528
+      ]
+    },
+    {
+      "id": "science-environment-44141840",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 2821,
+      "seconds": [
+        0.0565,
+        0.0601,
+        0.0578
+      ]
+    },
+    {
+      "id": "business-47891982",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 3724,
+      "seconds": [
+        0.0827,
+        0.0927,
+        0.1015
+      ]
+    },
+    {
+      "id": "world-europe-53801230",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 2917,
+      "seconds": [
+        0.0804,
+        0.069,
+        0.0736
+      ]
+    },
+    {
+      "id": "uk-politics-30142579",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 2575,
+      "seconds": [
+        0.0626,
+        0.0534,
+        0.0545
+      ]
+    },
+    {
+      "id": "uk-scotland-north-east-orkney-shetland-55564441",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 721,
+      "seconds": [
+        0.0177,
+        0.0147,
+        0.0163
+      ]
+    },
+    {
+      "id": "uk-england-south-yorkshire-55768636",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 895,
+      "seconds": [
+        0.0259,
+        0.0272,
+        0.0226
+      ]
+    },
+    {
+      "id": "uk-england-cambridgeshire-13640487",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 2083,
+      "seconds": [
+        0.044,
+        0.0356,
+        0.0268
+      ]
+    },
+    {
+      "id": "entertainment-arts-26706229",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 1887,
+      "seconds": [
+        0.0274,
+        0.0289,
+        0.0243
+      ]
+    },
+    {
+      "id": "education-56213402",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 3856,
+      "seconds": [
+        0.0476,
+        0.0483,
+        0.0398
+      ]
+    },
+    {
+      "id": "business-38842721",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 4229,
+      "seconds": [
+        0.0476,
+        0.0797,
+        0.1145
+      ]
+    },
+    {
+      "id": "uk-politics-36836980",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 3063,
+      "seconds": [
+        0.0838,
+        0.0863,
+        0.1158
+      ]
+    },
+    {
+      "id": "uk-politics-12657524",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 3823,
+      "seconds": [
+        0.1384,
+        0.1186,
+        0.1056
+      ]
+    },
+    {
+      "id": "technology-19700791",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 1933,
+      "seconds": [
+        0.0407,
+        0.052,
+        0.0399
+      ]
+    },
+    {
+      "id": "business-40666236",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 2849,
+      "seconds": [
+        0.0507,
+        0.0518,
+        0.0443
+      ]
+    },
+    {
+      "id": "business-22689987",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 1254,
+      "seconds": [
+        0.0158,
+        0.0181,
+        0.0143
+      ]
+    },
+    {
+      "id": "business-42226808",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 3281,
+      "seconds": [
+        0.039,
+        0.0394,
+        0.0355
+      ]
+    },
+    {
+      "id": "technology-54360612",
+      "lang": "en",
+      "engine": "crfcut",
+      "chars": 3562,
+      "seconds": [
+        0.0572,
+        0.0498,
+        0.061
+      ]
+    }
+  ]
+}
