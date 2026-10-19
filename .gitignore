@@ -150,6 +150,7 @@ scratch/
 deliverables/thesis_*/
 deliverables/**/*.docx
 deliverables/**/*.pdf
+deliverables/**/*.log
 /Cybercase_Thesis_*
 
 # local env files
