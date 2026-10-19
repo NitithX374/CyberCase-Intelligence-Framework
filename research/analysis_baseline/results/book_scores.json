@@ -1,0 +1,1241 @@
+{
+ "rows": [
+  {
+   "table": "5-1",
+   "item": "CASIE articles",
+   "book": "1,000",
+   "ours": "1,000",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-2",
+   "item": "cases 51-150: cases",
+   "book": "100",
+   "ours": "100",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-2",
+   "item": "cases 51-150: main-event facts",
+   "book": "776",
+   "ours": "776",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-2",
+   "item": "cases 51-150: facts per case, median (range)",
+   "book": "6 (3 to 32)",
+   "ours": "6 (3 to 32)",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-2",
+   "item": "cases 151-250: cases",
+   "book": "100",
+   "ours": "100",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-2",
+   "item": "cases 151-250: main-event facts",
+   "book": "832",
+   "ours": "832",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-2",
+   "item": "cases 151-250: facts per case, median (range)",
+   "book": "7 (3 to 32)",
+   "ours": "7 (3 to 32)",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-3",
+   "item": "ladder train: sentences",
+   "book": "2,214",
+   "ours": "2,214",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-3",
+   "item": "ladder train: positive share",
+   "book": "0.500",
+   "ours": "0.500",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-3",
+   "item": "ladder dev: sentences",
+   "book": "568",
+   "ours": "568",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-3",
+   "item": "ladder dev: positive share",
+   "book": "0.500",
+   "ours": "0.500",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-3",
+   "item": "ladder test: sentences",
+   "book": "662",
+   "ours": "662",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-3",
+   "item": "ladder test: positive share",
+   "book": "0.500",
+   "ours": "0.500",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-3",
+   "item": "mtdb train: sentences",
+   "book": "4,437",
+   "ours": "4,437",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-3",
+   "item": "mtdb train: positive share",
+   "book": "0.258",
+   "ours": "0.258",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-3",
+   "item": "mtdb dev: sentences",
+   "book": "698",
+   "ours": "698",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-3",
+   "item": "mtdb dev: positive share",
+   "book": "0.362",
+   "ours": "0.362",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-3",
+   "item": "mtdb test: sentences",
+   "book": "1,831",
+   "ours": "1,831",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-3",
+   "item": "mtdb test: positive share",
+   "book": "0.288",
+   "ours": "0.288",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-3",
+   "item": "mtdb test: positive sentences",
+   "book": "527",
+   "ours": "527",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-3",
+   "item": "mtdb reports train/dev/test",
+   "book": "23/8/8",
+   "ours": "23/8/8",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-5",
+   "item": "XLM-R base: LADDER test AUROC",
+   "book": "0.915 ± 0.005",
+   "ours": "0.915 ± 0.005",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-5",
+   "item": "XLM-R large: LADDER test AUROC",
+   "book": "0.943 ± 0.006",
+   "ours": "0.943 ± 0.006",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-5",
+   "item": "BGE-M3: LADDER test AUROC",
+   "book": "0.943 ± 0.004",
+   "ours": "0.943 ± 0.004",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-5",
+   "item": "the checkpoint the system runs: LADDER test AUROC",
+   "book": "0.917",
+   "ours": "0.917",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-5",
+   "item": "TF-IDF and logistic regression: LADDER test AUROC",
+   "book": "0.881",
+   "ours": "0.881",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-5",
+   "item": "TF-IDF and linear SVM: LADDER test AUROC",
+   "book": "0.881",
+   "ours": "0.881",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-5",
+   "item": "larger encoders minus XLM-R base, 'about'",
+   "book": "0.03",
+   "ours": "0.03",
+   "verdict": "yes"
+  },
+  {
+   "table": "5.3.1",
+   "item": "ladder_test: F1 of flagging every sentence",
+   "book": "0.667",
+   "ours": "0.667",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-8",
+   "item": "E1: AUROC, precision, recall, F1 (mean over seeds)",
+   "book": "0.881 0.795 0.834 0.814",
+   "ours": "0.881 0.795 0.834 0.814",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-8",
+   "item": "E2: AUROC, precision, recall, F1 (mean over seeds)",
+   "book": "0.735 0.714 0.535 0.611",
+   "ours": "0.735 0.714 0.535 0.611",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-8",
+   "item": "E3: AUROC, precision, recall, F1 (mean over seeds)",
+   "book": "0.920 0.833 0.849 0.839",
+   "ours": "0.920 0.833 0.849 0.839",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-8",
+   "item": "E4: AUROC, precision, recall, F1 (mean over seeds)",
+   "book": "0.762 0.737 0.558 0.635",
+   "ours": "0.762 0.737 0.558 0.635",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-8",
+   "item": "E5: AUROC, precision, recall, F1 (mean over seeds)",
+   "book": "0.923 0.848 0.854 0.851",
+   "ours": "0.923 0.848 0.854 0.851",
+   "verdict": "yes"
+  },
+  {
+   "table": "5.3.1",
+   "item": "mtdb_test: F1 of flagging every sentence",
+   "book": "0.447",
+   "ours": "0.447",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-9",
+   "item": "E1: AUROC, precision, recall, F1 (mean over seeds)",
+   "book": "0.781 0.608 0.541 0.572",
+   "ours": "0.781 0.608 0.541 0.572",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-9",
+   "item": "E2: AUROC, precision, recall, F1 (mean over seeds)",
+   "book": "0.832 0.640 0.617 0.628",
+   "ours": "0.832 0.640 0.617 0.628",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-9",
+   "item": "E3: AUROC, precision, recall, F1 (mean over seeds)",
+   "book": "0.844 0.753 0.481 0.579",
+   "ours": "0.844 0.753 0.481 0.579",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-9",
+   "item": "E4: AUROC, precision, recall, F1 (mean over seeds)",
+   "book": "0.893 0.705 0.701 0.702",
+   "ours": "0.893 0.705 0.701 0.702",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-9",
+   "item": "E5: AUROC, precision, recall, F1 (mean over seeds)",
+   "book": "0.847 0.734 0.518 0.605",
+   "ours": "0.847 0.734 0.518 0.605",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-9",
+   "item": "E3 seed 42 recall on MalwareTextDB",
+   "book": "0.583",
+   "ours": "0.583",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-10",
+   "item": "shipped checkpoint AUROC",
+   "book": "0.917",
+   "ours": "0.917",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-10",
+   "item": "TP / FN / FP / TN at 0.50",
+   "book": "278 / 53 / 44 / 287",
+   "ours": "278 / 53 / 44 / 287",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-10",
+   "item": "precision",
+   "book": "278/322 = 0.863",
+   "ours": "278/322 = 0.863",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-10",
+   "item": "recall",
+   "book": "278/331 = 0.840",
+   "ours": "278/331 = 0.840",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-11",
+   "item": "one call: M1",
+   "book": "1,340/1,383 = 0.969",
+   "ours": "1,340/1,383 = 0.969",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-11",
+   "item": "one call: M2",
+   "book": "1,399/1,424 = 0.982",
+   "ours": "1,399/1,424 = 0.982",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-11",
+   "item": "one call: M3",
+   "book": "77/100",
+   "ours": "77/100",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-11",
+   "item": "two calls: M1",
+   "book": "1,670/1,693 = 0.986",
+   "ours": "1,670/1,693 = 0.986",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-11",
+   "item": "two calls: M2",
+   "book": "1,779/1,803 = 0.987",
+   "ours": "1,779/1,803 = 0.987",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-11",
+   "item": "two calls: M3",
+   "book": "86/95",
+   "ours": "86/95",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-11",
+   "item": "shipped: M1",
+   "book": "1,577/1,614 = 0.977",
+   "ours": "1,577/1,614 = 0.977",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-11",
+   "item": "shipped: M2",
+   "book": "1,649/1,668 = 0.989",
+   "ours": "1,649/1,668 = 0.989",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-11",
+   "item": "shipped: M3",
+   "book": "85/96",
+   "ours": "85/96",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-11",
+   "item": "final: M1",
+   "book": "1,601/1,625 = 0.985",
+   "ours": "1,601/1,625 = 0.985",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-11",
+   "item": "final: M2",
+   "book": "1,677/1,704 = 0.984",
+   "ours": "1,677/1,704 = 0.984",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-11",
+   "item": "final: M3",
+   "book": "85/99",
+   "ours": "85/99",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-11",
+   "item": "M1 range in the text",
+   "book": "97% to 99%",
+   "ours": "97% to 99%",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-11",
+   "item": "M2 range in the text",
+   "book": "98.2% and 98.9%",
+   "ours": "98.2% and 98.9%",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "prose: M5",
+   "book": "0.699",
+   "ours": "0.699",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "prose: M5-std",
+   "book": "0.767",
+   "ours": "0.767",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "prose: chance floor (cases)",
+   "book": "0.141 (100)",
+   "ours": "0.141 (100)",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "one call: M4",
+   "book": "0.805",
+   "ours": "0.805",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "one call: M4b",
+   "book": "0.624",
+   "ours": "0.624",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "one call: M5",
+   "book": "0.771",
+   "ours": "0.771",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "one call: M5-std",
+   "book": "0.808",
+   "ours": "0.808",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "one call: chance floor (cases)",
+   "book": "0.151 (100)",
+   "ours": "0.151 (100)",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "two calls: M4",
+   "book": "0.872",
+   "ours": "0.872",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "two calls: M4b",
+   "book": "0.729",
+   "ours": "0.729",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "two calls: M5",
+   "book": "0.793",
+   "ours": "0.793",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "two calls: M5-std",
+   "book": "0.833",
+   "ours": "0.833",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "two calls: chance floor (cases)",
+   "book": "0.159 (95)",
+   "ours": "0.159 (95)",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "shipped: M4",
+   "book": "0.888",
+   "ours": "0.888",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "shipped: M4b",
+   "book": "0.743",
+   "ours": "0.743",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "shipped: M5",
+   "book": "0.825",
+   "ours": "0.825",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "shipped: M5-std",
+   "book": "0.842",
+   "ours": "0.842",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "shipped: chance floor (cases)",
+   "book": "0.111 (96)",
+   "ours": "0.111 (96)",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "final: M4",
+   "book": "0.928",
+   "ours": "0.928",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "final: M4b",
+   "book": "0.775",
+   "ours": "0.775",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "final: M5",
+   "book": "0.847",
+   "ours": "0.847",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "final: M5-std",
+   "book": "0.870",
+   "ours": "0.870",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "final: chance floor (cases)",
+   "book": "0.102 (99)",
+   "ours": "0.102 (99)",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "one call: M4 over completed cases",
+   "book": "0.805",
+   "ours": "0.805",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "two calls: M4 over completed cases",
+   "book": "0.917",
+   "ours": "0.917",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "shipped: M4 over completed cases",
+   "book": "0.925",
+   "ours": "0.925",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "final: M4 over completed cases",
+   "book": "0.938",
+   "ours": "0.938",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "M4 range in the text",
+   "book": "80.5% to 92.8%",
+   "ours": "80.5% to 92.8%",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "M4 minus M4b in the text",
+   "book": "0.14 to 0.18",
+   "ours": "0.14 to 0.18",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "M4b range in the text",
+   "book": "0.624 to 0.775",
+   "ours": "0.624 to 0.775",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-12",
+   "item": "chance floor range in the text",
+   "book": "0.102 to 0.159",
+   "ours": "0.102 to 0.159",
+   "verdict": "yes"
+  },
+  {
+   "table": "6.1.2",
+   "item": "final M4 and M4b as percentages",
+   "book": "92.8% and 77.5%",
+   "ours": "92.8% and 77.5%",
+   "verdict": "yes"
+  },
+  {
+   "table": "5.4.2 binder",
+   "item": "two calls: M4 without stitched quotes",
+   "book": "0.855",
+   "ours": "0.855",
+   "verdict": "yes"
+  },
+  {
+   "table": "5.4.2 binder",
+   "item": "shipped: M4 without stitched quotes",
+   "book": "0.888",
+   "ours": "0.888",
+   "verdict": "yes"
+  },
+  {
+   "table": "5.4.2 binder",
+   "item": "final: M4 without stitched quotes",
+   "book": "0.926",
+   "ours": "0.926",
+   "verdict": "yes"
+  },
+  {
+   "table": "5.4.2 binder",
+   "item": "two calls: M4 lowered by removing them",
+   "book": "0.017",
+   "ours": "0.017",
+   "verdict": "yes"
+  },
+  {
+   "table": "5.4.2 binder",
+   "item": "shipped and final: M4 lowered by removing them",
+   "book": "0.002 or less",
+   "ours": "0.000 and 0.002",
+   "verdict": "yes"
+  },
+  {
+   "table": "5.4.2 design",
+   "item": "M1, two calls − one call",
+   "book": "+0.019 [−0.012, +0.056]",
+   "ours": "+0.019 [−0.009, +0.055]",
+   "verdict": "point equal, interval moved 0.003",
+   "moved": 0.003,
+   "flipped": false
+  },
+  {
+   "table": "5.4.2 design",
+   "item": "M2, two calls − one call",
+   "book": "+0.005 [−0.015, +0.018]",
+   "ours": "+0.005 [−0.014, +0.018]",
+   "verdict": "point equal, interval moved 0.001",
+   "moved": 0.001,
+   "flipped": false
+  },
+  {
+   "table": "5.4.2 design",
+   "item": "M4, two calls − one call, failures 0",
+   "book": "+0.066 [−0.009, +0.142]",
+   "ours": "+0.066 [−0.008, +0.136]",
+   "verdict": "point equal, interval moved 0.006",
+   "moved": 0.006,
+   "flipped": false
+  },
+  {
+   "table": "5.4.2 design",
+   "item": "M4, two calls − one call, completed in both",
+   "book": "+0.120 [+0.059, +0.180]",
+   "ours": "+0.120 [+0.061, +0.181]",
+   "verdict": "point equal, interval moved 0.002",
+   "moved": 0.002,
+   "flipped": false
+  },
+  {
+   "table": "5.4.2 design",
+   "item": "M4b, two calls − one call, failures 0",
+   "book": "+0.105 [+0.035, +0.172]",
+   "ours": "+0.105 [+0.035, +0.172]",
+   "verdict": "yes",
+   "moved": 0.0,
+   "flipped": false
+  },
+  {
+   "table": "5.4.2 design",
+   "item": "M4b, two calls − one call, completed in both",
+   "book": "+0.151 [+0.090, +0.212]",
+   "ours": "+0.151 [+0.090, +0.212]",
+   "verdict": "yes",
+   "moved": 0.0,
+   "flipped": false
+  },
+  {
+   "table": "5-13 decoding",
+   "item": "M1, final − shipped",
+   "book": "+0.008 [−0.013, +0.042]",
+   "ours": "+0.008 [−0.013, +0.040]",
+   "verdict": "point equal, interval moved 0.002",
+   "moved": 0.002,
+   "flipped": false
+  },
+  {
+   "table": "5-13 decoding",
+   "item": "M2, final − shipped",
+   "book": "−0.004 [−0.015, +0.005]",
+   "ours": "−0.004 [−0.014, +0.005]",
+   "verdict": "point equal, interval moved 0.001",
+   "moved": 0.001,
+   "flipped": false
+  },
+  {
+   "table": "5-13 decoding",
+   "item": "M4, final − shipped, failures 0",
+   "book": "+0.041 [−0.010, +0.099]",
+   "ours": "+0.041 [−0.010, +0.095]",
+   "verdict": "point equal, interval moved 0.004",
+   "moved": 0.004,
+   "flipped": false
+  },
+  {
+   "table": "5-13 decoding",
+   "item": "M4b, final − shipped, failures 0",
+   "book": "+0.032 [−0.019, +0.088]",
+   "ours": "+0.032 [−0.019, +0.088]",
+   "verdict": "yes",
+   "moved": 0.0,
+   "flipped": false
+  },
+  {
+   "table": "5-13 decoding",
+   "item": "M5-std, final − shipped",
+   "book": "+0.028 [−0.012, +0.068]",
+   "ours": "+0.028 [−0.012, +0.068]",
+   "verdict": "yes",
+   "moved": 0.0,
+   "flipped": false
+  },
+  {
+   "table": "5-13 decoding",
+   "item": "shipped: M1, M2, M4, M4b, M5-std",
+   "book": "0.977 0.989 0.888 0.743 0.842",
+   "ours": "0.977 0.989 0.888 0.743 0.842",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-13 decoding",
+   "item": "final: M1, M2, M4, M4b, M5-std",
+   "book": "0.985 0.984 0.928 0.775 0.870",
+   "ours": "0.985 0.984 0.928 0.775 0.870",
+   "verdict": "yes"
+  },
+  {
+   "table": "5.4.2 prose",
+   "item": "M5-std, two calls − prose",
+   "book": "+0.067 [+0.016, +0.117]",
+   "ours": "+0.067 [+0.016, +0.117]",
+   "verdict": "yes",
+   "moved": 0.0,
+   "flipped": false
+  },
+  {
+   "table": "5.4.2 prose",
+   "item": "V3, two calls − prose",
+   "book": "+0.064 [+0.010, +0.114]",
+   "ours": "+0.064 [+0.012, +0.116]",
+   "verdict": "point equal, interval moved 0.002",
+   "moved": 0.002,
+   "flipped": false
+  },
+  {
+   "table": "5.4.2 prose",
+   "item": "M5-std, one call − prose",
+   "book": "+0.041 [−0.004, +0.090]",
+   "ours": "+0.041 [−0.004, +0.090]",
+   "verdict": "yes",
+   "moved": 0.0,
+   "flipped": false
+  },
+  {
+   "table": "5.4.2 prose",
+   "item": "M5-std, two calls − one call",
+   "book": "+0.025 [−0.037, +0.081]",
+   "ours": "+0.025 [−0.037, +0.081]",
+   "verdict": "yes",
+   "moved": 0.0,
+   "flipped": false
+  },
+  {
+   "table": "5.4.2 prose",
+   "item": "V3, two calls − one call",
+   "book": "+0.016 [−0.044, +0.079]",
+   "ours": "+0.016 [−0.045, +0.075]",
+   "verdict": "point equal, interval moved 0.004",
+   "moved": 0.004,
+   "flipped": false
+  },
+  {
+   "table": "5-15",
+   "item": "one call: failed / calls to the cap / median model s / USD per case",
+   "book": "0 / 4 / 92 / 0.0032",
+   "ours": "0 / 4 / 92 / 0.0032",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-15",
+   "item": "two calls: failed / calls to the cap / median model s / USD per case",
+   "book": "5 / 25 / 170 / 0.0074",
+   "ours": "5 / 25 / 170 / 0.0074",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-15",
+   "item": "shipped: failed / calls to the cap / median model s / USD per case",
+   "book": "4 / 19 / 253 / 0.0067",
+   "ours": "4 / 19 / 253 / 0.0067",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-15",
+   "item": "final: failed / calls to the cap / median model s / USD per case",
+   "book": "1 / 4 / 136 / 0.0044",
+   "ours": "1 / 4 / 136 / 0.0044",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-13 decoding",
+   "item": "failed cases, shipped and final",
+   "book": "4/100 and 1/100",
+   "ours": "4/100 and 1/100",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-15",
+   "item": "final USD over shipped USD",
+   "book": "about two thirds",
+   "ours": "0.66",
+   "verdict": "yes"
+  },
+  {
+   "table": "5.4.2 binder",
+   "item": "quotes the binder dropped, cases 51-150",
+   "book": "22",
+   "ours": "22",
+   "verdict": "yes"
+  },
+  {
+   "table": "5.4.2 binder",
+   "item": "of them, every word kept in order",
+   "book": "19",
+   "ours": "19",
+   "verdict": "yes"
+  },
+  {
+   "table": "5.4.2 binder",
+   "item": "of those, in case 1271",
+   "book": "14",
+   "ours": "14",
+   "verdict": "yes"
+  },
+  {
+   "table": "5.4.2 binder",
+   "item": "1271: claims demoted (every quote wrapped in quotation marks)",
+   "book": "14 (14)",
+   "ours": "14 (14)",
+   "verdict": "yes"
+  },
+  {
+   "table": "5.4.2 binder",
+   "item": "10086 A-05: characters written, characters kept",
+   "book": "207 -> 719",
+   "ours": "207 -> 719",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "traces selected, traces scored",
+   "book": "50, 48",
+   "ours": "50, 48",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "arm_b: claims kept",
+   "book": "2,601/2,601",
+   "ours": "2,601/2,601",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "arm_b: quotes kept in the claim's own row, normalised",
+   "book": "2,709/2,709",
+   "ours": "2,709/2,709",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "arm_b: quotes found verbatim anywhere",
+   "book": "2,709/2,709",
+   "ours": "2,709/2,709",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "arm_b: quotes found after NFKC and whitespace",
+   "book": "2,709/2,709",
+   "ours": "2,709/2,709",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "arm_b: malformed reports",
+   "book": "0/144",
+   "ours": "0/144",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "arm_b: traces whose three reports are identical",
+   "book": "48/48",
+   "ours": "48/48",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "arm_a: claims kept",
+   "book": "2,561/2,601",
+   "ours": "2,561/2,601",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "arm_a: quotes kept in the claim's own row, normalised",
+   "book": "2,630/2,709",
+   "ours": "2,630/2,709",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "arm_a: quotes found verbatim anywhere",
+   "book": "2,586/2,709 = 0.955",
+   "ours": "2,586/2,709 = 0.955",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "arm_a: quotes found after NFKC and whitespace",
+   "book": "2,638/2,709 = 0.974",
+   "ours": "2,638/2,709 = 0.974",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "arm_a: malformed reports",
+   "book": "3/144",
+   "ours": "3/144",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "arm_a: traces whose three reports are identical",
+   "book": "0/48",
+   "ours": "0/48",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "arm_a: claims lost (of them in the malformed reports)",
+   "book": "40 (40)",
+   "ours": "40 (40)",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "arm_a: quotes changed only in spacing or Unicode / cut, extended or dropped",
+   "book": "52 / 71",
+   "ours": "52 / 71",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "10078 A-01, Arm A run 1: trace quotes changed, characters before -> after",
+   "book": "22 -> 79 (extended)",
+   "ours": "22 -> 79 (extended); 56 -> 79 (extended); 84 -> 137 (extended); 52 -> 137 (extended); 98 -> 141 (extended); 42 -> 141 (extended)",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-14",
+   "item": "10081 A-05, Arm A run 1: trace quotes changed, characters before -> after",
+   "book": "340 -> 96 (cut to its end)",
+   "ours": "340 -> 96 (cut to its end)",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-16",
+   "item": "the attackers",
+   "book": "Attacker 741-754 yes yes yes A-06",
+   "ours": "Attacker 741-754 yes yes yes A-06",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-16",
+   "item": "meta data",
+   "book": "Compromised-Data 786-795 no no no A-07",
+   "ours": "Compromised-Data 786-795 no no no A-07",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-16",
+   "item": "21 february",
+   "book": "Time 768-779 yes yes yes A-06",
+   "ours": "Time 768-779 yes yes yes A-06",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-16",
+   "item": "a file server",
+   "book": "Victim 831-844 yes yes yes A-07",
+   "ours": "Victim 831-844 yes yes yes A-07",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-16",
+   "item": "athlete tues",
+   "book": "Victim 799-811 no yes yes A-07",
+   "ours": "Victim 799-811 no yes yes A-07",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-16",
+   "item": "athletes therapeutic use exemption tue applications",
+   "book": "Victim 243-297 no yes yes A-02",
+   "ours": "Victim 243-297 no yes yes A-02",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-16",
+   "item": "iaaf servers",
+   "book": "Victim 308-320 no yes yes A-02",
+   "ours": "Victim 308-320 no yes yes A-02",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-16",
+   "item": "the iaaf network",
+   "book": "Victim 721-737 no yes yes A-06",
+   "ours": "Victim 721-737 no yes yes A-06",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-16",
+   "item": "totals: prose, one call, two calls mention; two calls cite",
+   "book": "3/8 7/8 7/8 8/8",
+   "ours": "3/8 7/8 7/8 8/8",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-16",
+   "item": "one call: claims, quotes, facts cited",
+   "book": "1, 1, 0",
+   "ours": "1, 1, 0",
+   "verdict": "yes"
+  },
+  {
+   "table": "5-16",
+   "item": "two calls: claims that cite, facts cited and stated by one claim (M4b)",
+   "book": "3, 6/8",
+   "ours": "3, 6/8",
+   "verdict": "yes"
+  }
+ ],
+ "classifier_cells": {
+  "ladder_test|tfidf_ladder": [
+   0.8810160549830688,
+   0.7953890489913544,
+   0.8338368580060423,
+   0.8141592920353983
+  ],
+  "ladder_test|tfidf_mtdb": [
+   0.734627285256615,
+   0.7137096774193549,
+   0.5347432024169184,
+   0.6113989637305699
+  ],
+  "ladder_test|xlmr_base_ladder_s42": [
+   0.9161836784987359,
+   0.7827225130890052,
+   0.9033232628398792,
+   0.8387096774193549
+  ],
+  "ladder_test|xlmr_base_ladder_s7": [
+   0.9228101240404889,
+   0.8754208754208754,
+   0.7854984894259819,
+   0.8280254777070064
+  ],
+  "ladder_test|xlmr_base_ladder_s123": [
+   0.9201723240934275,
+   0.8402366863905325,
+   0.8580060422960725,
+   0.8490284005979073
+  ],
+  "ladder_test|xlmr_base_mtdb_s42": [
+   0.7441105867963964,
+   0.7297297297297297,
+   0.5709969788519638,
+   0.6406779661016949
+  ],
+  "ladder_test|xlmr_base_mtdb_s7": [
+   0.7707943520048192,
+   0.7338403041825095,
+   0.5830815709969789,
+   0.6498316498316499
+  ],
+  "ladder_test|xlmr_base_mtdb_s123": [
+   0.7704703315960972,
+   0.7478260869565218,
+   0.5196374622356495,
+   0.6131907308377896
+  ],
+  "ladder_test|xlmr_base_tapt_ladder_s42": [
+   0.9138425169540256,
+   0.8158640226628895,
+   0.8700906344410876,
+   0.8421052631578947
+  ],
+  "ladder_test|xlmr_base_tapt_ladder_s7": [
+   0.9271592993857304,
+   0.8580060422960725,
+   0.8580060422960725,
+   0.8580060422960725
+  ],
+  "ladder_test|xlmr_base_tapt_ladder_s123": [
+   0.926812460638366,
+   0.8706624605678234,
+   0.8338368580060423,
+   0.8518518518518519
+  ],
+  "mtdb_test|tfidf_ladder": [
+   0.7811128508399204,
+   0.6076759061833689,
+   0.540796963946869,
+   0.572289156626506
+  ],
+  "mtdb_test|tfidf_mtdb": [
+   0.8315721004412056,
+   0.639763779527559,
+   0.6166982922201139,
+   0.6280193236714976
+  ],
+  "mtdb_test|xlmr_base_ladder_s42": [
+   0.838651470879268,
+   0.6883408071748879,
+   0.5825426944971537,
+   0.6310380267214799
+  ],
+  "mtdb_test|xlmr_base_ladder_s7": [
+   0.8452775578864041,
+   0.8008130081300813,
+   0.3738140417457306,
+   0.5097024579560155
+  ],
+  "mtdb_test|xlmr_base_ladder_s123": [
+   0.8468869687198053,
+   0.7687687687687688,
+   0.4857685009487666,
+   0.5953488372093023
+  ],
+  "mtdb_test|xlmr_base_mtdb_s42": [
+   0.8966077228437386,
+   0.7023593466424682,
+   0.7343453510436433,
+   0.7179962894248608
+  ],
+  "mtdb_test|xlmr_base_mtdb_s7": [
+   0.8937490541437236,
+   0.6886446886446886,
+   0.713472485768501,
+   0.700838769804287
+  ],
+  "mtdb_test|xlmr_base_mtdb_s123": [
+   0.8888473358866602,
+   0.7247899159663865,
+   0.6546489563567363,
+   0.6879361914257228
+  ],
+  "mtdb_test|xlmr_base_tapt_ladder_s42": [
+   0.8428496175830316,
+   0.7009345794392523,
+   0.5692599620493358,
+   0.6282722513089005
+  ],
+  "mtdb_test|xlmr_base_tapt_ladder_s7": [
+   0.8503087856951608,
+   0.7354497354497355,
+   0.5275142314990512,
+   0.6143646408839779
+  ],
+  "mtdb_test|xlmr_base_tapt_ladder_s123": [
+   0.8484454488306308,
+   0.765079365079365,
+   0.4573055028462998,
+   0.5724465558194775
+  ]
+ }
+}
