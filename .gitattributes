@@ -6,3 +6,5 @@ backend/app/trace/b1_lr.json -text
 research/analysis_baseline/** -text
 research/traceability_properties/** -text
 evaluation/ocr_downstream/** -text
+research/segmenter_comparison/** -text
+research/attack_applicability_search/** -text
