@@ -1,0 +1,43 @@
+{
+ "pythainlp": "5.3.7",
+ "eligible_rows": 10025,
+ "articles": 100,
+ "bank": {
+  "substitutions": 3259,
+  "reference_characters": 285660,
+  "class_preserving_kept": {
+   "thai": 1991,
+   "arabic_digit": 92,
+   "latin": 126,
+   "thai_digit": 25
+  },
+  "source_characters_with_pairs": 122
+ },
+ "articles_with_candidates": {
+  "number": 55,
+  "place": 24,
+  "other": 100
+ },
+ "targets": {
+  "number": 55,
+  "place": 24,
+  "other": 100
+ },
+ "types": {
+  "number|could_substitute": 55,
+  "number|deletion": 28,
+  "number|substitution": 27,
+  "other|could_substitute": 100,
+  "other|deletion": 50,
+  "other|substitution": 50,
+  "place|could_substitute": 24,
+  "place|deletion": 12,
+  "place|substitution": 12
+ },
+ "target_occurrences": 412,
+ "original_survives_after_edit": [],
+ "substituted_form_already_in_clean_body": 0,
+ "background_substitutions": 2369,
+ "background_rate_realised": 0.01062,
+ "body_chars": 223050
+}

@@ -1,0 +1,4552 @@
+{
+  "settings": {
+    "dataset": "ThaiOCRBench",
+    "task": "Full-page OCR",
+    "normalization": {
+      "unicode": "NFC",
+      "line_endings": "LF",
+      "figure_blocks": "remove_<figure>_blocks",
+      "html_tags": "remove_html_tags",
+      "html_entities": "html.unescape_decoded",
+      "markdown": "remove_heading_bullet_code_and_emphasis_markers",
+      "whitespace": "collapse_runs_to_single_space_and_strip",
+      "unit": "Unicode_code_point",
+      "thai_spelling_policy": "preserve_raw_thai_no_silent_correction"
+    },
+    "engine_configuration": {
+      "typhoon": "Typhoon OCR, the vision-language model the product uses. Whole page in, text out; no layout stage of our own. Predictions are reused from the earlier cached run rather than re-billed.",
+      "paddle": "PaddleOCR full pipeline: PP-DocLayoutV3 for layout and reading order, then PP-OCRv5_server_det for line detection, then th_PP-OCRv5_mobile_rec. CPU. Regions labelled table, formula, chart, figure, image or stamp are EXCLUDED before recognition, so their text is scored as deleted. Some pages kill the native process outright; those are recorded with status=crashed and an empty prediction rather than dropped from the denominator.",
+      "tesseract": "Tesseract LSTM, lang=tha+eng, official tessdata. Whole page, no layout stage."
+    }
+  },
+  "matched_subset": {
+    "pages": 73,
+    "engines": {
+      "typhoon": {
+        "cer": 0.1341,
+        "reference_characters": 124981
+      },
+      "paddle": {
+        "cer": 0.419,
+        "reference_characters": 124981
+      },
+      "tesseract": {
+        "cer": 0.3203,
+        "reference_characters": 124981
+      }
+    }
+  },
+  "engines": {
+    "typhoon": {
+      "samples": 197,
+      "empty_predictions": 0,
+      "crashed_pages": 0,
+      "reference_characters": 285660,
+      "edits": 21442,
+      "cer_micro": 0.0751,
+      "cer_macro": 0.0694,
+      "seconds_per_page_mean": null,
+      "by_category": {
+        "Government": {
+          "samples": 54,
+          "cer": 0.0335
+        },
+        "Education": {
+          "samples": 35,
+          "cer": 0.0607
+        },
+        "Lifestyle": {
+          "samples": 18,
+          "cer": 0.0201
+        },
+        "Medical": {
+          "samples": 16,
+          "cer": 0.1287
+        },
+        "Finance": {
+          "samples": 12,
+          "cer": 0.1235
+        },
+        "Religion": {
+          "samples": 10,
+          "cer": 0.03
+        },
+        "Transportation": {
+          "samples": 9,
+          "cer": 0.1134
+        },
+        "Legal": {
+          "samples": 9,
+          "cer": 0.0819
+        },
+        "Advertising & Media": {
+          "samples": 5,
+          "cer": 0.0299
+        },
+        "Entertainment": {
+          "samples": 4,
+          "cer": 0.0846
+        },
+        "Retail": {
+          "samples": 4,
+          "cer": 0.0682
+        },
+        "Agriculture": {
+          "samples": 4,
+          "cer": 0.18
+        },
+        "Food & Beverage": {
+          "samples": 3,
+          "cer": 0.4363
+        },
+        "Technology": {
+          "samples": 3,
+          "cer": 0.1596
+        },
+        "Architecture": {
+          "samples": 3,
+          "cer": 0.0159
+        },
+        "Hospitality": {
+          "samples": 2,
+          "cer": 0.0261
+        },
+        "Logistics": {
+          "samples": 2,
+          "cer": 0.028
+        },
+        "Real Estate": {
+          "samples": 1,
+          "cer": 0.572
+        },
+        "Construction": {
+          "samples": 1,
+          "cer": 0.0836
+        },
+        "Manufacturing": {
+          "samples": 1,
+          "cer": 0.1929
+        },
+        "Environment": {
+          "samples": 1,
+          "cer": 0.015
+        }
+      },
+      "per_sample": [
+        {
+          "sample_id": "52A433B2",
+          "category": "Food & Beverage",
+          "reference_characters": 2023,
+          "prediction_characters": 1994,
+          "edits": 1215,
+          "cer": 0.6006,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "5300A462",
+          "category": "Real Estate",
+          "reference_characters": 1159,
+          "prediction_characters": 498,
+          "edits": 663,
+          "cer": 0.572,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "607413B9",
+          "category": "Medical",
+          "reference_characters": 2315,
+          "prediction_characters": 1072,
+          "edits": 1247,
+          "cer": 0.5387,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "B66CCB83",
+          "category": "Education",
+          "reference_characters": 913,
+          "prediction_characters": 909,
+          "edits": 479,
+          "cer": 0.5246,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "FECFF8A0",
+          "category": "Transportation",
+          "reference_characters": 2424,
+          "prediction_characters": 1307,
+          "edits": 1135,
+          "cer": 0.4682,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "A0900FF1",
+          "category": "Medical",
+          "reference_characters": 765,
+          "prediction_characters": 771,
+          "edits": 346,
+          "cer": 0.4523,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "C065E1E9",
+          "category": "Finance",
+          "reference_characters": 2580,
+          "prediction_characters": 1850,
+          "edits": 1116,
+          "cer": 0.4326,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "071FCCDD",
+          "category": "Government",
+          "reference_characters": 319,
+          "prediction_characters": 321,
+          "edits": 118,
+          "cer": 0.3699,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "A906A0B9",
+          "category": "Food & Beverage",
+          "reference_characters": 211,
+          "prediction_characters": 210,
+          "edits": 78,
+          "cer": 0.3697,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "79216F4C",
+          "category": "Legal",
+          "reference_characters": 478,
+          "prediction_characters": 474,
+          "edits": 155,
+          "cer": 0.3243,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "A3F4B490",
+          "category": "Finance",
+          "reference_characters": 1095,
+          "prediction_characters": 756,
+          "edits": 339,
+          "cer": 0.3096,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "908E11C8",
+          "category": "Technology",
+          "reference_characters": 1956,
+          "prediction_characters": 1657,
+          "edits": 590,
+          "cer": 0.3016,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "1A89E10E",
+          "category": "Government",
+          "reference_characters": 3070,
+          "prediction_characters": 2683,
+          "edits": 903,
+          "cer": 0.2941,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "AF432B6A",
+          "category": "Legal",
+          "reference_characters": 2327,
+          "prediction_characters": 2044,
+          "edits": 636,
+          "cer": 0.2733,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "656E1DDE",
+          "category": "Education",
+          "reference_characters": 1681,
+          "prediction_characters": 1680,
+          "edits": 441,
+          "cer": 0.2623,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "2FB8702E",
+          "category": "Agriculture",
+          "reference_characters": 2737,
+          "prediction_characters": 2225,
+          "edits": 625,
+          "cer": 0.2284,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "78BB936B",
+          "category": "Finance",
+          "reference_characters": 3947,
+          "prediction_characters": 3151,
+          "edits": 891,
+          "cer": 0.2257,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "8F33EBB9",
+          "category": "Agriculture",
+          "reference_characters": 1899,
+          "prediction_characters": 1486,
+          "edits": 423,
+          "cer": 0.2227,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "048AEF1B",
+          "category": "Manufacturing",
+          "reference_characters": 2131,
+          "prediction_characters": 2022,
+          "edits": 411,
+          "cer": 0.1929,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "370C19E9",
+          "category": "Government",
+          "reference_characters": 319,
+          "prediction_characters": 275,
+          "edits": 61,
+          "cer": 0.1912,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "D6DA33BA",
+          "category": "Retail",
+          "reference_characters": 816,
+          "prediction_characters": 793,
+          "edits": 153,
+          "cer": 0.1875,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "213B2F80",
+          "category": "Medical",
+          "reference_characters": 3203,
+          "prediction_characters": 3272,
+          "edits": 538,
+          "cer": 0.168,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "B1D44CA8",
+          "category": "Education",
+          "reference_characters": 1341,
+          "prediction_characters": 1345,
+          "edits": 221,
+          "cer": 0.1648,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "9ADD832F",
+          "category": "Medical",
+          "reference_characters": 1610,
+          "prediction_characters": 1357,
+          "edits": 265,
+          "cer": 0.1646,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "0159AF30",
+          "category": "Education",
+          "reference_characters": 3274,
+          "prediction_characters": 3222,
+          "edits": 485,
+          "cer": 0.1481,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "03C27426",
+          "category": "Transportation",
+          "reference_characters": 814,
+          "prediction_characters": 931,
+          "edits": 119,
+          "cer": 0.1462,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "B2DEDBA0",
+          "category": "Entertainment",
+          "reference_characters": 803,
+          "prediction_characters": 848,
+          "edits": 109,
+          "cer": 0.1357,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "56B2C74B",
+          "category": "Technology",
+          "reference_characters": 2134,
+          "prediction_characters": 2075,
+          "edits": 286,
+          "cer": 0.134,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "B4E5B000",
+          "category": "Education",
+          "reference_characters": 1690,
+          "prediction_characters": 1612,
+          "edits": 225,
+          "cer": 0.1331,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "CFFC5138",
+          "category": "Education",
+          "reference_characters": 431,
+          "prediction_characters": 443,
+          "edits": 55,
+          "cer": 0.1276,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "994B0E2F",
+          "category": "Government",
+          "reference_characters": 1342,
+          "prediction_characters": 1269,
+          "edits": 171,
+          "cer": 0.1274,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "8585BDBE",
+          "category": "Legal",
+          "reference_characters": 1633,
+          "prediction_characters": 1713,
+          "edits": 204,
+          "cer": 0.1249,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "A2A35822",
+          "category": "Medical",
+          "reference_characters": 3253,
+          "prediction_characters": 3242,
+          "edits": 386,
+          "cer": 0.1187,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "BE5569A1",
+          "category": "Medical",
+          "reference_characters": 1739,
+          "prediction_characters": 1625,
+          "edits": 206,
+          "cer": 0.1185,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "726C828F",
+          "category": "Government",
+          "reference_characters": 289,
+          "prediction_characters": 255,
+          "edits": 34,
+          "cer": 0.1176,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "839599BE",
+          "category": "Medical",
+          "reference_characters": 992,
+          "prediction_characters": 913,
+          "edits": 116,
+          "cer": 0.1169,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "773F19BA",
+          "category": "Education",
+          "reference_characters": 794,
+          "prediction_characters": 781,
+          "edits": 85,
+          "cer": 0.1071,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "EBDA8D6A",
+          "category": "Lifestyle",
+          "reference_characters": 1345,
+          "prediction_characters": 1352,
+          "edits": 143,
+          "cer": 0.1063,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "E8AF3856",
+          "category": "Education",
+          "reference_characters": 1067,
+          "prediction_characters": 999,
+          "edits": 113,
+          "cer": 0.1059,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "9F68AAB1",
+          "category": "Transportation",
+          "reference_characters": 1015,
+          "prediction_characters": 1016,
+          "edits": 107,
+          "cer": 0.1054,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "A3407ABE",
+          "category": "Medical",
+          "reference_characters": 1681,
+          "prediction_characters": 1519,
+          "edits": 176,
+          "cer": 0.1047,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "9DD3CA14",
+          "category": "Agriculture",
+          "reference_characters": 1868,
+          "prediction_characters": 1678,
+          "edits": 193,
+          "cer": 0.1033,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "BFE7C5A8",
+          "category": "Government",
+          "reference_characters": 940,
+          "prediction_characters": 963,
+          "edits": 95,
+          "cer": 0.1011,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "D7A122A5",
+          "category": "Education",
+          "reference_characters": 1195,
+          "prediction_characters": 1124,
+          "edits": 116,
+          "cer": 0.0971,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "8A16F1D6",
+          "category": "Education",
+          "reference_characters": 1634,
+          "prediction_characters": 1570,
+          "edits": 158,
+          "cer": 0.0967,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "CD4EC446",
+          "category": "Government",
+          "reference_characters": 229,
+          "prediction_characters": 207,
+          "edits": 22,
+          "cer": 0.0961,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "2F5AD273",
+          "category": "Medical",
+          "reference_characters": 2855,
+          "prediction_characters": 2863,
+          "edits": 265,
+          "cer": 0.0928,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "2CF4F9FD",
+          "category": "Religion",
+          "reference_characters": 1388,
+          "prediction_characters": 1509,
+          "edits": 128,
+          "cer": 0.0922,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "961DC4EB",
+          "category": "Advertising & Media",
+          "reference_characters": 1405,
+          "prediction_characters": 1289,
+          "edits": 127,
+          "cer": 0.0904,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "BEA7A53F",
+          "category": "Lifestyle",
+          "reference_characters": 1315,
+          "prediction_characters": 1226,
+          "edits": 113,
+          "cer": 0.0859,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "230D44A3",
+          "category": "Government",
+          "reference_characters": 564,
+          "prediction_characters": 582,
+          "edits": 48,
+          "cer": 0.0851,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "2C975344",
+          "category": "Education",
+          "reference_characters": 1851,
+          "prediction_characters": 1833,
+          "edits": 155,
+          "cer": 0.0837,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "8831D6C2",
+          "category": "Construction",
+          "reference_characters": 1674,
+          "prediction_characters": 1651,
+          "edits": 140,
+          "cer": 0.0836,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "58711248",
+          "category": "Medical",
+          "reference_characters": 290,
+          "prediction_characters": 294,
+          "edits": 24,
+          "cer": 0.0828,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "838F01E8",
+          "category": "Entertainment",
+          "reference_characters": 1940,
+          "prediction_characters": 1787,
+          "edits": 160,
+          "cer": 0.0825,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "DF82A0C7",
+          "category": "Education",
+          "reference_characters": 780,
+          "prediction_characters": 808,
+          "edits": 56,
+          "cer": 0.0718,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "0B0966A3",
+          "category": "Finance",
+          "reference_characters": 3225,
+          "prediction_characters": 3069,
+          "edits": 231,
+          "cer": 0.0716,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "1CEED6AB",
+          "category": "Religion",
+          "reference_characters": 1085,
+          "prediction_characters": 1058,
+          "edits": 71,
+          "cer": 0.0654,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "C56EA8A9",
+          "category": "Finance",
+          "reference_characters": 2206,
+          "prediction_characters": 2094,
+          "edits": 140,
+          "cer": 0.0635,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "95979273",
+          "category": "Finance",
+          "reference_characters": 3138,
+          "prediction_characters": 3005,
+          "edits": 194,
+          "cer": 0.0618,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "B2EF6E79",
+          "category": "Architecture",
+          "reference_characters": 566,
+          "prediction_characters": 592,
+          "edits": 35,
+          "cer": 0.0618,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "5DBA81A8",
+          "category": "Entertainment",
+          "reference_characters": 756,
+          "prediction_characters": 717,
+          "edits": 46,
+          "cer": 0.0608,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "CE8213EE",
+          "category": "Lifestyle",
+          "reference_characters": 439,
+          "prediction_characters": 460,
+          "edits": 25,
+          "cer": 0.0569,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "029FB169",
+          "category": "Government",
+          "reference_characters": 2620,
+          "prediction_characters": 2639,
+          "edits": 136,
+          "cer": 0.0519,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "B79CE26D",
+          "category": "Education",
+          "reference_characters": 977,
+          "prediction_characters": 931,
+          "edits": 48,
+          "cer": 0.0491,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "53A47D21",
+          "category": "Retail",
+          "reference_characters": 986,
+          "prediction_characters": 947,
+          "edits": 48,
+          "cer": 0.0487,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "28987CC6",
+          "category": "Government",
+          "reference_characters": 86,
+          "prediction_characters": 90,
+          "edits": 4,
+          "cer": 0.0465,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "33067A35",
+          "category": "Government",
+          "reference_characters": 2290,
+          "prediction_characters": 2311,
+          "edits": 104,
+          "cer": 0.0454,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "77009AF9",
+          "category": "Hospitality",
+          "reference_characters": 1992,
+          "prediction_characters": 1997,
+          "edits": 89,
+          "cer": 0.0447,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "1A833A5A",
+          "category": "Religion",
+          "reference_characters": 1325,
+          "prediction_characters": 1377,
+          "edits": 58,
+          "cer": 0.0438,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "B804017D",
+          "category": "Government",
+          "reference_characters": 681,
+          "prediction_characters": 660,
+          "edits": 28,
+          "cer": 0.0411,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "4EA487DA",
+          "category": "Legal",
+          "reference_characters": 2100,
+          "prediction_characters": 2093,
+          "edits": 86,
+          "cer": 0.041,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "6BA97DBE",
+          "category": "Government",
+          "reference_characters": 1701,
+          "prediction_characters": 1721,
+          "edits": 67,
+          "cer": 0.0394,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "6BFE2154",
+          "category": "Medical",
+          "reference_characters": 2823,
+          "prediction_characters": 2782,
+          "edits": 111,
+          "cer": 0.0393,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "546DFFCD",
+          "category": "Logistics",
+          "reference_characters": 287,
+          "prediction_characters": 279,
+          "edits": 11,
+          "cer": 0.0383,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "30073A28",
+          "category": "Government",
+          "reference_characters": 1623,
+          "prediction_characters": 1638,
+          "edits": 61,
+          "cer": 0.0376,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "29413361",
+          "category": "Transportation",
+          "reference_characters": 509,
+          "prediction_characters": 527,
+          "edits": 18,
+          "cer": 0.0354,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "8F424A1D",
+          "category": "Retail",
+          "reference_characters": 1036,
+          "prediction_characters": 1019,
+          "edits": 32,
+          "cer": 0.0309,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "DBC7753F",
+          "category": "Government",
+          "reference_characters": 2247,
+          "prediction_characters": 2235,
+          "edits": 69,
+          "cer": 0.0307,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "6D5DB2A0",
+          "category": "Retail",
+          "reference_characters": 1017,
+          "prediction_characters": 1007,
+          "edits": 30,
+          "cer": 0.0295,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "39BF7C57",
+          "category": "Religion",
+          "reference_characters": 664,
+          "prediction_characters": 661,
+          "edits": 19,
+          "cer": 0.0286,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "F1D97B10",
+          "category": "Advertising & Media",
+          "reference_characters": 1090,
+          "prediction_characters": 1091,
+          "edits": 31,
+          "cer": 0.0284,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "FDF8F9E0",
+          "category": "Government",
+          "reference_characters": 145,
+          "prediction_characters": 143,
+          "edits": 4,
+          "cer": 0.0276,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "1B3E1DFA",
+          "category": "Finance",
+          "reference_characters": 1025,
+          "prediction_characters": 1038,
+          "edits": 28,
+          "cer": 0.0273,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "72E0E40C",
+          "category": "Logistics",
+          "reference_characters": 1821,
+          "prediction_characters": 1855,
+          "edits": 48,
+          "cer": 0.0264,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "9BBB9DB3",
+          "category": "Education",
+          "reference_characters": 3004,
+          "prediction_characters": 3005,
+          "edits": 79,
+          "cer": 0.0263,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "C7EBD957",
+          "category": "Education",
+          "reference_characters": 429,
+          "prediction_characters": 427,
+          "edits": 11,
+          "cer": 0.0256,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "CD5D0597",
+          "category": "Government",
+          "reference_characters": 2793,
+          "prediction_characters": 2801,
+          "edits": 71,
+          "cer": 0.0254,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "9DA41D6D",
+          "category": "Education",
+          "reference_characters": 551,
+          "prediction_characters": 537,
+          "edits": 14,
+          "cer": 0.0254,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "6654F976",
+          "category": "Lifestyle",
+          "reference_characters": 208,
+          "prediction_characters": 209,
+          "edits": 5,
+          "cer": 0.024,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "745FCAAB",
+          "category": "Education",
+          "reference_characters": 1605,
+          "prediction_characters": 1608,
+          "edits": 38,
+          "cer": 0.0237,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "27EA5E35",
+          "category": "Education",
+          "reference_characters": 863,
+          "prediction_characters": 843,
+          "edits": 20,
+          "cer": 0.0232,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "AF24ABC7",
+          "category": "Medical",
+          "reference_characters": 674,
+          "prediction_characters": 661,
+          "edits": 15,
+          "cer": 0.0223,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "6887485D",
+          "category": "Technology",
+          "reference_characters": 1624,
+          "prediction_characters": 1623,
+          "edits": 36,
+          "cer": 0.0222,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "8640348A",
+          "category": "Religion",
+          "reference_characters": 1840,
+          "prediction_characters": 1874,
+          "edits": 40,
+          "cer": 0.0217,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "69BA917C",
+          "category": "Government",
+          "reference_characters": 1623,
+          "prediction_characters": 1650,
+          "edits": 35,
+          "cer": 0.0216,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "F74692A0",
+          "category": "Transportation",
+          "reference_characters": 2082,
+          "prediction_characters": 2065,
+          "edits": 44,
+          "cer": 0.0211,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "178F2951",
+          "category": "Finance",
+          "reference_characters": 667,
+          "prediction_characters": 671,
+          "edits": 14,
+          "cer": 0.021,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "D3974C29",
+          "category": "Government",
+          "reference_characters": 2514,
+          "prediction_characters": 2485,
+          "edits": 52,
+          "cer": 0.0207,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "CFF71779",
+          "category": "Government",
+          "reference_characters": 3162,
+          "prediction_characters": 3150,
+          "edits": 64,
+          "cer": 0.0202,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "39311352",
+          "category": "Finance",
+          "reference_characters": 2029,
+          "prediction_characters": 2014,
+          "edits": 40,
+          "cer": 0.0197,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "84CDF504",
+          "category": "Education",
+          "reference_characters": 477,
+          "prediction_characters": 480,
+          "edits": 9,
+          "cer": 0.0189,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "E666F212",
+          "category": "Education",
+          "reference_characters": 2142,
+          "prediction_characters": 2156,
+          "edits": 39,
+          "cer": 0.0182,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "3D0DFA8A",
+          "category": "Government",
+          "reference_characters": 2626,
+          "prediction_characters": 2633,
+          "edits": 46,
+          "cer": 0.0175,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "038EB8BB",
+          "category": "Government",
+          "reference_characters": 799,
+          "prediction_characters": 810,
+          "edits": 14,
+          "cer": 0.0175,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "85252C85",
+          "category": "Legal",
+          "reference_characters": 1662,
+          "prediction_characters": 1678,
+          "edits": 29,
+          "cer": 0.0174,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "6874F0E4",
+          "category": "Government",
+          "reference_characters": 1261,
+          "prediction_characters": 1241,
+          "edits": 22,
+          "cer": 0.0174,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "91511909",
+          "category": "Transportation",
+          "reference_characters": 1130,
+          "prediction_characters": 1118,
+          "edits": 19,
+          "cer": 0.0168,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "1B0AD18A",
+          "category": "Lifestyle",
+          "reference_characters": 2682,
+          "prediction_characters": 2722,
+          "edits": 45,
+          "cer": 0.0168,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "9CD60110",
+          "category": "Agriculture",
+          "reference_characters": 429,
+          "prediction_characters": 431,
+          "edits": 7,
+          "cer": 0.0163,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "0DCB6501",
+          "category": "Education",
+          "reference_characters": 1910,
+          "prediction_characters": 1923,
+          "edits": 31,
+          "cer": 0.0162,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "62D06AFA",
+          "category": "Lifestyle",
+          "reference_characters": 495,
+          "prediction_characters": 503,
+          "edits": 8,
+          "cer": 0.0162,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "BF22A3A5",
+          "category": "Government",
+          "reference_characters": 1000,
+          "prediction_characters": 1001,
+          "edits": 16,
+          "cer": 0.016,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "B3FABE4F",
+          "category": "Education",
+          "reference_characters": 381,
+          "prediction_characters": 386,
+          "edits": 6,
+          "cer": 0.0157,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "AF5F42D4",
+          "category": "Government",
+          "reference_characters": 1951,
+          "prediction_characters": 1957,
+          "edits": 30,
+          "cer": 0.0154,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "3213908F",
+          "category": "Legal",
+          "reference_characters": 859,
+          "prediction_characters": 858,
+          "edits": 13,
+          "cer": 0.0151,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "5EB4426D",
+          "category": "Religion",
+          "reference_characters": 1137,
+          "prediction_characters": 1148,
+          "edits": 17,
+          "cer": 0.015,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "0B5CA667",
+          "category": "Environment",
+          "reference_characters": 3409,
+          "prediction_characters": 3419,
+          "edits": 51,
+          "cer": 0.015,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "17773401",
+          "category": "Government",
+          "reference_characters": 140,
+          "prediction_characters": 141,
+          "edits": 2,
+          "cer": 0.0143,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "15269AA2",
+          "category": "Government",
+          "reference_characters": 1980,
+          "prediction_characters": 1980,
+          "edits": 28,
+          "cer": 0.0141,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "8DB1557D",
+          "category": "Government",
+          "reference_characters": 1957,
+          "prediction_characters": 1963,
+          "edits": 27,
+          "cer": 0.0138,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "368F4D2B",
+          "category": "Finance",
+          "reference_characters": 1253,
+          "prediction_characters": 1270,
+          "edits": 17,
+          "cer": 0.0136,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "E82B0154",
+          "category": "Government",
+          "reference_characters": 2019,
+          "prediction_characters": 2033,
+          "edits": 27,
+          "cer": 0.0134,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "0DA0AFA7",
+          "category": "Government",
+          "reference_characters": 1075,
+          "prediction_characters": 1069,
+          "edits": 14,
+          "cer": 0.013,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "A0FB27DA",
+          "category": "Lifestyle",
+          "reference_characters": 1172,
+          "prediction_characters": 1165,
+          "edits": 15,
+          "cer": 0.0128,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "3E77BD56",
+          "category": "Education",
+          "reference_characters": 2218,
+          "prediction_characters": 2221,
+          "edits": 28,
+          "cer": 0.0126,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "E0A03157",
+          "category": "Education",
+          "reference_characters": 2297,
+          "prediction_characters": 2293,
+          "edits": 29,
+          "cer": 0.0126,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "71F94E4E",
+          "category": "Advertising & Media",
+          "reference_characters": 644,
+          "prediction_characters": 652,
+          "edits": 8,
+          "cer": 0.0124,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "30BEE697",
+          "category": "Education",
+          "reference_characters": 1492,
+          "prediction_characters": 1495,
+          "edits": 18,
+          "cer": 0.0121,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "0F91D89A",
+          "category": "Legal",
+          "reference_characters": 1304,
+          "prediction_characters": 1295,
+          "edits": 15,
+          "cer": 0.0115,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "D78C8F3F",
+          "category": "Government",
+          "reference_characters": 712,
+          "prediction_characters": 716,
+          "edits": 8,
+          "cer": 0.0112,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "64B212A2",
+          "category": "Lifestyle",
+          "reference_characters": 635,
+          "prediction_characters": 642,
+          "edits": 7,
+          "cer": 0.011,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "1576920D",
+          "category": "Lifestyle",
+          "reference_characters": 279,
+          "prediction_characters": 282,
+          "edits": 3,
+          "cer": 0.0108,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "6A94BBB9",
+          "category": "Government",
+          "reference_characters": 1792,
+          "prediction_characters": 1808,
+          "edits": 19,
+          "cer": 0.0106,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "D26F9ABF",
+          "category": "Education",
+          "reference_characters": 2142,
+          "prediction_characters": 2124,
+          "edits": 22,
+          "cer": 0.0103,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "84AE897C",
+          "category": "Government",
+          "reference_characters": 1652,
+          "prediction_characters": 1664,
+          "edits": 16,
+          "cer": 0.0097,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "E6803A95",
+          "category": "Transportation",
+          "reference_characters": 3292,
+          "prediction_characters": 3306,
+          "edits": 32,
+          "cer": 0.0097,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "F267DB2B",
+          "category": "Government",
+          "reference_characters": 1953,
+          "prediction_characters": 1946,
+          "edits": 19,
+          "cer": 0.0097,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "08A1628F",
+          "category": "Advertising & Media",
+          "reference_characters": 2506,
+          "prediction_characters": 2523,
+          "edits": 24,
+          "cer": 0.0096,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "DAE3E86B",
+          "category": "Education",
+          "reference_characters": 1602,
+          "prediction_characters": 1604,
+          "edits": 14,
+          "cer": 0.0087,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "FD830B8B",
+          "category": "Religion",
+          "reference_characters": 1222,
+          "prediction_characters": 1224,
+          "edits": 10,
+          "cer": 0.0082,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "B2DBB4F6",
+          "category": "Entertainment",
+          "reference_characters": 247,
+          "prediction_characters": 249,
+          "edits": 2,
+          "cer": 0.0081,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "1A7DCA31",
+          "category": "Government",
+          "reference_characters": 1131,
+          "prediction_characters": 1132,
+          "edits": 9,
+          "cer": 0.008,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "F7ECAAAD",
+          "category": "Education",
+          "reference_characters": 1380,
+          "prediction_characters": 1379,
+          "edits": 11,
+          "cer": 0.008,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "ED25450C",
+          "category": "Legal",
+          "reference_characters": 2502,
+          "prediction_characters": 2521,
+          "edits": 20,
+          "cer": 0.008,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "40D39B61",
+          "category": "Education",
+          "reference_characters": 641,
+          "prediction_characters": 646,
+          "edits": 5,
+          "cer": 0.0078,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "C982E351",
+          "category": "Government",
+          "reference_characters": 2299,
+          "prediction_characters": 2302,
+          "edits": 18,
+          "cer": 0.0078,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "145E6018",
+          "category": "Government",
+          "reference_characters": 1274,
+          "prediction_characters": 1273,
+          "edits": 10,
+          "cer": 0.0078,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "F320D8FF",
+          "category": "Government",
+          "reference_characters": 1677,
+          "prediction_characters": 1690,
+          "edits": 13,
+          "cer": 0.0078,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "CECCB5BF",
+          "category": "Government",
+          "reference_characters": 536,
+          "prediction_characters": 536,
+          "edits": 4,
+          "cer": 0.0075,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "1E134C1F",
+          "category": "Medical",
+          "reference_characters": 1630,
+          "prediction_characters": 1620,
+          "edits": 12,
+          "cer": 0.0074,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "90D5C5FA",
+          "category": "Lifestyle",
+          "reference_characters": 2629,
+          "prediction_characters": 2623,
+          "edits": 18,
+          "cer": 0.0068,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "E7BFA0C6",
+          "category": "Government",
+          "reference_characters": 472,
+          "prediction_characters": 471,
+          "edits": 3,
+          "cer": 0.0064,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "F096D392",
+          "category": "Medical",
+          "reference_characters": 656,
+          "prediction_characters": 660,
+          "edits": 4,
+          "cer": 0.0061,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "AF75DA1C",
+          "category": "Education",
+          "reference_characters": 163,
+          "prediction_characters": 164,
+          "edits": 1,
+          "cer": 0.0061,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "EDE52B43",
+          "category": "Government",
+          "reference_characters": 1222,
+          "prediction_characters": 1222,
+          "edits": 7,
+          "cer": 0.0057,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "F36A404E",
+          "category": "Education",
+          "reference_characters": 2814,
+          "prediction_characters": 2809,
+          "edits": 16,
+          "cer": 0.0057,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "149C5D04",
+          "category": "Transportation",
+          "reference_characters": 357,
+          "prediction_characters": 357,
+          "edits": 2,
+          "cer": 0.0056,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "BA84615E",
+          "category": "Transportation",
+          "reference_characters": 1464,
+          "prediction_characters": 1462,
+          "edits": 8,
+          "cer": 0.0055,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "322DB7DB",
+          "category": "Government",
+          "reference_characters": 2924,
+          "prediction_characters": 2939,
+          "edits": 15,
+          "cer": 0.0051,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "A04EEA18",
+          "category": "Government",
+          "reference_characters": 596,
+          "prediction_characters": 599,
+          "edits": 3,
+          "cer": 0.005,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "014D854C",
+          "category": "Government",
+          "reference_characters": 1210,
+          "prediction_characters": 1205,
+          "edits": 6,
+          "cer": 0.005,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "5BEB845D",
+          "category": "Government",
+          "reference_characters": 1922,
+          "prediction_characters": 1931,
+          "edits": 9,
+          "cer": 0.0047,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "8BC9FC2A",
+          "category": "Government",
+          "reference_characters": 1714,
+          "prediction_characters": 1718,
+          "edits": 8,
+          "cer": 0.0047,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "DA6CC808",
+          "category": "Hospitality",
+          "reference_characters": 1728,
+          "prediction_characters": 1734,
+          "edits": 8,
+          "cer": 0.0046,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "328034D2",
+          "category": "Government",
+          "reference_characters": 660,
+          "prediction_characters": 659,
+          "edits": 3,
+          "cer": 0.0045,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "8A52957B",
+          "category": "Government",
+          "reference_characters": 1583,
+          "prediction_characters": 1587,
+          "edits": 7,
+          "cer": 0.0044,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "3C1FE8A3",
+          "category": "Architecture",
+          "reference_characters": 1453,
+          "prediction_characters": 1450,
+          "edits": 6,
+          "cer": 0.0041,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "F704EBB4",
+          "category": "Finance",
+          "reference_characters": 2244,
+          "prediction_characters": 2246,
+          "edits": 9,
+          "cer": 0.004,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "C7FC0E64",
+          "category": "Advertising & Media",
+          "reference_characters": 807,
+          "prediction_characters": 807,
+          "edits": 3,
+          "cer": 0.0037,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "78B93799",
+          "category": "Lifestyle",
+          "reference_characters": 3299,
+          "prediction_characters": 3296,
+          "edits": 12,
+          "cer": 0.0036,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "1DBB40DA",
+          "category": "Government",
+          "reference_characters": 1133,
+          "prediction_characters": 1132,
+          "edits": 4,
+          "cer": 0.0035,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "77155F88",
+          "category": "Government",
+          "reference_characters": 1477,
+          "prediction_characters": 1479,
+          "edits": 5,
+          "cer": 0.0034,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "C4D1389C",
+          "category": "Government",
+          "reference_characters": 1528,
+          "prediction_characters": 1533,
+          "edits": 5,
+          "cer": 0.0033,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "567B6499",
+          "category": "Lifestyle",
+          "reference_characters": 307,
+          "prediction_characters": 306,
+          "edits": 1,
+          "cer": 0.0033,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "69A67416",
+          "category": "Lifestyle",
+          "reference_characters": 2460,
+          "prediction_characters": 2459,
+          "edits": 8,
+          "cer": 0.0033,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "42271868",
+          "category": "Medical",
+          "reference_characters": 1259,
+          "prediction_characters": 1263,
+          "edits": 4,
+          "cer": 0.0032,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "12BA4B2A",
+          "category": "Religion",
+          "reference_characters": 1570,
+          "prediction_characters": 1567,
+          "edits": 5,
+          "cer": 0.0032,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "F45A8C0E",
+          "category": "Medical",
+          "reference_characters": 3201,
+          "prediction_characters": 3199,
+          "edits": 9,
+          "cer": 0.0028,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "7946D327",
+          "category": "Finance",
+          "reference_characters": 1070,
+          "prediction_characters": 1073,
+          "edits": 3,
+          "cer": 0.0028,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "05D1D2E1",
+          "category": "Government",
+          "reference_characters": 1458,
+          "prediction_characters": 1461,
+          "edits": 4,
+          "cer": 0.0027,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "5FF078A0",
+          "category": "Education",
+          "reference_characters": 2462,
+          "prediction_characters": 2458,
+          "edits": 6,
+          "cer": 0.0024,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "A61D585C",
+          "category": "Education",
+          "reference_characters": 1254,
+          "prediction_characters": 1257,
+          "edits": 3,
+          "cer": 0.0024,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "627EB4F3",
+          "category": "Religion",
+          "reference_characters": 1333,
+          "prediction_characters": 1334,
+          "edits": 3,
+          "cer": 0.0023,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "BA5D578E",
+          "category": "Food & Beverage",
+          "reference_characters": 732,
+          "prediction_characters": 732,
+          "edits": 1,
+          "cer": 0.0014,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "30F651B6",
+          "category": "Government",
+          "reference_characters": 722,
+          "prediction_characters": 721,
+          "edits": 1,
+          "cer": 0.0014,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "972A5D1E",
+          "category": "Education",
+          "reference_characters": 2461,
+          "prediction_characters": 2459,
+          "edits": 2,
+          "cer": 0.0008,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "E6744D20",
+          "category": "Legal",
+          "reference_characters": 1286,
+          "prediction_characters": 1287,
+          "edits": 1,
+          "cer": 0.0008,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "C59C1CAA",
+          "category": "Government",
+          "reference_characters": 1671,
+          "prediction_characters": 1670,
+          "edits": 1,
+          "cer": 0.0006,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "6AE45D11",
+          "category": "Lifestyle",
+          "reference_characters": 1743,
+          "prediction_characters": 1742,
+          "edits": 1,
+          "cer": 0.0006,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "1A276050",
+          "category": "Religion",
+          "reference_characters": 126,
+          "prediction_characters": 126,
+          "edits": 0,
+          "cer": 0.0,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "322ABACD",
+          "category": "Education",
+          "reference_characters": 142,
+          "prediction_characters": 142,
+          "edits": 0,
+          "cer": 0.0,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "A6044BDC",
+          "category": "Lifestyle",
+          "reference_characters": 194,
+          "prediction_characters": 194,
+          "edits": 0,
+          "cer": 0.0,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "EF240C5C",
+          "category": "Lifestyle",
+          "reference_characters": 473,
+          "prediction_characters": 473,
+          "edits": 0,
+          "cer": 0.0,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "5E8C040A",
+          "category": "Lifestyle",
+          "reference_characters": 235,
+          "prediction_characters": 235,
+          "edits": 0,
+          "cer": 0.0,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "BCF5F036",
+          "category": "Lifestyle",
+          "reference_characters": 214,
+          "prediction_characters": 214,
+          "edits": 0,
+          "cer": 0.0,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "E260C666",
+          "category": "Architecture",
+          "reference_characters": 556,
+          "prediction_characters": 556,
+          "edits": 0,
+          "cer": 0.0,
+          "elapsed_seconds": 0.0
+        }
+      ],
+      "quotable": {
+        "reference_spans": 4609,
+        "recoverable_verbatim": 2814,
+        "rate": 0.6105
+      },
+      "catalogue": {
+        "raw": "observed_ocr_error_catalogue.json",
+        "filtered": "observed_ocr_error_catalogue_filtered.json",
+        "rejections": "observed_ocr_error_rejections.json"
+      }
+    },
+    "paddle": {
+      "samples": 73,
+      "empty_predictions": 7,
+      "crashed_pages": 2,
+      "reference_characters": 124981,
+      "edits": 52364,
+      "cer_micro": 0.419,
+      "cer_macro": 0.4525,
+      "seconds_per_page_mean": 51.35,
+      "by_category": {
+        "Medical": {
+          "samples": 14,
+          "cer": 0.2567
+        },
+        "Government": {
+          "samples": 14,
+          "cer": 0.4151
+        },
+        "Education": {
+          "samples": 10,
+          "cer": 0.4971
+        },
+        "Finance": {
+          "samples": 8,
+          "cer": 0.3195
+        },
+        "Religion": {
+          "samples": 4,
+          "cer": 0.4696
+        },
+        "Agriculture": {
+          "samples": 4,
+          "cer": 0.3766
+        },
+        "Retail": {
+          "samples": 3,
+          "cer": 0.6783
+        },
+        "Legal": {
+          "samples": 3,
+          "cer": 0.6561
+        },
+        "Entertainment": {
+          "samples": 2,
+          "cer": 0.5819
+        },
+        "Food & Beverage": {
+          "samples": 2,
+          "cer": 0.9109
+        },
+        "Technology": {
+          "samples": 2,
+          "cer": 0.4489
+        },
+        "Transportation": {
+          "samples": 2,
+          "cer": 0.4937
+        },
+        "Lifestyle": {
+          "samples": 1,
+          "cer": 0.4907
+        },
+        "Hospitality": {
+          "samples": 1,
+          "cer": 1.0
+        },
+        "Real Estate": {
+          "samples": 1,
+          "cer": 0.7118
+        },
+        "Construction": {
+          "samples": 1,
+          "cer": 0.3315
+        },
+        "Manufacturing": {
+          "samples": 1,
+          "cer": 0.4725
+        }
+      },
+      "per_sample": [
+        {
+          "sample_id": "5EB4426D",
+          "category": "Religion",
+          "reference_characters": 1137,
+          "prediction_characters": 0,
+          "edits": 1137,
+          "cer": 1.0,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "8F424A1D",
+          "category": "Retail",
+          "reference_characters": 1036,
+          "prediction_characters": 0,
+          "edits": 1036,
+          "cer": 1.0,
+          "elapsed_seconds": 0.0
+        },
+        {
+          "sample_id": "40D39B61",
+          "category": "Education",
+          "reference_characters": 641,
+          "prediction_characters": 0,
+          "edits": 641,
+          "cer": 1.0,
+          "elapsed_seconds": 6.445
+        },
+        {
+          "sample_id": "77009AF9",
+          "category": "Hospitality",
+          "reference_characters": 1992,
+          "prediction_characters": 0,
+          "edits": 1992,
+          "cer": 1.0,
+          "elapsed_seconds": 36.15
+        },
+        {
+          "sample_id": "DF82A0C7",
+          "category": "Education",
+          "reference_characters": 780,
+          "prediction_characters": 0,
+          "edits": 780,
+          "cer": 1.0,
+          "elapsed_seconds": 5.887
+        },
+        {
+          "sample_id": "230D44A3",
+          "category": "Government",
+          "reference_characters": 564,
+          "prediction_characters": 0,
+          "edits": 564,
+          "cer": 1.0,
+          "elapsed_seconds": 5.636
+        },
+        {
+          "sample_id": "8A16F1D6",
+          "category": "Education",
+          "reference_characters": 1634,
+          "prediction_characters": 0,
+          "edits": 1634,
+          "cer": 1.0,
+          "elapsed_seconds": 5.082
+        },
+        {
+          "sample_id": "1A89E10E",
+          "category": "Government",
+          "reference_characters": 3070,
+          "prediction_characters": 6,
+          "edits": 3064,
+          "cer": 0.998,
+          "elapsed_seconds": 6.667
+        },
+        {
+          "sample_id": "52A433B2",
+          "category": "Food & Beverage",
+          "reference_characters": 2023,
+          "prediction_characters": 21,
+          "edits": 2007,
+          "cer": 0.9921,
+          "elapsed_seconds": 60.835
+        },
+        {
+          "sample_id": "C4D1389C",
+          "category": "Government",
+          "reference_characters": 1528,
+          "prediction_characters": 16,
+          "edits": 1512,
+          "cer": 0.9895,
+          "elapsed_seconds": 6.204
+        },
+        {
+          "sample_id": "A0900FF1",
+          "category": "Medical",
+          "reference_characters": 765,
+          "prediction_characters": 15,
+          "edits": 750,
+          "cer": 0.9804,
+          "elapsed_seconds": 5.885
+        },
+        {
+          "sample_id": "8585BDBE",
+          "category": "Legal",
+          "reference_characters": 1633,
+          "prediction_characters": 48,
+          "edits": 1585,
+          "cer": 0.9706,
+          "elapsed_seconds": 8.184
+        },
+        {
+          "sample_id": "BFE7C5A8",
+          "category": "Government",
+          "reference_characters": 940,
+          "prediction_characters": 36,
+          "edits": 904,
+          "cer": 0.9617,
+          "elapsed_seconds": 8.1
+        },
+        {
+          "sample_id": "0159AF30",
+          "category": "Education",
+          "reference_characters": 3274,
+          "prediction_characters": 347,
+          "edits": 2936,
+          "cer": 0.8968,
+          "elapsed_seconds": 34.476
+        },
+        {
+          "sample_id": "9ADD832F",
+          "category": "Medical",
+          "reference_characters": 1610,
+          "prediction_characters": 598,
+          "edits": 1176,
+          "cer": 0.7304,
+          "elapsed_seconds": 32.53
+        },
+        {
+          "sample_id": "C065E1E9",
+          "category": "Finance",
+          "reference_characters": 2580,
+          "prediction_characters": 743,
+          "edits": 1848,
+          "cer": 0.7163,
+          "elapsed_seconds": 21.396
+        },
+        {
+          "sample_id": "5300A462",
+          "category": "Real Estate",
+          "reference_characters": 1159,
+          "prediction_characters": 411,
+          "edits": 825,
+          "cer": 0.7118,
+          "elapsed_seconds": 39.018
+        },
+        {
+          "sample_id": "39BF7C57",
+          "category": "Religion",
+          "reference_characters": 664,
+          "prediction_characters": 201,
+          "edits": 468,
+          "cer": 0.7048,
+          "elapsed_seconds": 13.9
+        },
+        {
+          "sample_id": "B2DEDBA0",
+          "category": "Entertainment",
+          "reference_characters": 803,
+          "prediction_characters": 263,
+          "edits": 559,
+          "cer": 0.6961,
+          "elapsed_seconds": 17.045
+        },
+        {
+          "sample_id": "D6DA33BA",
+          "category": "Retail",
+          "reference_characters": 816,
+          "prediction_characters": 516,
+          "edits": 557,
+          "cer": 0.6826,
+          "elapsed_seconds": 26.638
+        },
+        {
+          "sample_id": "84AE897C",
+          "category": "Government",
+          "reference_characters": 1652,
+          "prediction_characters": 648,
+          "edits": 1094,
+          "cer": 0.6622,
+          "elapsed_seconds": 23.085
+        },
+        {
+          "sample_id": "908E11C8",
+          "category": "Technology",
+          "reference_characters": 1956,
+          "prediction_characters": 722,
+          "edits": 1255,
+          "cer": 0.6416,
+          "elapsed_seconds": 33.067
+        },
+        {
+          "sample_id": "AF432B6A",
+          "category": "Legal",
+          "reference_characters": 2327,
+          "prediction_characters": 1284,
+          "edits": 1444,
+          "cer": 0.6205,
+          "elapsed_seconds": 52.608
+        },
+        {
+          "sample_id": "607413B9",
+          "category": "Medical",
+          "reference_characters": 2315,
+          "prediction_characters": 1014,
+          "edits": 1418,
+          "cer": 0.6125,
+          "elapsed_seconds": 69.291
+        },
+        {
+          "sample_id": "1A276050",
+          "category": "Religion",
+          "reference_characters": 126,
+          "prediction_characters": 119,
+          "edits": 75,
+          "cer": 0.5952,
+          "elapsed_seconds": 61.73
+        },
+        {
+          "sample_id": "BE5569A1",
+          "category": "Medical",
+          "reference_characters": 1739,
+          "prediction_characters": 1020,
+          "edits": 943,
+          "cer": 0.5423,
+          "elapsed_seconds": 72.4
+        },
+        {
+          "sample_id": "D7A122A5",
+          "category": "Education",
+          "reference_characters": 1195,
+          "prediction_characters": 607,
+          "edits": 648,
+          "cer": 0.5423,
+          "elapsed_seconds": 29.961
+        },
+        {
+          "sample_id": "FECFF8A0",
+          "category": "Transportation",
+          "reference_characters": 2424,
+          "prediction_characters": 1309,
+          "edits": 1280,
+          "cer": 0.5281,
+          "elapsed_seconds": 130.9
+        },
+        {
+          "sample_id": "8F33EBB9",
+          "category": "Agriculture",
+          "reference_characters": 1899,
+          "prediction_characters": 996,
+          "edits": 971,
+          "cer": 0.5113,
+          "elapsed_seconds": 29.265
+        },
+        {
+          "sample_id": "EBDA8D6A",
+          "category": "Lifestyle",
+          "reference_characters": 1345,
+          "prediction_characters": 1098,
+          "edits": 660,
+          "cer": 0.4907,
+          "elapsed_seconds": 112.264
+        },
+        {
+          "sample_id": "048AEF1B",
+          "category": "Manufacturing",
+          "reference_characters": 2131,
+          "prediction_characters": 1246,
+          "edits": 1007,
+          "cer": 0.4725,
+          "elapsed_seconds": 45.401
+        },
+        {
+          "sample_id": "4EA487DA",
+          "category": "Legal",
+          "reference_characters": 2100,
+          "prediction_characters": 1279,
+          "edits": 947,
+          "cer": 0.451,
+          "elapsed_seconds": 35.353
+        },
+        {
+          "sample_id": "2FB8702E",
+          "category": "Agriculture",
+          "reference_characters": 2737,
+          "prediction_characters": 1715,
+          "edits": 1145,
+          "cer": 0.4183,
+          "elapsed_seconds": 38.127
+        },
+        {
+          "sample_id": "994B0E2F",
+          "category": "Government",
+          "reference_characters": 1342,
+          "prediction_characters": 1113,
+          "edits": 559,
+          "cer": 0.4165,
+          "elapsed_seconds": 38.098
+        },
+        {
+          "sample_id": "A3F4B490",
+          "category": "Finance",
+          "reference_characters": 1095,
+          "prediction_characters": 757,
+          "edits": 403,
+          "cer": 0.368,
+          "elapsed_seconds": 36.789
+        },
+        {
+          "sample_id": "9CD60110",
+          "category": "Agriculture",
+          "reference_characters": 429,
+          "prediction_characters": 395,
+          "edits": 157,
+          "cer": 0.366,
+          "elapsed_seconds": 110.63
+        },
+        {
+          "sample_id": "1B3E1DFA",
+          "category": "Finance",
+          "reference_characters": 1025,
+          "prediction_characters": 993,
+          "edits": 371,
+          "cer": 0.362,
+          "elapsed_seconds": 77.825
+        },
+        {
+          "sample_id": "78BB936B",
+          "category": "Finance",
+          "reference_characters": 3947,
+          "prediction_characters": 2927,
+          "edits": 1419,
+          "cer": 0.3595,
+          "elapsed_seconds": 171.356
+        },
+        {
+          "sample_id": "E8AF3856",
+          "category": "Education",
+          "reference_characters": 1067,
+          "prediction_characters": 789,
+          "edits": 377,
+          "cer": 0.3533,
+          "elapsed_seconds": 46.073
+        },
+        {
+          "sample_id": "1DBB40DA",
+          "category": "Government",
+          "reference_characters": 1133,
+          "prediction_characters": 1071,
+          "edits": 397,
+          "cer": 0.3504,
+          "elapsed_seconds": 87.107
+        },
+        {
+          "sample_id": "6D5DB2A0",
+          "category": "Retail",
+          "reference_characters": 1017,
+          "prediction_characters": 997,
+          "edits": 353,
+          "cer": 0.3471,
+          "elapsed_seconds": 90.684
+        },
+        {
+          "sample_id": "8831D6C2",
+          "category": "Construction",
+          "reference_characters": 1674,
+          "prediction_characters": 1477,
+          "edits": 555,
+          "cer": 0.3315,
+          "elapsed_seconds": 74.477
+        },
+        {
+          "sample_id": "95979273",
+          "category": "Finance",
+          "reference_characters": 3138,
+          "prediction_characters": 2302,
+          "edits": 909,
+          "cer": 0.2897,
+          "elapsed_seconds": 53.3
+        },
+        {
+          "sample_id": "56B2C74B",
+          "category": "Technology",
+          "reference_characters": 2134,
+          "prediction_characters": 1742,
+          "edits": 581,
+          "cer": 0.2723,
+          "elapsed_seconds": 61.877
+        },
+        {
+          "sample_id": "BF22A3A5",
+          "category": "Government",
+          "reference_characters": 1000,
+          "prediction_characters": 870,
+          "edits": 272,
+          "cer": 0.272,
+          "elapsed_seconds": 31.295
+        },
+        {
+          "sample_id": "149C5D04",
+          "category": "Transportation",
+          "reference_characters": 357,
+          "prediction_characters": 303,
+          "edits": 93,
+          "cer": 0.2605,
+          "elapsed_seconds": 19.328
+        },
+        {
+          "sample_id": "656E1DDE",
+          "category": "Education",
+          "reference_characters": 1681,
+          "prediction_characters": 1285,
+          "edits": 426,
+          "cer": 0.2534,
+          "elapsed_seconds": 36.575
+        },
+        {
+          "sample_id": "A61D585C",
+          "category": "Education",
+          "reference_characters": 1254,
+          "prediction_characters": 1184,
+          "edits": 276,
+          "cer": 0.2201,
+          "elapsed_seconds": 49.615
+        },
+        {
+          "sample_id": "A3407ABE",
+          "category": "Medical",
+          "reference_characters": 1681,
+          "prediction_characters": 1470,
+          "edits": 366,
+          "cer": 0.2177,
+          "elapsed_seconds": 118.725
+        },
+        {
+          "sample_id": "B2DBB4F6",
+          "category": "Entertainment",
+          "reference_characters": 247,
+          "prediction_characters": 198,
+          "edits": 52,
+          "cer": 0.2105,
+          "elapsed_seconds": 43.882
+        },
+        {
+          "sample_id": "2F5AD273",
+          "category": "Medical",
+          "reference_characters": 2855,
+          "prediction_characters": 2351,
+          "edits": 585,
+          "cer": 0.2049,
+          "elapsed_seconds": 67.545
+        },
+        {
+          "sample_id": "0B0966A3",
+          "category": "Finance",
+          "reference_characters": 3225,
+          "prediction_characters": 2681,
+          "edits": 606,
+          "cer": 0.1879,
+          "elapsed_seconds": 47.134
+        },
+        {
+          "sample_id": "213B2F80",
+          "category": "Medical",
+          "reference_characters": 3203,
+          "prediction_characters": 3333,
+          "edits": 587,
+          "cer": 0.1833,
+          "elapsed_seconds": 149.879
+        },
+        {
+          "sample_id": "9DD3CA14",
+          "category": "Agriculture",
+          "reference_characters": 1868,
+          "prediction_characters": 1559,
+          "edits": 338,
+          "cer": 0.1809,
+          "elapsed_seconds": 33.954
+        },
+        {
+          "sample_id": "5BEB845D",
+          "category": "Government",
+          "reference_characters": 1922,
+          "prediction_characters": 1679,
+          "edits": 332,
+          "cer": 0.1727,
+          "elapsed_seconds": 52.687
+        },
+        {
+          "sample_id": "C56EA8A9",
+          "category": "Finance",
+          "reference_characters": 2206,
+          "prediction_characters": 1890,
+          "edits": 376,
+          "cer": 0.1704,
+          "elapsed_seconds": 36.865
+        },
+        {
+          "sample_id": "AF24ABC7",
+          "category": "Medical",
+          "reference_characters": 674,
+          "prediction_characters": 601,
+          "edits": 114,
+          "cer": 0.1691,
+          "elapsed_seconds": 24.846
+        },
+        {
+          "sample_id": "A2A35822",
+          "category": "Medical",
+          "reference_characters": 3253,
+          "prediction_characters": 2848,
+          "edits": 499,
+          "cer": 0.1534,
+          "elapsed_seconds": 85.594
+        },
+        {
+          "sample_id": "EDE52B43",
+          "category": "Government",
+          "reference_characters": 1222,
+          "prediction_characters": 1107,
+          "edits": 179,
+          "cer": 0.1465,
+          "elapsed_seconds": 35.899
+        },
+        {
+          "sample_id": "A906A0B9",
+          "category": "Food & Beverage",
+          "reference_characters": 211,
+          "prediction_characters": 207,
+          "edits": 28,
+          "cer": 0.1327,
+          "elapsed_seconds": 108.443
+        },
+        {
+          "sample_id": "322DB7DB",
+          "category": "Government",
+          "reference_characters": 2924,
+          "prediction_characters": 2731,
+          "edits": 369,
+          "cer": 0.1262,
+          "elapsed_seconds": 64.63
+        },
+        {
+          "sample_id": "CD5D0597",
+          "category": "Government",
+          "reference_characters": 2793,
+          "prediction_characters": 2524,
+          "edits": 330,
+          "cer": 0.1182,
+          "elapsed_seconds": 63.944
+        },
+        {
+          "sample_id": "39311352",
+          "category": "Finance",
+          "reference_characters": 2029,
+          "prediction_characters": 1936,
+          "edits": 216,
+          "cer": 0.1065,
+          "elapsed_seconds": 70.59
+        },
+        {
+          "sample_id": "33067A35",
+          "category": "Government",
+          "reference_characters": 2290,
+          "prediction_characters": 2190,
+          "edits": 235,
+          "cer": 0.1026,
+          "elapsed_seconds": 71.73
+        },
+        {
+          "sample_id": "6BFE2154",
+          "category": "Medical",
+          "reference_characters": 2823,
+          "prediction_characters": 2719,
+          "edits": 269,
+          "cer": 0.0953,
+          "elapsed_seconds": 103.611
+        },
+        {
+          "sample_id": "F45A8C0E",
+          "category": "Medical",
+          "reference_characters": 3201,
+          "prediction_characters": 3038,
+          "edits": 291,
+          "cer": 0.0909,
+          "elapsed_seconds": 73.777
+        },
+        {
+          "sample_id": "5FF078A0",
+          "category": "Education",
+          "reference_characters": 2462,
+          "prediction_characters": 2374,
+          "edits": 201,
+          "cer": 0.0816,
+          "elapsed_seconds": 55.894
+        },
+        {
+          "sample_id": "77155F88",
+          "category": "Government",
+          "reference_characters": 1477,
+          "prediction_characters": 1458,
+          "edits": 91,
+          "cer": 0.0616,
+          "elapsed_seconds": 34.694
+        },
+        {
+          "sample_id": "8640348A",
+          "category": "Religion",
+          "reference_characters": 1840,
+          "prediction_characters": 1800,
+          "edits": 89,
+          "cer": 0.0484,
+          "elapsed_seconds": 46.55
+        },
+        {
+          "sample_id": "D26F9ABF",
+          "category": "Education",
+          "reference_characters": 2142,
+          "prediction_characters": 2099,
+          "edits": 99,
+          "cer": 0.0462,
+          "elapsed_seconds": 44.796
+        },
+        {
+          "sample_id": "1E134C1F",
+          "category": "Medical",
+          "reference_characters": 1630,
+          "prediction_characters": 1642,
+          "edits": 57,
+          "cer": 0.035,
+          "elapsed_seconds": 56.246
+        },
+        {
+          "sample_id": "F096D392",
+          "category": "Medical",
+          "reference_characters": 656,
+          "prediction_characters": 660,
+          "edits": 16,
+          "cer": 0.0244,
+          "elapsed_seconds": 58.109
+        },
+        {
+          "sample_id": "42271868",
+          "category": "Medical",
+          "reference_characters": 1259,
+          "prediction_characters": 1261,
+          "edits": 29,
+          "cer": 0.023,
+          "elapsed_seconds": 37.318
+        }
+      ],
+      "quotable": {
+        "reference_spans": 2058,
+        "recoverable_verbatim": 332,
+        "rate": 0.1613
+      },
+      "catalogue": {
+        "raw": "observed_ocr_error_catalogue.json",
+        "filtered": "observed_ocr_error_catalogue_filtered.json",
+        "rejections": "observed_ocr_error_rejections.json"
+      }
+    },
+    "tesseract": {
+      "samples": 197,
+      "empty_predictions": 2,
+      "crashed_pages": 0,
+      "reference_characters": 285660,
+      "edits": 79576,
+      "cer_micro": 0.2786,
+      "cer_macro": 0.2927,
+      "seconds_per_page_mean": 22.91,
+      "by_category": {
+        "Government": {
+          "samples": 54,
+          "cer": 0.1965
+        },
+        "Education": {
+          "samples": 35,
+          "cer": 0.3315
+        },
+        "Lifestyle": {
+          "samples": 18,
+          "cer": 0.1639
+        },
+        "Medical": {
+          "samples": 16,
+          "cer": 0.2866
+        },
+        "Finance": {
+          "samples": 12,
+          "cer": 0.3508
+        },
+        "Religion": {
+          "samples": 10,
+          "cer": 0.2766
+        },
+        "Transportation": {
+          "samples": 9,
+          "cer": 0.3032
+        },
+        "Legal": {
+          "samples": 9,
+          "cer": 0.3983
+        },
+        "Advertising & Media": {
+          "samples": 5,
+          "cer": 0.1114
+        },
+        "Entertainment": {
+          "samples": 4,
+          "cer": 0.3986
+        },
+        "Retail": {
+          "samples": 4,
+          "cer": 0.5401
+        },
+        "Agriculture": {
+          "samples": 4,
+          "cer": 0.3417
+        },
+        "Food & Beverage": {
+          "samples": 3,
+          "cer": 0.6753
+        },
+        "Technology": {
+          "samples": 3,
+          "cer": 0.5123
+        },
+        "Architecture": {
+          "samples": 3,
+          "cer": 0.0377
+        },
+        "Hospitality": {
+          "samples": 2,
+          "cer": 0.1008
+        },
+        "Logistics": {
+          "samples": 2,
+          "cer": 0.1053
+        },
+        "Real Estate": {
+          "samples": 1,
+          "cer": 0.5755
+        },
+        "Construction": {
+          "samples": 1,
+          "cer": 0.3859
+        },
+        "Manufacturing": {
+          "samples": 1,
+          "cer": 0.2389
+        },
+        "Environment": {
+          "samples": 1,
+          "cer": 0.2291
+        }
+      },
+      "per_sample": [
+        {
+          "sample_id": "58711248",
+          "category": "Medical",
+          "reference_characters": 290,
+          "prediction_characters": 0,
+          "edits": 290,
+          "cer": 1.0,
+          "elapsed_seconds": 0.406
+        },
+        {
+          "sample_id": "CE8213EE",
+          "category": "Lifestyle",
+          "reference_characters": 439,
+          "prediction_characters": 0,
+          "edits": 439,
+          "cer": 1.0,
+          "elapsed_seconds": 0.578
+        },
+        {
+          "sample_id": "53A47D21",
+          "category": "Retail",
+          "reference_characters": 986,
+          "prediction_characters": 39,
+          "edits": 948,
+          "cer": 0.9615,
+          "elapsed_seconds": 1.549
+        },
+        {
+          "sample_id": "AF432B6A",
+          "category": "Legal",
+          "reference_characters": 2327,
+          "prediction_characters": 148,
+          "edits": 2223,
+          "cer": 0.9553,
+          "elapsed_seconds": 39.409
+        },
+        {
+          "sample_id": "839599BE",
+          "category": "Medical",
+          "reference_characters": 992,
+          "prediction_characters": 55,
+          "edits": 939,
+          "cer": 0.9466,
+          "elapsed_seconds": 1.157
+        },
+        {
+          "sample_id": "39BF7C57",
+          "category": "Religion",
+          "reference_characters": 664,
+          "prediction_characters": 66,
+          "edits": 617,
+          "cer": 0.9292,
+          "elapsed_seconds": 3.573
+        },
+        {
+          "sample_id": "52A433B2",
+          "category": "Food & Beverage",
+          "reference_characters": 2023,
+          "prediction_characters": 801,
+          "edits": 1776,
+          "cer": 0.8779,
+          "elapsed_seconds": 19.732
+        },
+        {
+          "sample_id": "CFFC5138",
+          "category": "Education",
+          "reference_characters": 431,
+          "prediction_characters": 72,
+          "edits": 375,
+          "cer": 0.8701,
+          "elapsed_seconds": 2.612
+        },
+        {
+          "sample_id": "1A276050",
+          "category": "Religion",
+          "reference_characters": 126,
+          "prediction_characters": 76,
+          "edits": 109,
+          "cer": 0.8651,
+          "elapsed_seconds": 3.033
+        },
+        {
+          "sample_id": "B4E5B000",
+          "category": "Education",
+          "reference_characters": 1690,
+          "prediction_characters": 307,
+          "edits": 1439,
+          "cer": 0.8515,
+          "elapsed_seconds": 4.141
+        },
+        {
+          "sample_id": "E666F212",
+          "category": "Education",
+          "reference_characters": 2142,
+          "prediction_characters": 363,
+          "edits": 1810,
+          "cer": 0.845,
+          "elapsed_seconds": 5.594
+        },
+        {
+          "sample_id": "230D44A3",
+          "category": "Government",
+          "reference_characters": 564,
+          "prediction_characters": 238,
+          "edits": 469,
+          "cer": 0.8316,
+          "elapsed_seconds": 4.575
+        },
+        {
+          "sample_id": "BFE7C5A8",
+          "category": "Government",
+          "reference_characters": 940,
+          "prediction_characters": 179,
+          "edits": 769,
+          "cer": 0.8181,
+          "elapsed_seconds": 4.391
+        },
+        {
+          "sample_id": "30BEE697",
+          "category": "Education",
+          "reference_characters": 1492,
+          "prediction_characters": 311,
+          "edits": 1202,
+          "cer": 0.8056,
+          "elapsed_seconds": 3.279
+        },
+        {
+          "sample_id": "C7EBD957",
+          "category": "Education",
+          "reference_characters": 429,
+          "prediction_characters": 123,
+          "edits": 337,
+          "cer": 0.7855,
+          "elapsed_seconds": 3.067
+        },
+        {
+          "sample_id": "A0FB27DA",
+          "category": "Lifestyle",
+          "reference_characters": 1172,
+          "prediction_characters": 425,
+          "edits": 891,
+          "cer": 0.7602,
+          "elapsed_seconds": 15.214
+        },
+        {
+          "sample_id": "8BC9FC2A",
+          "category": "Government",
+          "reference_characters": 1714,
+          "prediction_characters": 967,
+          "edits": 1257,
+          "cer": 0.7334,
+          "elapsed_seconds": 14.896
+        },
+        {
+          "sample_id": "627EB4F3",
+          "category": "Religion",
+          "reference_characters": 1333,
+          "prediction_characters": 1377,
+          "edits": 957,
+          "cer": 0.7179,
+          "elapsed_seconds": 23.574
+        },
+        {
+          "sample_id": "0159AF30",
+          "category": "Education",
+          "reference_characters": 3274,
+          "prediction_characters": 3452,
+          "edits": 2301,
+          "cer": 0.7028,
+          "elapsed_seconds": 65.885
+        },
+        {
+          "sample_id": "773F19BA",
+          "category": "Education",
+          "reference_characters": 794,
+          "prediction_characters": 333,
+          "edits": 537,
+          "cer": 0.6763,
+          "elapsed_seconds": 4.137
+        },
+        {
+          "sample_id": "79216F4C",
+          "category": "Legal",
+          "reference_characters": 478,
+          "prediction_characters": 504,
+          "edits": 315,
+          "cer": 0.659,
+          "elapsed_seconds": 7.196
+        },
+        {
+          "sample_id": "5DBA81A8",
+          "category": "Entertainment",
+          "reference_characters": 756,
+          "prediction_characters": 587,
+          "edits": 485,
+          "cer": 0.6415,
+          "elapsed_seconds": 18.252
+        },
+        {
+          "sample_id": "6BA97DBE",
+          "category": "Government",
+          "reference_characters": 1701,
+          "prediction_characters": 1100,
+          "edits": 1063,
+          "cer": 0.6249,
+          "elapsed_seconds": 10.277
+        },
+        {
+          "sample_id": "6D5DB2A0",
+          "category": "Retail",
+          "reference_characters": 1017,
+          "prediction_characters": 584,
+          "edits": 616,
+          "cer": 0.6057,
+          "elapsed_seconds": 8.587
+        },
+        {
+          "sample_id": "F704EBB4",
+          "category": "Finance",
+          "reference_characters": 2244,
+          "prediction_characters": 1381,
+          "edits": 1350,
+          "cer": 0.6016,
+          "elapsed_seconds": 17.817
+        },
+        {
+          "sample_id": "C065E1E9",
+          "category": "Finance",
+          "reference_characters": 2580,
+          "prediction_characters": 1821,
+          "edits": 1551,
+          "cer": 0.6012,
+          "elapsed_seconds": 26.065
+        },
+        {
+          "sample_id": "BA84615E",
+          "category": "Transportation",
+          "reference_characters": 1464,
+          "prediction_characters": 841,
+          "edits": 876,
+          "cer": 0.5984,
+          "elapsed_seconds": 26.382
+        },
+        {
+          "sample_id": "6887485D",
+          "category": "Technology",
+          "reference_characters": 1624,
+          "prediction_characters": 1416,
+          "edits": 959,
+          "cer": 0.5905,
+          "elapsed_seconds": 32.24
+        },
+        {
+          "sample_id": "29413361",
+          "category": "Transportation",
+          "reference_characters": 509,
+          "prediction_characters": 302,
+          "edits": 299,
+          "cer": 0.5874,
+          "elapsed_seconds": 5.355
+        },
+        {
+          "sample_id": "5300A462",
+          "category": "Real Estate",
+          "reference_characters": 1159,
+          "prediction_characters": 847,
+          "edits": 667,
+          "cer": 0.5755,
+          "elapsed_seconds": 14.151
+        },
+        {
+          "sample_id": "56B2C74B",
+          "category": "Technology",
+          "reference_characters": 2134,
+          "prediction_characters": 1605,
+          "edits": 1167,
+          "cer": 0.5469,
+          "elapsed_seconds": 70.394
+        },
+        {
+          "sample_id": "17773401",
+          "category": "Government",
+          "reference_characters": 140,
+          "prediction_characters": 88,
+          "edits": 75,
+          "cer": 0.5357,
+          "elapsed_seconds": 3.518
+        },
+        {
+          "sample_id": "CECCB5BF",
+          "category": "Government",
+          "reference_characters": 536,
+          "prediction_characters": 333,
+          "edits": 282,
+          "cer": 0.5261,
+          "elapsed_seconds": 14.272
+        },
+        {
+          "sample_id": "C56EA8A9",
+          "category": "Finance",
+          "reference_characters": 2206,
+          "prediction_characters": 1272,
+          "edits": 1110,
+          "cer": 0.5032,
+          "elapsed_seconds": 35.79
+        },
+        {
+          "sample_id": "9BBB9DB3",
+          "category": "Education",
+          "reference_characters": 3004,
+          "prediction_characters": 1577,
+          "edits": 1498,
+          "cer": 0.4987,
+          "elapsed_seconds": 17.501
+        },
+        {
+          "sample_id": "726C828F",
+          "category": "Government",
+          "reference_characters": 289,
+          "prediction_characters": 199,
+          "edits": 143,
+          "cer": 0.4948,
+          "elapsed_seconds": 5.864
+        },
+        {
+          "sample_id": "B2DEDBA0",
+          "category": "Entertainment",
+          "reference_characters": 803,
+          "prediction_characters": 790,
+          "edits": 392,
+          "cer": 0.4882,
+          "elapsed_seconds": 10.404
+        },
+        {
+          "sample_id": "370C19E9",
+          "category": "Government",
+          "reference_characters": 319,
+          "prediction_characters": 202,
+          "edits": 148,
+          "cer": 0.4639,
+          "elapsed_seconds": 10.45
+        },
+        {
+          "sample_id": "2FB8702E",
+          "category": "Agriculture",
+          "reference_characters": 2737,
+          "prediction_characters": 2266,
+          "edits": 1237,
+          "cer": 0.452,
+          "elapsed_seconds": 31.482
+        },
+        {
+          "sample_id": "178F2951",
+          "category": "Finance",
+          "reference_characters": 667,
+          "prediction_characters": 684,
+          "edits": 297,
+          "cer": 0.4453,
+          "elapsed_seconds": 6.86
+        },
+        {
+          "sample_id": "D7A122A5",
+          "category": "Education",
+          "reference_characters": 1195,
+          "prediction_characters": 1372,
+          "edits": 532,
+          "cer": 0.4452,
+          "elapsed_seconds": 27.437
+        },
+        {
+          "sample_id": "EBDA8D6A",
+          "category": "Lifestyle",
+          "reference_characters": 1345,
+          "prediction_characters": 1265,
+          "edits": 597,
+          "cer": 0.4439,
+          "elapsed_seconds": 25.296
+        },
+        {
+          "sample_id": "656E1DDE",
+          "category": "Education",
+          "reference_characters": 1681,
+          "prediction_characters": 1133,
+          "edits": 746,
+          "cer": 0.4438,
+          "elapsed_seconds": 43.103
+        },
+        {
+          "sample_id": "1A89E10E",
+          "category": "Government",
+          "reference_characters": 3070,
+          "prediction_characters": 2544,
+          "edits": 1345,
+          "cer": 0.4381,
+          "elapsed_seconds": 44.963
+        },
+        {
+          "sample_id": "B66CCB83",
+          "category": "Education",
+          "reference_characters": 913,
+          "prediction_characters": 916,
+          "edits": 393,
+          "cer": 0.4304,
+          "elapsed_seconds": 14.783
+        },
+        {
+          "sample_id": "78BB936B",
+          "category": "Finance",
+          "reference_characters": 3947,
+          "prediction_characters": 3648,
+          "edits": 1669,
+          "cer": 0.4229,
+          "elapsed_seconds": 35.298
+        },
+        {
+          "sample_id": "FECFF8A0",
+          "category": "Transportation",
+          "reference_characters": 2424,
+          "prediction_characters": 2532,
+          "edits": 1019,
+          "cer": 0.4204,
+          "elapsed_seconds": 30.268
+        },
+        {
+          "sample_id": "029FB169",
+          "category": "Government",
+          "reference_characters": 2620,
+          "prediction_characters": 1977,
+          "edits": 1091,
+          "cer": 0.4164,
+          "elapsed_seconds": 25.322
+        },
+        {
+          "sample_id": "F45A8C0E",
+          "category": "Medical",
+          "reference_characters": 3201,
+          "prediction_characters": 3235,
+          "edits": 1324,
+          "cer": 0.4136,
+          "elapsed_seconds": 35.02
+        },
+        {
+          "sample_id": "BE5569A1",
+          "category": "Medical",
+          "reference_characters": 1739,
+          "prediction_characters": 1186,
+          "edits": 718,
+          "cer": 0.4129,
+          "elapsed_seconds": 19.196
+        },
+        {
+          "sample_id": "908E11C8",
+          "category": "Technology",
+          "reference_characters": 1956,
+          "prediction_characters": 1533,
+          "edits": 801,
+          "cer": 0.4095,
+          "elapsed_seconds": 17.963
+        },
+        {
+          "sample_id": "A906A0B9",
+          "category": "Food & Beverage",
+          "reference_characters": 211,
+          "prediction_characters": 225,
+          "edits": 86,
+          "cer": 0.4076,
+          "elapsed_seconds": 8.11
+        },
+        {
+          "sample_id": "A3F4B490",
+          "category": "Finance",
+          "reference_characters": 1095,
+          "prediction_characters": 1139,
+          "edits": 434,
+          "cer": 0.3963,
+          "elapsed_seconds": 14.473
+        },
+        {
+          "sample_id": "A6044BDC",
+          "category": "Lifestyle",
+          "reference_characters": 194,
+          "prediction_characters": 245,
+          "edits": 75,
+          "cer": 0.3866,
+          "elapsed_seconds": 6.025
+        },
+        {
+          "sample_id": "8831D6C2",
+          "category": "Construction",
+          "reference_characters": 1674,
+          "prediction_characters": 1299,
+          "edits": 646,
+          "cer": 0.3859,
+          "elapsed_seconds": 27.434
+        },
+        {
+          "sample_id": "A2A35822",
+          "category": "Medical",
+          "reference_characters": 3253,
+          "prediction_characters": 3067,
+          "edits": 1255,
+          "cer": 0.3858,
+          "elapsed_seconds": 83.077
+        },
+        {
+          "sample_id": "8A16F1D6",
+          "category": "Education",
+          "reference_characters": 1634,
+          "prediction_characters": 1672,
+          "edits": 618,
+          "cer": 0.3782,
+          "elapsed_seconds": 21.572
+        },
+        {
+          "sample_id": "6A94BBB9",
+          "category": "Government",
+          "reference_characters": 1792,
+          "prediction_characters": 1814,
+          "edits": 675,
+          "cer": 0.3767,
+          "elapsed_seconds": 24.674
+        },
+        {
+          "sample_id": "8F33EBB9",
+          "category": "Agriculture",
+          "reference_characters": 1899,
+          "prediction_characters": 1381,
+          "edits": 715,
+          "cer": 0.3765,
+          "elapsed_seconds": 16.515
+        },
+        {
+          "sample_id": "5EB4426D",
+          "category": "Religion",
+          "reference_characters": 1137,
+          "prediction_characters": 831,
+          "edits": 428,
+          "cer": 0.3764,
+          "elapsed_seconds": 15.934
+        },
+        {
+          "sample_id": "E8AF3856",
+          "category": "Education",
+          "reference_characters": 1067,
+          "prediction_characters": 1129,
+          "edits": 389,
+          "cer": 0.3646,
+          "elapsed_seconds": 21.164
+        },
+        {
+          "sample_id": "B1D44CA8",
+          "category": "Education",
+          "reference_characters": 1341,
+          "prediction_characters": 1410,
+          "edits": 481,
+          "cer": 0.3587,
+          "elapsed_seconds": 31.598
+        },
+        {
+          "sample_id": "368F4D2B",
+          "category": "Finance",
+          "reference_characters": 1253,
+          "prediction_characters": 1259,
+          "edits": 446,
+          "cer": 0.3559,
+          "elapsed_seconds": 13.009
+        },
+        {
+          "sample_id": "9F68AAB1",
+          "category": "Transportation",
+          "reference_characters": 1015,
+          "prediction_characters": 958,
+          "edits": 360,
+          "cer": 0.3547,
+          "elapsed_seconds": 22.367
+        },
+        {
+          "sample_id": "DF82A0C7",
+          "category": "Education",
+          "reference_characters": 780,
+          "prediction_characters": 881,
+          "edits": 270,
+          "cer": 0.3462,
+          "elapsed_seconds": 11.838
+        },
+        {
+          "sample_id": "607413B9",
+          "category": "Medical",
+          "reference_characters": 2315,
+          "prediction_characters": 1922,
+          "edits": 800,
+          "cer": 0.3456,
+          "elapsed_seconds": 19.251
+        },
+        {
+          "sample_id": "03C27426",
+          "category": "Transportation",
+          "reference_characters": 814,
+          "prediction_characters": 728,
+          "edits": 279,
+          "cer": 0.3428,
+          "elapsed_seconds": 15.773
+        },
+        {
+          "sample_id": "85252C85",
+          "category": "Legal",
+          "reference_characters": 1662,
+          "prediction_characters": 1763,
+          "edits": 568,
+          "cer": 0.3418,
+          "elapsed_seconds": 21.72
+        },
+        {
+          "sample_id": "2C975344",
+          "category": "Education",
+          "reference_characters": 1851,
+          "prediction_characters": 1765,
+          "edits": 629,
+          "cer": 0.3398,
+          "elapsed_seconds": 22.084
+        },
+        {
+          "sample_id": "071FCCDD",
+          "category": "Government",
+          "reference_characters": 319,
+          "prediction_characters": 220,
+          "edits": 108,
+          "cer": 0.3386,
+          "elapsed_seconds": 4.148
+        },
+        {
+          "sample_id": "EF240C5C",
+          "category": "Lifestyle",
+          "reference_characters": 473,
+          "prediction_characters": 370,
+          "edits": 159,
+          "cer": 0.3362,
+          "elapsed_seconds": 4.848
+        },
+        {
+          "sample_id": "8F424A1D",
+          "category": "Retail",
+          "reference_characters": 1036,
+          "prediction_characters": 1326,
+          "edits": 348,
+          "cer": 0.3359,
+          "elapsed_seconds": 23.058
+        },
+        {
+          "sample_id": "91511909",
+          "category": "Transportation",
+          "reference_characters": 1130,
+          "prediction_characters": 1073,
+          "edits": 375,
+          "cer": 0.3319,
+          "elapsed_seconds": 18.098
+        },
+        {
+          "sample_id": "4EA487DA",
+          "category": "Legal",
+          "reference_characters": 2100,
+          "prediction_characters": 1934,
+          "edits": 684,
+          "cer": 0.3257,
+          "elapsed_seconds": 22.244
+        },
+        {
+          "sample_id": "994B0E2F",
+          "category": "Government",
+          "reference_characters": 1342,
+          "prediction_characters": 1271,
+          "edits": 428,
+          "cer": 0.3189,
+          "elapsed_seconds": 13.409
+        },
+        {
+          "sample_id": "838F01E8",
+          "category": "Entertainment",
+          "reference_characters": 1940,
+          "prediction_characters": 1813,
+          "edits": 604,
+          "cer": 0.3113,
+          "elapsed_seconds": 36.195
+        },
+        {
+          "sample_id": "E7BFA0C6",
+          "category": "Government",
+          "reference_characters": 472,
+          "prediction_characters": 405,
+          "edits": 145,
+          "cer": 0.3072,
+          "elapsed_seconds": 9.847
+        },
+        {
+          "sample_id": "ED25450C",
+          "category": "Legal",
+          "reference_characters": 2502,
+          "prediction_characters": 3138,
+          "edits": 736,
+          "cer": 0.2942,
+          "elapsed_seconds": 69.418
+        },
+        {
+          "sample_id": "2F5AD273",
+          "category": "Medical",
+          "reference_characters": 2855,
+          "prediction_characters": 2704,
+          "edits": 834,
+          "cer": 0.2921,
+          "elapsed_seconds": 52.595
+        },
+        {
+          "sample_id": "84CDF504",
+          "category": "Education",
+          "reference_characters": 477,
+          "prediction_characters": 521,
+          "edits": 138,
+          "cer": 0.2893,
+          "elapsed_seconds": 16.602
+        },
+        {
+          "sample_id": "FDF8F9E0",
+          "category": "Government",
+          "reference_characters": 145,
+          "prediction_characters": 159,
+          "edits": 39,
+          "cer": 0.269,
+          "elapsed_seconds": 2.404
+        },
+        {
+          "sample_id": "3213908F",
+          "category": "Legal",
+          "reference_characters": 859,
+          "prediction_characters": 763,
+          "edits": 230,
+          "cer": 0.2678,
+          "elapsed_seconds": 26.539
+        },
+        {
+          "sample_id": "3E77BD56",
+          "category": "Education",
+          "reference_characters": 2218,
+          "prediction_characters": 1974,
+          "edits": 583,
+          "cer": 0.2628,
+          "elapsed_seconds": 21.492
+        },
+        {
+          "sample_id": "1B3E1DFA",
+          "category": "Finance",
+          "reference_characters": 1025,
+          "prediction_characters": 1100,
+          "edits": 269,
+          "cer": 0.2624,
+          "elapsed_seconds": 21.524
+        },
+        {
+          "sample_id": "145E6018",
+          "category": "Government",
+          "reference_characters": 1274,
+          "prediction_characters": 1147,
+          "edits": 329,
+          "cer": 0.2582,
+          "elapsed_seconds": 17.801
+        },
+        {
+          "sample_id": "8585BDBE",
+          "category": "Legal",
+          "reference_characters": 1633,
+          "prediction_characters": 1692,
+          "edits": 412,
+          "cer": 0.2523,
+          "elapsed_seconds": 27.193
+        },
+        {
+          "sample_id": "AF75DA1C",
+          "category": "Education",
+          "reference_characters": 163,
+          "prediction_characters": 133,
+          "edits": 40,
+          "cer": 0.2454,
+          "elapsed_seconds": 1.811
+        },
+        {
+          "sample_id": "F1D97B10",
+          "category": "Advertising & Media",
+          "reference_characters": 1090,
+          "prediction_characters": 952,
+          "edits": 265,
+          "cer": 0.2431,
+          "elapsed_seconds": 24.39
+        },
+        {
+          "sample_id": "048AEF1B",
+          "category": "Manufacturing",
+          "reference_characters": 2131,
+          "prediction_characters": 2076,
+          "edits": 509,
+          "cer": 0.2389,
+          "elapsed_seconds": 26.747
+        },
+        {
+          "sample_id": "CD4EC446",
+          "category": "Government",
+          "reference_characters": 229,
+          "prediction_characters": 238,
+          "edits": 54,
+          "cer": 0.2358,
+          "elapsed_seconds": 4.342
+        },
+        {
+          "sample_id": "12BA4B2A",
+          "category": "Religion",
+          "reference_characters": 1570,
+          "prediction_characters": 1745,
+          "edits": 369,
+          "cer": 0.235,
+          "elapsed_seconds": 26.704
+        },
+        {
+          "sample_id": "BEA7A53F",
+          "category": "Lifestyle",
+          "reference_characters": 1315,
+          "prediction_characters": 1149,
+          "edits": 308,
+          "cer": 0.2342,
+          "elapsed_seconds": 27.11
+        },
+        {
+          "sample_id": "0B5CA667",
+          "category": "Environment",
+          "reference_characters": 3409,
+          "prediction_characters": 3060,
+          "edits": 781,
+          "cer": 0.2291,
+          "elapsed_seconds": 30.851
+        },
+        {
+          "sample_id": "038EB8BB",
+          "category": "Government",
+          "reference_characters": 799,
+          "prediction_characters": 951,
+          "edits": 178,
+          "cer": 0.2228,
+          "elapsed_seconds": 14.466
+        },
+        {
+          "sample_id": "05D1D2E1",
+          "category": "Government",
+          "reference_characters": 1458,
+          "prediction_characters": 1398,
+          "edits": 322,
+          "cer": 0.2209,
+          "elapsed_seconds": 35.269
+        },
+        {
+          "sample_id": "40D39B61",
+          "category": "Education",
+          "reference_characters": 641,
+          "prediction_characters": 642,
+          "edits": 141,
+          "cer": 0.22,
+          "elapsed_seconds": 14.923
+        },
+        {
+          "sample_id": "6874F0E4",
+          "category": "Government",
+          "reference_characters": 1261,
+          "prediction_characters": 1190,
+          "edits": 277,
+          "cer": 0.2197,
+          "elapsed_seconds": 9.108
+        },
+        {
+          "sample_id": "213B2F80",
+          "category": "Medical",
+          "reference_characters": 3203,
+          "prediction_characters": 3273,
+          "edits": 699,
+          "cer": 0.2182,
+          "elapsed_seconds": 46.096
+        },
+        {
+          "sample_id": "77155F88",
+          "category": "Government",
+          "reference_characters": 1477,
+          "prediction_characters": 1408,
+          "edits": 312,
+          "cer": 0.2112,
+          "elapsed_seconds": 44.251
+        },
+        {
+          "sample_id": "A61D585C",
+          "category": "Education",
+          "reference_characters": 1254,
+          "prediction_characters": 1425,
+          "edits": 263,
+          "cer": 0.2097,
+          "elapsed_seconds": 28.62
+        },
+        {
+          "sample_id": "E6744D20",
+          "category": "Legal",
+          "reference_characters": 1286,
+          "prediction_characters": 1512,
+          "edits": 269,
+          "cer": 0.2092,
+          "elapsed_seconds": 17.31
+        },
+        {
+          "sample_id": "546DFFCD",
+          "category": "Logistics",
+          "reference_characters": 287,
+          "prediction_characters": 236,
+          "edits": 60,
+          "cer": 0.2091,
+          "elapsed_seconds": 7.592
+        },
+        {
+          "sample_id": "D6DA33BA",
+          "category": "Retail",
+          "reference_characters": 816,
+          "prediction_characters": 786,
+          "edits": 170,
+          "cer": 0.2083,
+          "elapsed_seconds": 8.878
+        },
+        {
+          "sample_id": "5BEB845D",
+          "category": "Government",
+          "reference_characters": 1922,
+          "prediction_characters": 2085,
+          "edits": 381,
+          "cer": 0.1982,
+          "elapsed_seconds": 42.874
+        },
+        {
+          "sample_id": "B79CE26D",
+          "category": "Education",
+          "reference_characters": 977,
+          "prediction_characters": 999,
+          "edits": 190,
+          "cer": 0.1945,
+          "elapsed_seconds": 14.678
+        },
+        {
+          "sample_id": "95979273",
+          "category": "Finance",
+          "reference_characters": 3138,
+          "prediction_characters": 2772,
+          "edits": 609,
+          "cer": 0.1941,
+          "elapsed_seconds": 28.557
+        },
+        {
+          "sample_id": "1A833A5A",
+          "category": "Religion",
+          "reference_characters": 1325,
+          "prediction_characters": 1402,
+          "edits": 257,
+          "cer": 0.194,
+          "elapsed_seconds": 14.257
+        },
+        {
+          "sample_id": "149C5D04",
+          "category": "Transportation",
+          "reference_characters": 357,
+          "prediction_characters": 374,
+          "edits": 69,
+          "cer": 0.1933,
+          "elapsed_seconds": 8.001
+        },
+        {
+          "sample_id": "BA5D578E",
+          "category": "Food & Beverage",
+          "reference_characters": 732,
+          "prediction_characters": 668,
+          "edits": 141,
+          "cer": 0.1926,
+          "elapsed_seconds": 13.653
+        },
+        {
+          "sample_id": "9ADD832F",
+          "category": "Medical",
+          "reference_characters": 1610,
+          "prediction_characters": 1562,
+          "edits": 303,
+          "cer": 0.1882,
+          "elapsed_seconds": 17.137
+        },
+        {
+          "sample_id": "EDE52B43",
+          "category": "Government",
+          "reference_characters": 1222,
+          "prediction_characters": 1217,
+          "edits": 226,
+          "cer": 0.1849,
+          "elapsed_seconds": 44.067
+        },
+        {
+          "sample_id": "9CD60110",
+          "category": "Agriculture",
+          "reference_characters": 429,
+          "prediction_characters": 417,
+          "edits": 79,
+          "cer": 0.1841,
+          "elapsed_seconds": 6.32
+        },
+        {
+          "sample_id": "9DD3CA14",
+          "category": "Agriculture",
+          "reference_characters": 1868,
+          "prediction_characters": 1669,
+          "edits": 338,
+          "cer": 0.1809,
+          "elapsed_seconds": 19.978
+        },
+        {
+          "sample_id": "15269AA2",
+          "category": "Government",
+          "reference_characters": 1980,
+          "prediction_characters": 2020,
+          "edits": 355,
+          "cer": 0.1793,
+          "elapsed_seconds": 29.376
+        },
+        {
+          "sample_id": "B3FABE4F",
+          "category": "Education",
+          "reference_characters": 381,
+          "prediction_characters": 391,
+          "edits": 67,
+          "cer": 0.1759,
+          "elapsed_seconds": 5.947
+        },
+        {
+          "sample_id": "1CEED6AB",
+          "category": "Religion",
+          "reference_characters": 1085,
+          "prediction_characters": 1195,
+          "edits": 190,
+          "cer": 0.1751,
+          "elapsed_seconds": 35.902
+        },
+        {
+          "sample_id": "961DC4EB",
+          "category": "Advertising & Media",
+          "reference_characters": 1405,
+          "prediction_characters": 1261,
+          "edits": 226,
+          "cer": 0.1609,
+          "elapsed_seconds": 11.625
+        },
+        {
+          "sample_id": "0B0966A3",
+          "category": "Finance",
+          "reference_characters": 3225,
+          "prediction_characters": 3236,
+          "edits": 508,
+          "cer": 0.1575,
+          "elapsed_seconds": 30.376
+        },
+        {
+          "sample_id": "E6803A95",
+          "category": "Transportation",
+          "reference_characters": 3292,
+          "prediction_characters": 3074,
+          "edits": 515,
+          "cer": 0.1564,
+          "elapsed_seconds": 48.511
+        },
+        {
+          "sample_id": "CFF71779",
+          "category": "Government",
+          "reference_characters": 3162,
+          "prediction_characters": 2965,
+          "edits": 489,
+          "cer": 0.1546,
+          "elapsed_seconds": 81.7
+        },
+        {
+          "sample_id": "0F91D89A",
+          "category": "Legal",
+          "reference_characters": 1304,
+          "prediction_characters": 1260,
+          "edits": 200,
+          "cer": 0.1534,
+          "elapsed_seconds": 47.518
+        },
+        {
+          "sample_id": "A0900FF1",
+          "category": "Medical",
+          "reference_characters": 765,
+          "prediction_characters": 755,
+          "edits": 116,
+          "cer": 0.1516,
+          "elapsed_seconds": 5.673
+        },
+        {
+          "sample_id": "30073A28",
+          "category": "Government",
+          "reference_characters": 1623,
+          "prediction_characters": 1699,
+          "edits": 245,
+          "cer": 0.151,
+          "elapsed_seconds": 36.149
+        },
+        {
+          "sample_id": "A3407ABE",
+          "category": "Medical",
+          "reference_characters": 1681,
+          "prediction_characters": 1536,
+          "edits": 250,
+          "cer": 0.1487,
+          "elapsed_seconds": 22.576
+        },
+        {
+          "sample_id": "77009AF9",
+          "category": "Hospitality",
+          "reference_characters": 1992,
+          "prediction_characters": 1978,
+          "edits": 292,
+          "cer": 0.1466,
+          "elapsed_seconds": 26.658
+        },
+        {
+          "sample_id": "328034D2",
+          "category": "Government",
+          "reference_characters": 660,
+          "prediction_characters": 730,
+          "edits": 96,
+          "cer": 0.1455,
+          "elapsed_seconds": 8.89
+        },
+        {
+          "sample_id": "E0A03157",
+          "category": "Education",
+          "reference_characters": 2297,
+          "prediction_characters": 2400,
+          "edits": 326,
+          "cer": 0.1419,
+          "elapsed_seconds": 42.027
+        },
+        {
+          "sample_id": "1E134C1F",
+          "category": "Medical",
+          "reference_characters": 1630,
+          "prediction_characters": 1753,
+          "edits": 230,
+          "cer": 0.1411,
+          "elapsed_seconds": 26.019
+        },
+        {
+          "sample_id": "62D06AFA",
+          "category": "Lifestyle",
+          "reference_characters": 495,
+          "prediction_characters": 501,
+          "edits": 69,
+          "cer": 0.1394,
+          "elapsed_seconds": 23.47
+        },
+        {
+          "sample_id": "014D854C",
+          "category": "Government",
+          "reference_characters": 1210,
+          "prediction_characters": 1227,
+          "edits": 165,
+          "cer": 0.1364,
+          "elapsed_seconds": 28.66
+        },
+        {
+          "sample_id": "DBC7753F",
+          "category": "Government",
+          "reference_characters": 2247,
+          "prediction_characters": 2202,
+          "edits": 300,
+          "cer": 0.1335,
+          "elapsed_seconds": 23.092
+        },
+        {
+          "sample_id": "E82B0154",
+          "category": "Government",
+          "reference_characters": 2019,
+          "prediction_characters": 2226,
+          "edits": 269,
+          "cer": 0.1332,
+          "elapsed_seconds": 29.66
+        },
+        {
+          "sample_id": "33067A35",
+          "category": "Government",
+          "reference_characters": 2290,
+          "prediction_characters": 2330,
+          "edits": 301,
+          "cer": 0.1314,
+          "elapsed_seconds": 56.272
+        },
+        {
+          "sample_id": "AF5F42D4",
+          "category": "Government",
+          "reference_characters": 1951,
+          "prediction_characters": 1900,
+          "edits": 256,
+          "cer": 0.1312,
+          "elapsed_seconds": 115.387
+        },
+        {
+          "sample_id": "F096D392",
+          "category": "Medical",
+          "reference_characters": 656,
+          "prediction_characters": 704,
+          "edits": 86,
+          "cer": 0.1311,
+          "elapsed_seconds": 7.558
+        },
+        {
+          "sample_id": "69BA917C",
+          "category": "Government",
+          "reference_characters": 1623,
+          "prediction_characters": 1625,
+          "edits": 207,
+          "cer": 0.1275,
+          "elapsed_seconds": 25.264
+        },
+        {
+          "sample_id": "567B6499",
+          "category": "Lifestyle",
+          "reference_characters": 307,
+          "prediction_characters": 312,
+          "edits": 39,
+          "cer": 0.127,
+          "elapsed_seconds": 4.957
+        },
+        {
+          "sample_id": "AF24ABC7",
+          "category": "Medical",
+          "reference_characters": 674,
+          "prediction_characters": 669,
+          "edits": 84,
+          "cer": 0.1246,
+          "elapsed_seconds": 16.636
+        },
+        {
+          "sample_id": "BCF5F036",
+          "category": "Lifestyle",
+          "reference_characters": 214,
+          "prediction_characters": 235,
+          "edits": 26,
+          "cer": 0.1215,
+          "elapsed_seconds": 3.274
+        },
+        {
+          "sample_id": "F320D8FF",
+          "category": "Government",
+          "reference_characters": 1677,
+          "prediction_characters": 1640,
+          "edits": 197,
+          "cer": 0.1175,
+          "elapsed_seconds": 35.171
+        },
+        {
+          "sample_id": "39311352",
+          "category": "Finance",
+          "reference_characters": 2029,
+          "prediction_characters": 1969,
+          "edits": 237,
+          "cer": 0.1168,
+          "elapsed_seconds": 41.577
+        },
+        {
+          "sample_id": "F36A404E",
+          "category": "Education",
+          "reference_characters": 2814,
+          "prediction_characters": 2811,
+          "edits": 315,
+          "cer": 0.1119,
+          "elapsed_seconds": 54.858
+        },
+        {
+          "sample_id": "64B212A2",
+          "category": "Lifestyle",
+          "reference_characters": 635,
+          "prediction_characters": 644,
+          "edits": 69,
+          "cer": 0.1087,
+          "elapsed_seconds": 9.505
+        },
+        {
+          "sample_id": "28987CC6",
+          "category": "Government",
+          "reference_characters": 86,
+          "prediction_characters": 84,
+          "edits": 9,
+          "cer": 0.1047,
+          "elapsed_seconds": 1.893
+        },
+        {
+          "sample_id": "7946D327",
+          "category": "Finance",
+          "reference_characters": 1070,
+          "prediction_characters": 1083,
+          "edits": 108,
+          "cer": 0.1009,
+          "elapsed_seconds": 23.173
+        },
+        {
+          "sample_id": "0DCB6501",
+          "category": "Education",
+          "reference_characters": 1910,
+          "prediction_characters": 1940,
+          "edits": 190,
+          "cer": 0.0995,
+          "elapsed_seconds": 20.917
+        },
+        {
+          "sample_id": "D3974C29",
+          "category": "Government",
+          "reference_characters": 2514,
+          "prediction_characters": 2519,
+          "edits": 248,
+          "cer": 0.0986,
+          "elapsed_seconds": 25.363
+        },
+        {
+          "sample_id": "30F651B6",
+          "category": "Government",
+          "reference_characters": 722,
+          "prediction_characters": 771,
+          "edits": 70,
+          "cer": 0.097,
+          "elapsed_seconds": 16.004
+        },
+        {
+          "sample_id": "CD5D0597",
+          "category": "Government",
+          "reference_characters": 2793,
+          "prediction_characters": 2828,
+          "edits": 268,
+          "cer": 0.096,
+          "elapsed_seconds": 56.774
+        },
+        {
+          "sample_id": "6BFE2154",
+          "category": "Medical",
+          "reference_characters": 2823,
+          "prediction_characters": 2802,
+          "edits": 257,
+          "cer": 0.091,
+          "elapsed_seconds": 37.188
+        },
+        {
+          "sample_id": "B804017D",
+          "category": "Government",
+          "reference_characters": 681,
+          "prediction_characters": 693,
+          "edits": 62,
+          "cer": 0.091,
+          "elapsed_seconds": 12.965
+        },
+        {
+          "sample_id": "42271868",
+          "category": "Medical",
+          "reference_characters": 1259,
+          "prediction_characters": 1324,
+          "edits": 112,
+          "cer": 0.089,
+          "elapsed_seconds": 12.757
+        },
+        {
+          "sample_id": "72E0E40C",
+          "category": "Logistics",
+          "reference_characters": 1821,
+          "prediction_characters": 1870,
+          "edits": 162,
+          "cer": 0.089,
+          "elapsed_seconds": 93.376
+        },
+        {
+          "sample_id": "D26F9ABF",
+          "category": "Education",
+          "reference_characters": 2142,
+          "prediction_characters": 2200,
+          "edits": 189,
+          "cer": 0.0882,
+          "elapsed_seconds": 20.188
+        },
+        {
+          "sample_id": "3D0DFA8A",
+          "category": "Government",
+          "reference_characters": 2626,
+          "prediction_characters": 2563,
+          "edits": 230,
+          "cer": 0.0876,
+          "elapsed_seconds": 33.395
+        },
+        {
+          "sample_id": "745FCAAB",
+          "category": "Education",
+          "reference_characters": 1605,
+          "prediction_characters": 1650,
+          "edits": 139,
+          "cer": 0.0866,
+          "elapsed_seconds": 33.353
+        },
+        {
+          "sample_id": "27EA5E35",
+          "category": "Education",
+          "reference_characters": 863,
+          "prediction_characters": 869,
+          "edits": 73,
+          "cer": 0.0846,
+          "elapsed_seconds": 10.341
+        },
+        {
+          "sample_id": "F74692A0",
+          "category": "Transportation",
+          "reference_characters": 2082,
+          "prediction_characters": 2074,
+          "edits": 176,
+          "cer": 0.0845,
+          "elapsed_seconds": 77.581
+        },
+        {
+          "sample_id": "322ABACD",
+          "category": "Education",
+          "reference_characters": 142,
+          "prediction_characters": 140,
+          "edits": 12,
+          "cer": 0.0845,
+          "elapsed_seconds": 2.152
+        },
+        {
+          "sample_id": "8DB1557D",
+          "category": "Government",
+          "reference_characters": 1957,
+          "prediction_characters": 1903,
+          "edits": 160,
+          "cer": 0.0818,
+          "elapsed_seconds": 15.349
+        },
+        {
+          "sample_id": "2CF4F9FD",
+          "category": "Religion",
+          "reference_characters": 1388,
+          "prediction_characters": 1401,
+          "edits": 111,
+          "cer": 0.08,
+          "elapsed_seconds": 21.547
+        },
+        {
+          "sample_id": "FD830B8B",
+          "category": "Religion",
+          "reference_characters": 1222,
+          "prediction_characters": 1221,
+          "edits": 88,
+          "cer": 0.072,
+          "elapsed_seconds": 26.457
+        },
+        {
+          "sample_id": "8A52957B",
+          "category": "Government",
+          "reference_characters": 1583,
+          "prediction_characters": 1599,
+          "edits": 114,
+          "cer": 0.072,
+          "elapsed_seconds": 18.747
+        },
+        {
+          "sample_id": "08A1628F",
+          "category": "Advertising & Media",
+          "reference_characters": 2506,
+          "prediction_characters": 2593,
+          "edits": 179,
+          "cer": 0.0714,
+          "elapsed_seconds": 30.208
+        },
+        {
+          "sample_id": "84AE897C",
+          "category": "Government",
+          "reference_characters": 1652,
+          "prediction_characters": 1670,
+          "edits": 117,
+          "cer": 0.0708,
+          "elapsed_seconds": 28.608
+        },
+        {
+          "sample_id": "0DA0AFA7",
+          "category": "Government",
+          "reference_characters": 1075,
+          "prediction_characters": 1114,
+          "edits": 76,
+          "cer": 0.0707,
+          "elapsed_seconds": 12.97
+        },
+        {
+          "sample_id": "C982E351",
+          "category": "Government",
+          "reference_characters": 2299,
+          "prediction_characters": 2346,
+          "edits": 157,
+          "cer": 0.0683,
+          "elapsed_seconds": 24.693
+        },
+        {
+          "sample_id": "C59C1CAA",
+          "category": "Government",
+          "reference_characters": 1671,
+          "prediction_characters": 1711,
+          "edits": 113,
+          "cer": 0.0676,
+          "elapsed_seconds": 23.345
+        },
+        {
+          "sample_id": "6654F976",
+          "category": "Lifestyle",
+          "reference_characters": 208,
+          "prediction_characters": 210,
+          "edits": 14,
+          "cer": 0.0673,
+          "elapsed_seconds": 4.668
+        },
+        {
+          "sample_id": "5E8C040A",
+          "category": "Lifestyle",
+          "reference_characters": 235,
+          "prediction_characters": 237,
+          "edits": 15,
+          "cer": 0.0638,
+          "elapsed_seconds": 2.683
+        },
+        {
+          "sample_id": "8640348A",
+          "category": "Religion",
+          "reference_characters": 1840,
+          "prediction_characters": 1919,
+          "edits": 107,
+          "cer": 0.0582,
+          "elapsed_seconds": 12.939
+        },
+        {
+          "sample_id": "BF22A3A5",
+          "category": "Government",
+          "reference_characters": 1000,
+          "prediction_characters": 1012,
+          "edits": 56,
+          "cer": 0.056,
+          "elapsed_seconds": 13.447
+        },
+        {
+          "sample_id": "9DA41D6D",
+          "category": "Education",
+          "reference_characters": 551,
+          "prediction_characters": 557,
+          "edits": 29,
+          "cer": 0.0526,
+          "elapsed_seconds": 12.399
+        },
+        {
+          "sample_id": "1A7DCA31",
+          "category": "Government",
+          "reference_characters": 1131,
+          "prediction_characters": 1141,
+          "edits": 59,
+          "cer": 0.0522,
+          "elapsed_seconds": 16.857
+        },
+        {
+          "sample_id": "90D5C5FA",
+          "category": "Lifestyle",
+          "reference_characters": 2629,
+          "prediction_characters": 2690,
+          "edits": 132,
+          "cer": 0.0502,
+          "elapsed_seconds": 42.793
+        },
+        {
+          "sample_id": "B2DBB4F6",
+          "category": "Entertainment",
+          "reference_characters": 247,
+          "prediction_characters": 251,
+          "edits": 12,
+          "cer": 0.0486,
+          "elapsed_seconds": 6.504
+        },
+        {
+          "sample_id": "DA6CC808",
+          "category": "Hospitality",
+          "reference_characters": 1728,
+          "prediction_characters": 1767,
+          "edits": 83,
+          "cer": 0.048,
+          "elapsed_seconds": 15.36
+        },
+        {
+          "sample_id": "1B0AD18A",
+          "category": "Lifestyle",
+          "reference_characters": 2682,
+          "prediction_characters": 2748,
+          "edits": 124,
+          "cer": 0.0462,
+          "elapsed_seconds": 29.702
+        },
+        {
+          "sample_id": "6AE45D11",
+          "category": "Lifestyle",
+          "reference_characters": 1743,
+          "prediction_characters": 1769,
+          "edits": 80,
+          "cer": 0.0459,
+          "elapsed_seconds": 21.83
+        },
+        {
+          "sample_id": "DAE3E86B",
+          "category": "Education",
+          "reference_characters": 1602,
+          "prediction_characters": 1603,
+          "edits": 73,
+          "cer": 0.0456,
+          "elapsed_seconds": 21.21
+        },
+        {
+          "sample_id": "972A5D1E",
+          "category": "Education",
+          "reference_characters": 2461,
+          "prediction_characters": 2514,
+          "edits": 112,
+          "cer": 0.0455,
+          "elapsed_seconds": 24.596
+        },
+        {
+          "sample_id": "69A67416",
+          "category": "Lifestyle",
+          "reference_characters": 2460,
+          "prediction_characters": 2522,
+          "edits": 112,
+          "cer": 0.0455,
+          "elapsed_seconds": 37.502
+        },
+        {
+          "sample_id": "3C1FE8A3",
+          "category": "Architecture",
+          "reference_characters": 1453,
+          "prediction_characters": 1435,
+          "edits": 66,
+          "cer": 0.0454,
+          "elapsed_seconds": 50.636
+        },
+        {
+          "sample_id": "5FF078A0",
+          "category": "Education",
+          "reference_characters": 2462,
+          "prediction_characters": 2529,
+          "edits": 111,
+          "cer": 0.0451,
+          "elapsed_seconds": 38.778
+        },
+        {
+          "sample_id": "322DB7DB",
+          "category": "Government",
+          "reference_characters": 2924,
+          "prediction_characters": 2970,
+          "edits": 132,
+          "cer": 0.0451,
+          "elapsed_seconds": 47.979
+        },
+        {
+          "sample_id": "78B93799",
+          "category": "Lifestyle",
+          "reference_characters": 3299,
+          "prediction_characters": 3376,
+          "edits": 145,
+          "cer": 0.044,
+          "elapsed_seconds": 56.289
+        },
+        {
+          "sample_id": "E260C666",
+          "category": "Architecture",
+          "reference_characters": 556,
+          "prediction_characters": 573,
+          "edits": 24,
+          "cer": 0.0432,
+          "elapsed_seconds": 11.235
+        },
+        {
+          "sample_id": "71F94E4E",
+          "category": "Advertising & Media",
+          "reference_characters": 644,
+          "prediction_characters": 649,
+          "edits": 27,
+          "cer": 0.0419,
+          "elapsed_seconds": 11.218
+        },
+        {
+          "sample_id": "C4D1389C",
+          "category": "Government",
+          "reference_characters": 1528,
+          "prediction_characters": 1552,
+          "edits": 60,
+          "cer": 0.0393,
+          "elapsed_seconds": 13.957
+        },
+        {
+          "sample_id": "D78C8F3F",
+          "category": "Government",
+          "reference_characters": 712,
+          "prediction_characters": 717,
+          "edits": 25,
+          "cer": 0.0351,
+          "elapsed_seconds": 16.037
+        },
+        {
+          "sample_id": "F267DB2B",
+          "category": "Government",
+          "reference_characters": 1953,
+          "prediction_characters": 1985,
+          "edits": 65,
+          "cer": 0.0333,
+          "elapsed_seconds": 35.181
+        },
+        {
+          "sample_id": "F7ECAAAD",
+          "category": "Education",
+          "reference_characters": 1380,
+          "prediction_characters": 1394,
+          "edits": 45,
+          "cer": 0.0326,
+          "elapsed_seconds": 34.345
+        },
+        {
+          "sample_id": "1DBB40DA",
+          "category": "Government",
+          "reference_characters": 1133,
+          "prediction_characters": 1145,
+          "edits": 36,
+          "cer": 0.0318,
+          "elapsed_seconds": 17.598
+        },
+        {
+          "sample_id": "A04EEA18",
+          "category": "Government",
+          "reference_characters": 596,
+          "prediction_characters": 603,
+          "edits": 18,
+          "cer": 0.0302,
+          "elapsed_seconds": 7.676
+        },
+        {
+          "sample_id": "C7FC0E64",
+          "category": "Advertising & Media",
+          "reference_characters": 807,
+          "prediction_characters": 812,
+          "edits": 22,
+          "cer": 0.0273,
+          "elapsed_seconds": 12.243
+        },
+        {
+          "sample_id": "1576920D",
+          "category": "Lifestyle",
+          "reference_characters": 279,
+          "prediction_characters": 283,
+          "edits": 5,
+          "cer": 0.0179,
+          "elapsed_seconds": 3.226
+        },
+        {
+          "sample_id": "B2EF6E79",
+          "category": "Architecture",
+          "reference_characters": 566,
+          "prediction_characters": 570,
+          "edits": 7,
+          "cer": 0.0124,
+          "elapsed_seconds": 5.574
+        }
+      ],
+      "quotable": {
+        "reference_spans": 4609,
+        "recoverable_verbatim": 539,
+        "rate": 0.1169
+      },
+      "catalogue": {
+        "raw": "observed_ocr_error_catalogue.json",
+        "filtered": "observed_ocr_error_catalogue_filtered.json",
+        "rejections": "observed_ocr_error_rejections.json"
+      }
+    }
+  }
+}

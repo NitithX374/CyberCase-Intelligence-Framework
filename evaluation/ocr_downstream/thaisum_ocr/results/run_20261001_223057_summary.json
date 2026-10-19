@@ -1,0 +1,52 @@
+{
+ "code": "969d61a1cc0100c09ad97cd913efa985aa29ad52",
+ "model": "google/gemma-4-26b-a4b-it",
+ "providers": [
+  "coreweave/bf16",
+  "nextbit/bf16"
+ ],
+ "articles": 100,
+ "arms": {
+  "clean": {
+   "runs": 100,
+   "completed": 98,
+   "errors": {
+    "CaseAnalysisFailure: case_judgement_invalid": 2
+   },
+   "calls": 201,
+   "usd": 0.4521,
+   "usd_per_article": 0.00452,
+   "model_seconds": 15432.4,
+   "status_codes": {
+    "200": 201
+   }
+  },
+  "targeted": {
+   "runs": 100,
+   "completed": 100,
+   "errors": {},
+   "calls": 206,
+   "usd": 0.4628,
+   "usd_per_article": 0.00463,
+   "model_seconds": 15265.7,
+   "status_codes": {
+    "200": 206
+   }
+  },
+  "realistic": {
+   "runs": 100,
+   "completed": 100,
+   "errors": {},
+   "calls": 203,
+   "usd": 0.4519,
+   "usd_per_article": 0.00452,
+   "model_seconds": 14823.1,
+   "status_codes": {
+    "200": 203
+   }
+  }
+ },
+ "cap_usd": 1.962,
+ "spent_usd": 1.3668,
+ "stopped": []
+}
