@@ -1,0 +1,58 @@
+{
+  "created_at": "2026-10-16T20:40:52.045036+00:00",
+  "evidence_version": "evidence_units_v4",
+  "before": "SaT sat-3l-sm (threshold 0.025)",
+  "after": "PyThaiNLP crfcut fall-back (SaT unavailable)",
+  "inputs": {
+    "ThaiSum test (Thai news)": {
+      "dataset": "pythainlp/thaisum",
+      "revision": "6c2928cb64cd0d8ec0f3790ce848048fde1911dd",
+      "file": "data/test-00000-of-00001-f0463a2623057daa.parquet",
+      "file_sha256": "11b0f4c975c5601779111d379955b345bbfde723cd1cd5492e2d3244afa1a6cd",
+      "available": 10998,
+      "used": 500,
+      "sample": "first N by SHA-256 of text"
+    },
+    "AttributionBench references (English)": {
+      "dataset": "osunlp/AttributionBench",
+      "revision": "62569e644f4186606f54f742178a4517431b42e1",
+      "files": {
+        "test_all_subset_balanced.jsonl": "c2ff75dd4ea5cf12d86166ead66a96b42d5001a36daf02ff71303ef3317715a8",
+        "test_ood_all_subset_balanced.jsonl": "90d8f5363cec90197f80b3e896dad17e091a108a5bf282c3d515d48c9a01a934"
+      },
+      "available": 2856,
+      "used": 1000,
+      "sample": "first N by SHA-256 of text"
+    }
+  },
+  "results": [
+    {
+      "corpus": "ThaiSum test (Thai news)",
+      "sources": 500,
+      "sat_units": 12092,
+      "fallback_units": 19054,
+      "old_ids": 12092,
+      "same_text": 0,
+      "different_text_without_error": 0,
+      "typed_failures": {
+        "stale_id": 12092
+      },
+      "share_different_text_without_error": 0.0,
+      "sources_with_a_silent_change": 0
+    },
+    {
+      "corpus": "AttributionBench references (English)",
+      "sources": 1000,
+      "sat_units": 10869,
+      "fallback_units": 10055,
+      "old_ids": 10869,
+      "same_text": 0,
+      "different_text_without_error": 0,
+      "typed_failures": {
+        "stale_id": 10869
+      },
+      "share_different_text_without_error": 0.0,
+      "sources_with_a_silent_change": 0
+    }
+  ]
+}

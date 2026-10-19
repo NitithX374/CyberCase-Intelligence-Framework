@@ -1,0 +1,134 @@
+{
+  "created_at": "2026-10-16T19:52:57.655649+00:00",
+  "evidence_version": "evidence_units_v4",
+  "segmenter": "SaT sat-3l-sm (threshold 0.025)",
+  "min_sentence_chars": 25,
+  "max_unit_chars": 2000,
+  "environment": {
+    "python": "3.13.4",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "pythainlp": "5.4.0",
+    "wtpsplit": "2.2.2",
+    "torch": "2.14.1+cpu"
+  },
+  "inputs": {
+    "thai": {
+      "dataset": "pythainlp/thaisum",
+      "revision": "6c2928cb64cd0d8ec0f3790ce848048fde1911dd",
+      "file": "data/test-00000-of-00001-f0463a2623057daa.parquet",
+      "file_sha256": "11b0f4c975c5601779111d379955b345bbfde723cd1cd5492e2d3244afa1a6cd",
+      "available": 10998,
+      "used": 500,
+      "sample": "first N by SHA-256 of text"
+    },
+    "english": {
+      "dataset": "osunlp/AttributionBench",
+      "revision": "62569e644f4186606f54f742178a4517431b42e1",
+      "files": {
+        "test_all_subset_balanced.jsonl": "c2ff75dd4ea5cf12d86166ead66a96b42d5001a36daf02ff71303ef3317715a8",
+        "test_ood_all_subset_balanced.jsonl": "90d8f5363cec90197f80b3e896dad17e091a108a5bf282c3d515d48c9a01a934"
+      },
+      "available": 2856,
+      "used": 1000,
+      "sample": "first N by SHA-256 of text"
+    }
+  },
+  "results": [
+    {
+      "corpus": "ThaiSum test (Thai news)",
+      "sources": 500,
+      "characters": 1590648,
+      "thai_share_of_sources": 1.0,
+      "units": 12092,
+      "units_per_source": {
+        "mean": 24.184,
+        "median": 13.0,
+        "p95": 80,
+        "max": 257,
+        "min": 1
+      },
+      "unit_length_chars": {
+        "mean": 131.54548461792922,
+        "median": 81.0,
+        "p95": 415,
+        "max": 1815,
+        "min": 13
+      },
+      "units_at_length_cap": 0,
+      "segmentation_seconds": 526.3560185999959,
+      "ms_per_1000_chars": 330.90666105888664,
+      "lossless_failures": 0,
+      "determinism_failures": 0,
+      "units_digest": "36ae178cbd9d1a66157c8a05097d644069266b641f07ae0a8f33df2c55d11461",
+      "revision": {
+        "edit": "one random single-character insertion per source (seeded by SHA-256 of the text)",
+        "old_ids": 12092,
+        "content_addressed_stale_id": 12092,
+        "raw_offsets_silently_changed": 6444,
+        "raw_offsets_unchanged": 5648,
+        "positional_ids_silently_changed": 4052,
+        "positional_ids_out_of_range": 167,
+        "sources_with_a_silent_offset_change": 500,
+        "sources_with_a_silent_positional_change": 500
+      },
+      "boundaries": {
+        "reference_words": "PyThaiNLP newmm",
+        "fixed_chunk_chars": 132,
+        "unit_cuts": 11592,
+        "unit_cuts_mid_word": 57,
+        "unit_cuts_splitting_digits": 0,
+        "fixed_cuts": 11804,
+        "fixed_cuts_mid_word": 8822,
+        "fixed_cuts_splitting_digits": 75
+      }
+    },
+    {
+      "corpus": "AttributionBench references (English)",
+      "sources": 1000,
+      "characters": 1179509,
+      "thai_share_of_sources": 0.0,
+      "units": 10869,
+      "units_per_source": {
+        "mean": 10.869,
+        "median": 5.0,
+        "p95": 25,
+        "max": 644,
+        "min": 1
+      },
+      "unit_length_chars": {
+        "mean": 108.52047106449535,
+        "median": 97,
+        "p95": 232,
+        "max": 638,
+        "min": 2
+      },
+      "units_at_length_cap": 0,
+      "segmentation_seconds": 150.7703382000036,
+      "ms_per_1000_chars": 127.82466110898993,
+      "lossless_failures": 0,
+      "determinism_failures": 0,
+      "units_digest": "038b75dd0fa6e4f1aee8c588a940336ffd1a12a1a9421e672cfbef8df5b3a1cb",
+      "revision": {
+        "edit": "one random single-character insertion per source (seeded by SHA-256 of the text)",
+        "old_ids": 10869,
+        "content_addressed_stale_id": 10869,
+        "raw_offsets_silently_changed": 6203,
+        "raw_offsets_unchanged": 4666,
+        "positional_ids_silently_changed": 1275,
+        "positional_ids_out_of_range": 8,
+        "sources_with_a_silent_offset_change": 995,
+        "sources_with_a_silent_positional_change": 1000
+      },
+      "boundaries": {
+        "reference_words": "regex \\w+ runs",
+        "fixed_chunk_chars": 109,
+        "unit_cuts": 9869,
+        "unit_cuts_mid_word": 27,
+        "unit_cuts_splitting_digits": 0,
+        "fixed_cuts": 10303,
+        "fixed_cuts_mid_word": 6676,
+        "fixed_cuts_splitting_digits": 79
+      }
+    }
+  ]
+}
