@@ -1,0 +1,174 @@
+{
+  "schema_version": "ai-research-writing/citation-requests-v1",
+  "entries": [
+    {
+      "key": "ladder",
+      "identifier": "doi:10.1145/3607199.3607208",
+      "claim_support": [
+        {
+          "claim": "LADDER publishes a relevant-sentence binary task, with positives defined by annotated attack patterns and sampled remaining sentences as negatives.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Section 3.4.1, Relevant Sentence Extraction; read the original author paper.",
+          "source": "https://arxiv.org/abs/2211.01753"
+        }
+      ]
+    },
+    {
+      "key": "annoctr",
+      "identifier": "doi:10.48550/arXiv.2404.07765",
+      "claim_support": [
+        {
+          "claim": "AnnoCTR annotates explicit and implicit cybersecurity concepts and links mentions to ATT&CK.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Corpus construction and task definitions; released ce_tags and ci_tags independently inspected.",
+          "source": "https://aclanthology.org/2024.lrec-main.103/"
+        }
+      ]
+    },
+    {
+      "key": "malwaretextdb",
+      "identifier": "doi:10.18653/v1/P17-1143",
+      "claim_support": [
+        {
+          "claim": "MalwareTextDB provides malware action, entity and modifier sequence-labeling targets.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Sections 3 and 5.2; native token files already contain BIO Entity/Action/Modifier labels.",
+          "source": "https://aclanthology.org/P17-1143/"
+        }
+      ]
+    },
+    {
+      "key": "casie",
+      "identifier": "doi:10.1609/aaai.v34i05.6401",
+      "claim_support": [
+        {
+          "claim": "CASIE extracts cybersecurity event nuggets and arguments with five native event types.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Annotation schema, corpus statistics and experiments; original JSON sample inspected.",
+          "source": "https://ojs.aaai.org/index.php/AAAI/article/view/6401"
+        }
+      ]
+    },
+    {
+      "key": "security_ttp",
+      "identifier": "doi:10.18653/v1/2024.findings-eacl.25",
+      "claim_support": [
+        {
+          "claim": "The Security-TTP-Mapping Expert subset is paragraph-to-ATT&CK matching, with candidate-assisted test annotation.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Dataset collection and annotation appendix; all released Expert TSV splits parsed.",
+          "source": "https://aclanthology.org/2024.findings-eacl.25/"
+        }
+      ]
+    },
+    {
+      "key": "text2ttp",
+      "identifier": "doi:10.1145/3634737.3645000",
+      "claim_support": [
+        {
+          "claim": "Text2TTP studies semantic ranking for adversarial technique annotation rather than a no-ATT&CK text rejection task.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Dataset and ranking/evaluation sections; compared paper collection with current loader files.",
+          "source": "https://arxiv.org/abs/2403.17068"
+        }
+      ]
+    },
+    {
+      "key": "ctibench",
+      "identifier": "doi:10.52202/079017-1607",
+      "claim_support": [
+        {
+          "claim": "CTI-ATE evaluates extraction of parent ATT&CK technique sets from 60 malware descriptions.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Sections 3.4 and 4.1; native TSV GT column verified.",
+          "source": "https://papers.neurips.cc/paper_files/paper/2024/hash/5acd3c628aa1819fbf07c39ef73e7285-Abstract-Datasets_and_Benchmarks_Track.html"
+        }
+      ]
+    },
+    {
+      "key": "securenlp",
+      "identifier": "doi:10.18653/v1/S18-1113",
+      "claim_support": [
+        {
+          "claim": "SecureNLP Subtask 1 classifies relevant and irrelevant malware-behavior sentences, with 9424/1213/618 sentence splits.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Sections 2.1.7, 2.2 and Tables 1-2; original organizer paper read.",
+          "source": "https://aclanthology.org/S18-1113/"
+        }
+      ]
+    },
+    {
+      "key": "cyseced",
+      "identifier": "doi:10.18653/v1/2020.emnlp-main.433",
+      "claim_support": [
+        {
+          "claim": "CySecED is a cybersecurity event-trigger detection task with 30 event types, not an ATT&CK applicability binary benchmark.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Event ontology and dataset statistics in original paper; public full-data availability unverified.",
+          "source": "https://aclanthology.org/2020.emnlp-main.433/"
+        }
+      ]
+    },
+    {
+      "key": "ctihal",
+      "identifier": "doi:10.48550/arXiv.2504.05866",
+      "claim_support": [
+        {
+          "claim": "CTI-HAL publishes human annotations of ATT&CK techniques in report contexts; null technique records can carry tool annotations.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Original paper and official annotation JSON, including a MiniDuke tool record, inspected.",
+          "source": "https://arxiv.org/abs/2504.05866"
+        }
+      ]
+    },
+    {
+      "key": "tim",
+      "identifier": "doi:10.1186/s42400-021-00106-5",
+      "claim_support": [
+        {
+          "claim": "TIM uses three-sentence contexts and six TTP categories; a usable complete author data release was not verified.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Original publisher article and its linked repository inspected.",
+          "source": "https://link.springer.com/article/10.1186/s42400-021-00106-5"
+        }
+      ]
+    },
+    {
+      "key": "ttpxhunter",
+      "identifier": "doi:10.1145/3696427",
+      "claim_support": [
+        {
+          "claim": "TTPXHunter is technique classification with augmented examples; its released CSV has 193 classes and no native benign class.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Original author preprint and released Dataset/MITRE_ATT&CK_Dataset.csv inspected.",
+          "source": "https://arxiv.org/abs/2403.03267"
+        }
+      ]
+    },
+    {
+      "key": "ryan2026",
+      "identifier": "doi:10.48550/arXiv.2606.18166",
+      "claim_support": [
+        {
+          "claim": "This preprint describes a sentence-level technique classification corpus; an author download was not verified in the search.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Dataset section and artifact links inspected; excluded from recommendations.",
+          "source": "https://arxiv.org/abs/2606.18166"
+        }
+      ]
+    }
+  ]
+}

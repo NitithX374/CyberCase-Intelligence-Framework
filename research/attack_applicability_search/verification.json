@@ -1,0 +1,391 @@
+{
+  "checked_on": "2026-09-26",
+  "scope": "Downloaded artifact counts and native-label inspection; no model training or new labels",
+  "cache_path": "C:\\Users\\kkham\\AppData\\Local\\Temp\\cybercase-dataset-audit-20260926",
+  "initial_native_counts": [
+    {
+      "dataset": "LADDER",
+      "file": "dev.csv",
+      "rows": 568,
+      "labels": {
+        "1": 284,
+        "0": 284
+      }
+    },
+    {
+      "dataset": "LADDER",
+      "file": "test.csv",
+      "rows": 662,
+      "labels": {
+        "1": 331,
+        "0": 331
+      }
+    },
+    {
+      "dataset": "LADDER",
+      "file": "train.csv",
+      "rows": 2214,
+      "labels": {
+        "1": 1107,
+        "0": 1107
+      }
+    },
+    {
+      "dataset": "qcri__Text2TTP",
+      "rows": 3539,
+      "columns": [
+        "tech_id",
+        "text",
+        "tech_name",
+        "top_tech_id",
+        "dataset"
+      ],
+      "datasets": {
+        "manual": 2017,
+        "tram": 1522
+      }
+    },
+    {
+      "dataset": "maveryn__cti-bench",
+      "rows": 60,
+      "columns": [
+        "URL",
+        "Platform",
+        "Description",
+        "Prompt",
+        "GT"
+      ],
+      "datasets": {
+        "": 60
+      }
+    },
+    {
+      "dataset": "AnnoCTR",
+      "split": "train",
+      "ner_sentences": 7570,
+      "docs": 70,
+      "tags": {
+        "ce_tags": {
+          "O": 142075,
+          "B-CON": 915,
+          "B-TECHNIQUE": 638,
+          "I-TECHNIQUE": 2484,
+          "B-MALWARE": 1034,
+          "B-TACTIC": 435,
+          "I-TACTIC": 481,
+          "B-GROUP": 401,
+          "I-CON": 74,
+          "B-TOOL": 137,
+          "I-TOOL": 30,
+          "I-MALWARE": 144,
+          "I-GROUP": 92
+        },
+        "ci_tags": {
+          "O": 137363,
+          "B-TECHNIQUE": 1320,
+          "I-TECHNIQUE": 9132,
+          "B-TACTIC": 173,
+          "I-TACTIC": 915,
+          "B-GROUP": 3,
+          "I-GROUP": 34
+        }
+      }
+    },
+    {
+      "dataset": "AnnoCTR-link",
+      "split": "train",
+      "rows": 6766,
+      "keys": [
+        "mention",
+        "context_left",
+        "context_right",
+        "_context_left",
+        "_context_right",
+        "sentence_left",
+        "sentence_right",
+        "label",
+        "label_id",
+        "label_title",
+        "label_link",
+        "entity_class",
+        "entity_type",
+        "document"
+      ]
+    },
+    {
+      "dataset": "AnnoCTR",
+      "split": "dev",
+      "ner_sentences": 1550,
+      "docs": 16,
+      "tags": {
+        "ce_tags": {
+          "B-GROUP": 99,
+          "I-GROUP": 5,
+          "O": 53482,
+          "B-TECHNIQUE": 103,
+          "I-TECHNIQUE": 231,
+          "B-TACTIC": 73,
+          "B-MALWARE": 214,
+          "B-CON": 204,
+          "I-TACTIC": 146,
+          "I-MALWARE": 20,
+          "I-CON": 44,
+          "B-TOOL": 31,
+          "I-TOOL": 5
+        },
+        "ci_tags": {
+          "O": 52056,
+          "B-TECHNIQUE": 348,
+          "I-TECHNIQUE": 2128,
+          "B-TACTIC": 22,
+          "I-TACTIC": 103
+        }
+      }
+    },
+    {
+      "dataset": "AnnoCTR-link",
+      "split": "dev",
+      "rows": 1421,
+      "keys": [
+        "mention",
+        "context_left",
+        "context_right",
+        "_context_left",
+        "_context_right",
+        "sentence_left",
+        "sentence_right",
+        "label",
+        "label_id",
+        "label_title",
+        "label_link",
+        "entity_class",
+        "entity_type",
+        "document"
+      ]
+    },
+    {
+      "dataset": "AnnoCTR",
+      "split": "test",
+      "ner_sentences": 3059,
+      "docs": 34,
+      "tags": {
+        "ce_tags": {
+          "B-MALWARE": 421,
+          "O": 61534,
+          "B-CON": 449,
+          "B-TACTIC": 188,
+          "I-TACTIC": 226,
+          "B-TECHNIQUE": 357,
+          "I-TECHNIQUE": 1171,
+          "I-MALWARE": 64,
+          "I-CON": 89,
+          "B-TOOL": 52,
+          "B-GROUP": 213,
+          "I-GROUP": 35,
+          "I-TOOL": 23
+        },
+        "ci_tags": {
+          "O": 58801,
+          "B-TECHNIQUE": 624,
+          "I-TECHNIQUE": 4860,
+          "B-TACTIC": 67,
+          "I-TACTIC": 470
+        }
+      }
+    },
+    {
+      "dataset": "AnnoCTR-link",
+      "split": "test",
+      "rows": 3076,
+      "keys": [
+        "mention",
+        "context_left",
+        "context_right",
+        "_context_left",
+        "_context_right",
+        "sentence_left",
+        "sentence_right",
+        "label",
+        "label_id",
+        "label_title",
+        "label_link",
+        "entity_class",
+        "entity_type",
+        "document"
+      ]
+    }
+  ],
+  "additional_counts": {
+    "TRAM2": {
+      "rows": 19178,
+      "empty": 15108,
+      "nonempty": 4070,
+      "label_count": 50,
+      "document_titles": 151,
+      "split": "Author notebook uses shuffled row-level 80/20 without random_state; no frozen split files verified"
+    },
+    "MalwareTextDB_v1": {
+      "paper_reports": 39,
+      "paper_sentences": 6819,
+      "native_token_labels": [
+        "B-Action",
+        "I-Action",
+        "B-Entity",
+        "I-Entity",
+        "B-Modifier",
+        "I-Modifier",
+        "O"
+      ],
+      "native_sequence_blocks": 6966,
+      "paper_split_documents": [
+        23,
+        8,
+        8
+      ],
+      "fixed_membership_verified": false
+    },
+    "CTI_ATE": {
+      "rows": 60,
+      "unique_ids": 115,
+      "assignments": 397,
+      "empty_targets": 0,
+      "split": "test-only"
+    },
+    "TTPXHunter": {
+      "rows": 47860,
+      "classes": 193,
+      "fixed_split_verified": false,
+      "paper_rows": 39296
+    },
+    "DNRTI": {
+      "train": {
+        "sequence_blocks": 140527,
+        "tags": {
+          "O": 110614,
+          "B-HackOrg": 3419,
+          "B-Idus": 1349,
+          "I-Idus": 482,
+          "B-Tool": 2449,
+          "I-Tool": 1386,
+          "B-Area": 2171,
+          "I-Area": 816,
+          "B-Org": 1113,
+          "I-Org": 958,
+          "I-HackOrg": 977,
+          "B-Time": 1328,
+          "I-Time": 794,
+          "B-Way": 828,
+          "I-Way": 785,
+          "B-OffAct": 1412,
+          "B-SamFile": 1221,
+          "B-Features": 812,
+          "I-Features": 1178,
+          "I-OffAct": 851,
+          "B-SecTeam": 997,
+          "B-Exp": 1068,
+          "I-Exp": 538,
+          "I-SecTeam": 473,
+          "B-Purp": 721,
+          "I-Purp": 1231,
+          "I-SamFile": 556
+        }
+      },
+      "valid": {
+        "sequence_blocks": 17609,
+        "tags": {
+          "O": 14316,
+          "B-OffAct": 100,
+          "I-OffAct": 65,
+          "B-Idus": 103,
+          "I-Idus": 37,
+          "B-Org": 111,
+          "I-Org": 69,
+          "B-Tool": 317,
+          "I-Tool": 156,
+          "B-HackOrg": 426,
+          "B-Way": 109,
+          "I-Way": 107,
+          "B-Area": 144,
+          "I-Area": 48,
+          "B-Time": 183,
+          "I-HackOrg": 141,
+          "I-Time": 86,
+          "B-SecTeam": 178,
+          "I-SecTeam": 65,
+          "B-SamFile": 191,
+          "I-SamFile": 89,
+          "B-Exp": 131,
+          "B-Purp": 82,
+          "I-Purp": 130,
+          "I-Exp": 41,
+          "B-Features": 97,
+          "I-Features": 87
+        }
+      },
+      "test": {
+        "sequence_blocks": 17732,
+        "tags": {
+          "B-SecTeam": 152,
+          "O": 14126,
+          "B-HackOrg": 369,
+          "B-Area": 216,
+          "I-HackOrg": 133,
+          "B-Tool": 315,
+          "I-Tool": 161,
+          "I-SecTeam": 56,
+          "B-SamFile": 248,
+          "I-SamFile": 95,
+          "B-Purp": 115,
+          "B-Org": 137,
+          "I-Org": 101,
+          "B-Idus": 127,
+          "I-Idus": 38,
+          "I-Purp": 145,
+          "B-Time": 167,
+          "B-Exp": 132,
+          "B-OffAct": 150,
+          "B-Way": 100,
+          "I-Way": 89,
+          "I-Area": 52,
+          "I-Time": 101,
+          "I-OffAct": 91,
+          "I-Exp": 49,
+          "B-Features": 116,
+          "I-Features": 151
+        }
+      }
+    }
+  },
+  "repository_revisions": {
+    "aiforsec__LADDER": "913b4fb4e58198762fa1d2e82925e33d437348e5",
+    "anuraagkansara__SecureNLP": "f3789f5c57085cf2a48f273c66b506efb733a740",
+    "boschresearch__anno-ctr-lrec-coling-2024": "d510b6949e1938d47c93a43eedd562dc538439dc",
+    "center-for-threat-informed-defense__tram": "f29793d8d665f7f552898696e00065ef24a29a20",
+    "dessertlab__CTI-HAL": "fdf0678a153a17337266a2205293581ee333dfe9",
+    "Ebiquity__CASIE": "2c8beef56d48e8de6599891c6a5e0e5f0d82e20c",
+    "genesith__CyBERTuned": "702016718290e78ee10f19e066a201d535fe71f9",
+    "lichao20000__secureNLP": "6438597d50f1110e4c1c00d53158ce7a4bf339e6",
+    "lukedorney__secureNLP": "45c934b7a1595d458e20708a389864299062fe56",
+    "maveryn__cti-bench": "4543e5b6560d3204e1205ced4fa286adc7452d07",
+    "nanda-rani__TTPXHunter-Actionable-Threat-Intelligence-Extraction-as-TTPs-from-Finished-Cyber-Threat-Reports": "b4020e8caba09c0e687876044544a9ce94866c20",
+    "paarthlakhani__Semantic_Ext_Cybersecurity": "67e8300025b31798570b0c85b09b617d3f7dd881",
+    "qcri__Text2TTP": "aa9e0bfa07b2ee81f5ddffc7ed72021159b423d8",
+    "SCreaMxp__DNRTI-A-Large-scale-Dataset-for-Named-Entity-Recognition-in-Threat-Intelligence": "ef501f244ee53d2a3203e437699e50661cd0353d",
+    "statnlp-research__statnlp-datasets": "7c2447d0e939a34a07acb08974b29d31f8b5ccec",
+    "vlegoy__rcATT": "f82f7fd456279abefcd3e0b50e8056345c11aeb7"
+  },
+  "unavailable_original_endpoints": [
+    {
+      "url": "http://www.statnlp.org/resource/semeval",
+      "error": "HTTP Error 406: Not Acceptable"
+    },
+    {
+      "url": "https://www.statnlp.org/research/re/semeval2018/eval_data.zip",
+      "error": "HTTP Error 406: Not Acceptable"
+    },
+    {
+      "url": "https://www.statnlp.org/research/re/semeval2018/dev_data.zip",
+      "error": "HTTP Error 406: Not Acceptable"
+    }
+  ]
+}

@@ -1,0 +1,341 @@
+{
+  "schema_version": "ai-research-writing/citation-lock-v1",
+  "request_sha256": "60ba938cb199315eacb0e58a38b007cc7807efc65453fec73969fccc3379ee95",
+  "records": [
+    {
+      "key": "ladder",
+      "identifier": "doi:10.1145/3607199.3607208",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.1145%2F3607199.3607208",
+      "checked_at": "2026-09-26T11:36:57.397073+00:00",
+      "metadata": {
+        "title": "Looking Beyond IoCs: Automatically Extracting Attack Patterns from External CTI",
+        "authors": [
+          "Md Tanvirul Alam",
+          "Dipkamal Bhusal",
+          "Youngja Park",
+          "Nidhi Rastogi"
+        ],
+        "year": 2023,
+        "doi": "10.1145/3607199.3607208",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "2af7cea1ba96b798fca9b66386fe055d17ff2bc518daefa0908314688d0789d0",
+      "claim_support_sha256": "04548855e7fa3c8c1b32322bad28cf593f9fb09ff4c40930638d0f3d6cd7a782",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "annoctr",
+      "identifier": "doi:10.48550/arXiv.2404.07765",
+      "status": "verified",
+      "provider": "datacite",
+      "request_url": "https://api.datacite.org/dois/10.48550%2FarXiv.2404.07765",
+      "checked_at": "2026-09-26T11:36:59.334733+00:00",
+      "metadata": {
+        "title": "AnnoCTR: A Dataset for Detecting and Linking Entities, Tactics, and Techniques in Cyber Threat Reports",
+        "authors": [
+          "Lange, Lukas",
+          "M\u00fcller, Marc",
+          "Torbati, Ghazaleh Haratinezhad",
+          "Milchevski, Dragan",
+          "Grau, Patrick",
+          "Pujari, Subhash",
+          "Friedrich, Annemarie"
+        ],
+        "year": 2024,
+        "doi": "10.48550/arxiv.2404.07765",
+        "type": "Preprint"
+      },
+      "metadata_sha256": "ead4f112ad81d35eb8bb3c55b743a247ab7fb9b6704c422d151c39e4f7e9f541",
+      "claim_support_sha256": "44b3ebb77277ddeb5481126ac27659c2312d9b95639badb33fdfc8caf197f78c",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "malwaretextdb",
+      "identifier": "doi:10.18653/v1/P17-1143",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.18653%2Fv1%2FP17-1143",
+      "checked_at": "2026-09-26T11:36:59.995390+00:00",
+      "metadata": {
+        "title": "MalwareTextDB: A Database for Annotated Malware Articles",
+        "authors": [
+          "Swee Kiat Lim",
+          "Aldrian Obaja Muis",
+          "Wei Lu",
+          "Chen Hui Ong"
+        ],
+        "year": 2017,
+        "doi": "10.18653/v1/p17-1143",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "2ad7ef344d60405fe682b0306b08dc4bf84108731863131f40470c61297c9542",
+      "claim_support_sha256": "143c2699945a064b3048bc4fe85258bfbc056316755bdbd66d1031faf53aaa5e",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "casie",
+      "identifier": "doi:10.1609/aaai.v34i05.6401",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.1609%2Faaai.v34i05.6401",
+      "checked_at": "2026-09-26T11:37:00.637207+00:00",
+      "metadata": {
+        "title": "CASIE: Extracting Cybersecurity Event Information from Text",
+        "authors": [
+          "Taneeya Satyapanich",
+          "Francis Ferraro",
+          "Tim Finin"
+        ],
+        "year": 2020,
+        "doi": "10.1609/aaai.v34i05.6401",
+        "type": "journal-article"
+      },
+      "metadata_sha256": "93945d2bf488fddf2542d69a2a5cb32c0c021163ad780e43a0beaacd48a332d5",
+      "claim_support_sha256": "3ed9f95f60698ed6ea8665be4debfba7131ba0fd79ab95ecf7cb174f74071345",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "security_ttp",
+      "identifier": "doi:10.18653/v1/2024.findings-eacl.25",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2024.findings-eacl.25",
+      "checked_at": "2026-09-26T11:37:01.301354+00:00",
+      "metadata": {
+        "title": "Noise Contrastive Estimation-based Matching Framework for Low-Resource Security Attack Pattern Recognition",
+        "authors": [
+          "Tu Nguyen",
+          "Nedim \u0160rndi\u0107",
+          "Alexander Neth"
+        ],
+        "year": 2024,
+        "doi": "10.18653/v1/2024.findings-eacl.25",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "e56bb85a92dfbd2426671a2d43ffb13adf472154f331092fed947205475df6cc",
+      "claim_support_sha256": "92b8c202ed642acf1a3a5a0abb5069a16183524fe393b6a05da6024c8852c2b5",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "text2ttp",
+      "identifier": "doi:10.1145/3634737.3645000",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.1145%2F3634737.3645000",
+      "checked_at": "2026-09-26T11:37:02.158069+00:00",
+      "metadata": {
+        "title": "Semantic Ranking for Automated Adversarial Technique Annotation in Security Text",
+        "authors": [
+          "Udesh Kumarasinghe",
+          "Ahmed Lekssays",
+          "Husrev Taha Sencar",
+          "Sabri Boughorbel",
+          "Charitha Elvitigala",
+          "Preslav Nakov"
+        ],
+        "year": 2024,
+        "doi": "10.1145/3634737.3645000",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "51ddef17ad30734310e5e6e38fe7a3725b8653fd76877410e1167928aa98f472",
+      "claim_support_sha256": "800cca2d99de2a75bfc32adc9d0fb69f95b87a66b385e3add18e75fad4a9a7db",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "ctibench",
+      "identifier": "doi:10.52202/079017-1607",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.52202%2F079017-1607",
+      "checked_at": "2026-09-26T11:37:02.836196+00:00",
+      "metadata": {
+        "title": "CTIBench: A Benchmark for Evaluating LLMs in Cyber Threat Intelligence",
+        "authors": [
+          "Md Tanvirul Alam",
+          "Dipkamal Bhusal",
+          "Le Nguyen",
+          "Nidhi Rastogi"
+        ],
+        "year": 2024,
+        "doi": "10.52202/079017-1607",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "405a4f76d2fbe8fd6f0e376e158d80ca2103b1e32ef376312a3aa0de78baa711",
+      "claim_support_sha256": "d71aa3e66dc90796b468018097c4dd22d2e2c53e97f7067c7e3d13692b5966b9",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "securenlp",
+      "identifier": "doi:10.18653/v1/S18-1113",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.18653%2Fv1%2FS18-1113",
+      "checked_at": "2026-09-26T11:37:03.509526+00:00",
+      "metadata": {
+        "title": "SemEval-2018 Task 8: Semantic Extraction from CybersecUrity REports\n            using Natural Language Processing (SecureNLP)",
+        "authors": [
+          "Peter Phandi",
+          "Amila Silva",
+          "Wei Lu"
+        ],
+        "year": 2018,
+        "doi": "10.18653/v1/s18-1113",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "73099c22042d3f2e7dba7961ea281c44a7902e24e704885514d75e3c96259aee",
+      "claim_support_sha256": "4d71a2824b4e05fa94d409d78c157fa1f22d5d189d5dc24581e7434f6031416e",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "cyseced",
+      "identifier": "doi:10.18653/v1/2020.emnlp-main.433",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2020.emnlp-main.433",
+      "checked_at": "2026-09-26T11:37:04.145964+00:00",
+      "metadata": {
+        "title": "Introducing a New Dataset for Event Detection in Cybersecurity Texts",
+        "authors": [
+          "Hieu Man Duc Trong",
+          "Duc Trong Le",
+          "Amir Pouran Ben Veyseh",
+          "Thuat Nguyen",
+          "Thien Huu Nguyen"
+        ],
+        "year": 2020,
+        "doi": "10.18653/v1/2020.emnlp-main.433",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "fd520d6f16be352c73b1383aa45c5bdd90b571e25706f3fc16a203f071c7144e",
+      "claim_support_sha256": "3820d427242fdaf1722568bed9db4d9b7b1f3c7bf1b1db7e5efdd32ee0c21406",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "ctihal",
+      "identifier": "doi:10.48550/arXiv.2504.05866",
+      "status": "verified",
+      "provider": "datacite",
+      "request_url": "https://api.datacite.org/dois/10.48550%2FarXiv.2504.05866",
+      "checked_at": "2026-09-26T11:37:05.760718+00:00",
+      "metadata": {
+        "title": "CTI-HAL: A Human-Annotated Dataset for Cyber Threat Intelligence Analysis",
+        "authors": [
+          "Della Penna, Sofia",
+          "Natella, Roberto",
+          "Orbinato, Vittorio",
+          "Parracino, Lorenzo",
+          "Pianese, Luciano"
+        ],
+        "year": 2025,
+        "doi": "10.48550/arxiv.2504.05866",
+        "type": "Preprint"
+      },
+      "metadata_sha256": "7a539b3db6006be07c8524f1e3a114b0f6de266b758a9ee8e25f45f17f5d879a",
+      "claim_support_sha256": "60ba3617bb13339a278f57770663bb6f91d4cb239280178814eb7c614d6b72d8",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "tim",
+      "identifier": "doi:10.1186/s42400-021-00106-5",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.1186%2Fs42400-021-00106-5",
+      "checked_at": "2026-09-26T11:37:06.459091+00:00",
+      "metadata": {
+        "title": "TIM: threat context-enhanced TTP intelligence mining on unstructured threat data",
+        "authors": [
+          "Yizhe You",
+          "Jun Jiang",
+          "Zhengwei Jiang",
+          "Peian Yang",
+          "Baoxu Liu",
+          "Huamin Feng",
+          "Xuren Wang",
+          "Ning Li"
+        ],
+        "year": 2022,
+        "doi": "10.1186/s42400-021-00106-5",
+        "type": "journal-article"
+      },
+      "metadata_sha256": "5b612a536b3cb79d7b6d14fa08d67f5b0fa869530a1438dbf85da614041653b6",
+      "claim_support_sha256": "c09f25b3d5b858c95f6acaf4a8183955b33f91428cea7df8ac0e294ee44b81bb",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "ttpxhunter",
+      "identifier": "doi:10.1145/3696427",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.1145%2F3696427",
+      "checked_at": "2026-09-26T11:37:07.338461+00:00",
+      "metadata": {
+        "title": "TTPXHunter: Actionable Threat Intelligence Extraction as TTPs from Finished Cyber Threat Reports",
+        "authors": [
+          "Nanda Rani",
+          "Bikash Saha",
+          "Vikas Maurya",
+          "Sandeep Kumar Shukla"
+        ],
+        "year": 2024,
+        "doi": "10.1145/3696427",
+        "type": "journal-article"
+      },
+      "metadata_sha256": "0152dedcd81492f719e1919306b1f80a746534b1c548737d47ee6d2068f71472",
+      "claim_support_sha256": "e52c1984b882386a1e37ef12e944a5472e901b86e52d811caa5ac48756b76829",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "ryan2026",
+      "identifier": "doi:10.48550/arXiv.2606.18166",
+      "status": "verified",
+      "provider": "datacite",
+      "request_url": "https://api.datacite.org/dois/10.48550%2FarXiv.2606.18166",
+      "checked_at": "2026-09-26T11:37:08.985929+00:00",
+      "metadata": {
+        "title": "Evaluating Open-Source LLMs for Multi-Label ATT&amp;CK Technique Classification on CTI Reports",
+        "authors": [
+          "Ryan, Ahmed",
+          "Noor, Saad Sakib",
+          "Erfan, Md",
+          "Mitra, Shaswata",
+          "Mittal, Sudip",
+          "Rahman, Md Rayhanur"
+        ],
+        "year": 2026,
+        "doi": "10.48550/arxiv.2606.18166",
+        "type": "Preprint"
+      },
+      "metadata_sha256": "f10f053da5e553c9ad31324ef1c125bbd9472d45e07b6be9a53fdcd11c934ff4",
+      "claim_support_sha256": "97a0358c73ad117204d0738075f1c0e0e79c80bbd041e14e439da430822abfbe",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    }
+  ]
+}

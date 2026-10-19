@@ -1,0 +1,568 @@
+{
+  "checked_on": "2026-09-26",
+  "receipts": [
+    {
+      "path": "aiforsec__LADDER/attack_pattern/data/sentence_classification/train.csv",
+      "url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/data/sentence_classification/train.csv",
+      "final_url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/data/sentence_classification/train.csv",
+      "bytes": 270631,
+      "sha256": "068476ba52bf588389dcb65248c552254b6e245b8e4c5c8a8f3e9d35b65ee8c8",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "aiforsec__LADDER/attack_pattern/data/sentence_classification/dev.csv",
+      "url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/data/sentence_classification/dev.csv",
+      "final_url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/data/sentence_classification/dev.csv",
+      "bytes": 71493,
+      "sha256": "d6be16909608ebd34347715a15e5ef93c2954650b5068989124a833e06aa1a5a",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "aiforsec__LADDER/attack_pattern/data/sentence_classification/test.csv",
+      "url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/data/sentence_classification/test.csv",
+      "final_url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/data/sentence_classification/test.csv",
+      "bytes": 73525,
+      "sha256": "a0ef974e45d067f2b91d99d22d520c46c9b9ad01f3b5af350a6752a6e8ebc6bb",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "aiforsec__LADDER/attack_pattern/data/entity_extraction/train.txt",
+      "url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/data/entity_extraction/train.txt",
+      "final_url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/data/entity_extraction/train.txt",
+      "bytes": 252571,
+      "sha256": "3ce0deafdc2a126eb0ebd6b92738c9c8dba80b3d4a1dbe57a2eae67d928afb76",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "aiforsec__LADDER/attack_pattern/data/entity_extraction/dev.txt",
+      "url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/data/entity_extraction/dev.txt",
+      "final_url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/data/entity_extraction/dev.txt",
+      "bytes": 70922,
+      "sha256": "be91774285b3828c30d2a020389c52b16376b5a25aea462f574d2887d4d5153d",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "aiforsec__LADDER/attack_pattern/data/entity_extraction/test.txt",
+      "url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/data/entity_extraction/test.txt",
+      "final_url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/data/entity_extraction/test.txt",
+      "bytes": 64600,
+      "sha256": "948e1a1d0a989e4f9c02a804a0a106425e8570c83ae6fa4c887419bfcced250f",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "aiforsec__LADDER/attack_pattern/dataset.py",
+      "url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/dataset.py",
+      "final_url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/dataset.py",
+      "bytes": 6028,
+      "sha256": "494a7b45d067c1a718ddd15d0520d2f7c3a877c3300cae352ff90caab5d65cdc",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "aiforsec__LADDER/attack_pattern/finetune_sentence_classification.py",
+      "url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/finetune_sentence_classification.py",
+      "final_url": "https://raw.githubusercontent.com/aiforsec/LADDER/913b4fb4e58198762fa1d2e82925e33d437348e5/attack_pattern/finetune_sentence_classification.py",
+      "bytes": 4140,
+      "sha256": "d1fa470c32bfc8db350f83918d326e6724dbe1596e82351134aeba89ed986e3a",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "boschresearch__anno-ctr-lrec-coling-2024/AnnoCTR/ner_json/train.json",
+      "url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/AnnoCTR/ner_json/train.json",
+      "final_url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/AnnoCTR/ner_json/train.json",
+      "bytes": 8193379,
+      "sha256": "4e98d5949a77ce0a4c67eb6babb7502f9e84936dc3bc677356869c88097393f3",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "boschresearch__anno-ctr-lrec-coling-2024/AnnoCTR/ner_json/dev.json",
+      "url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/AnnoCTR/ner_json/dev.json",
+      "final_url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/AnnoCTR/ner_json/dev.json",
+      "bytes": 2945542,
+      "sha256": "e6af35b9666c0c2a5bcb5779d296247d94b724e4d31b2e11cf4e18a796639137",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "boschresearch__anno-ctr-lrec-coling-2024/AnnoCTR/ner_json/test.json",
+      "url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/AnnoCTR/ner_json/test.json",
+      "final_url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/AnnoCTR/ner_json/test.json",
+      "bytes": 3532117,
+      "sha256": "5d776f6cf7b9a3f59427cf9e0027372a52953477501423a67f090016ed04af68",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "boschresearch__anno-ctr-lrec-coling-2024/AnnoCTR/linking_mitre_only/train_w_con_w_neg.jsonl",
+      "url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/AnnoCTR/linking_mitre_only/train_w_con_w_neg.jsonl",
+      "final_url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/AnnoCTR/linking_mitre_only/train_w_con_w_neg.jsonl",
+      "bytes": 9131118,
+      "sha256": "0afefe9caf6cd8c4fe354f72a9e29eb000119bd3c1159dd52ab6c6a40604f720",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "boschresearch__anno-ctr-lrec-coling-2024/AnnoCTR/linking_mitre_only/dev_w_con_w_neg.jsonl",
+      "url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/AnnoCTR/linking_mitre_only/dev_w_con_w_neg.jsonl",
+      "final_url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/AnnoCTR/linking_mitre_only/dev_w_con_w_neg.jsonl",
+      "bytes": 3747046,
+      "sha256": "b07015d150b270ffd55c5d0d4c212dd3eed4044d8d355a7738e479ec2de97f18",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "boschresearch__anno-ctr-lrec-coling-2024/AnnoCTR/linking_mitre_only/test_w_con_w_neg.jsonl",
+      "url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/AnnoCTR/linking_mitre_only/test_w_con_w_neg.jsonl",
+      "final_url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/AnnoCTR/linking_mitre_only/test_w_con_w_neg.jsonl",
+      "bytes": 4434771,
+      "sha256": "4c025b41185000cfc7c968ba5f58739e0d7eaeda6533f5d1fc77716d00aad56a",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "boschresearch__anno-ctr-lrec-coling-2024/AnnoCTR/all/splits.tsv",
+      "url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/AnnoCTR/all/splits.tsv",
+      "final_url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/AnnoCTR/all/splits.tsv",
+      "bytes": 23657,
+      "sha256": "b567abb4fa623fb310147c02a7657d6eabd37dd40eabd38261eefae149a10d4c",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "boschresearch__anno-ctr-lrec-coling-2024/Annotation_Guidelines_Cysec_Layer.pdf",
+      "url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/Annotation_Guidelines_Cysec_Layer.pdf",
+      "final_url": "https://raw.githubusercontent.com/boschresearch/anno-ctr-lrec-coling-2024/d510b6949e1938d47c93a43eedd562dc538439dc/Annotation_Guidelines_Cysec_Layer.pdf",
+      "bytes": 1623480,
+      "sha256": "31dff582437a6d124bd38521a4199917c52de79eb3558ca8a29f91247b0f633b",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "center-for-threat-informed-defense__tram/data/tram2-data/multi_label.json",
+      "url": "https://raw.githubusercontent.com/center-for-threat-informed-defense/tram/f29793d8d665f7f552898696e00065ef24a29a20/data/tram2-data/multi_label.json",
+      "final_url": "https://raw.githubusercontent.com/center-for-threat-informed-defense/tram/f29793d8d665f7f552898696e00065ef24a29a20/data/tram2-data/multi_label.json",
+      "bytes": 5846167,
+      "sha256": "8a0c6644e4477eab28c92efd3bd7004b9563cb120ae1681d7d0a05dc170cd91b",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "center-for-threat-informed-defense__tram/data/tram2-data/single_label.json",
+      "url": "https://raw.githubusercontent.com/center-for-threat-informed-defense/tram/f29793d8d665f7f552898696e00065ef24a29a20/data/tram2-data/single_label.json",
+      "final_url": "https://raw.githubusercontent.com/center-for-threat-informed-defense/tram/f29793d8d665f7f552898696e00065ef24a29a20/data/tram2-data/single_label.json",
+      "bytes": 1024483,
+      "sha256": "7f9966dd8647e777e28e02aa08d7a38499f4b6ba5682a2366508a7b63b82cc0f",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "center-for-threat-informed-defense__tram/data/training/archive/negative_data.json",
+      "url": "https://raw.githubusercontent.com/center-for-threat-informed-defense/tram/f29793d8d665f7f552898696e00065ef24a29a20/data/training/archive/negative_data.json",
+      "final_url": "https://raw.githubusercontent.com/center-for-threat-informed-defense/tram/f29793d8d665f7f552898696e00065ef24a29a20/data/training/archive/negative_data.json",
+      "bytes": 2081162,
+      "sha256": "48728b53e5b6cb76927ee698e8c3246720b397cd32d9c3379c37a3d7bbfb5fe3",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "center-for-threat-informed-defense__tram/data/training/bootstrap-training-data.json",
+      "url": "https://raw.githubusercontent.com/center-for-threat-informed-defense/tram/f29793d8d665f7f552898696e00065ef24a29a20/data/training/bootstrap-training-data.json",
+      "final_url": "https://raw.githubusercontent.com/center-for-threat-informed-defense/tram/f29793d8d665f7f552898696e00065ef24a29a20/data/training/bootstrap-training-data.json",
+      "bytes": 3970658,
+      "sha256": "73029c363b059da6448ab09c71e6a5b7be5f19aa0e0404f1a01e811a64ae29e9",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "qcri__Text2TTP/data/sentences.csv",
+      "url": "https://raw.githubusercontent.com/qcri/Text2TTP/aa9e0bfa07b2ee81f5ddffc7ed72021159b423d8/data/sentences.csv",
+      "final_url": "https://raw.githubusercontent.com/qcri/Text2TTP/aa9e0bfa07b2ee81f5ddffc7ed72021159b423d8/data/sentences.csv",
+      "bytes": 749416,
+      "sha256": "634251592c1661250cb737642894c8c23eaaa740a69d7f0229ef7c90fbdba88b",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "qcri__Text2TTP/libs/resources.py",
+      "url": "https://raw.githubusercontent.com/qcri/Text2TTP/aa9e0bfa07b2ee81f5ddffc7ed72021159b423d8/libs/resources.py",
+      "final_url": "https://raw.githubusercontent.com/qcri/Text2TTP/aa9e0bfa07b2ee81f5ddffc7ed72021159b423d8/libs/resources.py",
+      "bytes": 5083,
+      "sha256": "45cc0db94e362525c0f3c64e2df7c26519f019ef1b47b7222813f2cae10e66d5",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "qcri__Text2TTP/libs/rank.py",
+      "url": "https://raw.githubusercontent.com/qcri/Text2TTP/aa9e0bfa07b2ee81f5ddffc7ed72021159b423d8/libs/rank.py",
+      "final_url": "https://raw.githubusercontent.com/qcri/Text2TTP/aa9e0bfa07b2ee81f5ddffc7ed72021159b423d8/libs/rank.py",
+      "bytes": 4016,
+      "sha256": "554bf4b7afacb5ef2a2f2c82db375a522524c0f1a80cafe47fb3d5bc9b2c05e7",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "qcri__Text2TTP/data/negative_data.json",
+      "url": "https://raw.githubusercontent.com/qcri/Text2TTP/aa9e0bfa07b2ee81f5ddffc7ed72021159b423d8/data/negative_data.json",
+      "final_url": "https://raw.githubusercontent.com/qcri/Text2TTP/aa9e0bfa07b2ee81f5ddffc7ed72021159b423d8/data/negative_data.json",
+      "bytes": 2081162,
+      "sha256": "48728b53e5b6cb76927ee698e8c3246720b397cd32d9c3379c37a3d7bbfb5fe3",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "maveryn__cti-bench/data/cti-ate.tsv",
+      "url": "https://raw.githubusercontent.com/maveryn/cti-bench/4543e5b6560d3204e1205ced4fa286adc7452d07/data/cti-ate.tsv",
+      "final_url": "https://raw.githubusercontent.com/maveryn/cti-bench/4543e5b6560d3204e1205ced4fa286adc7452d07/data/cti-ate.tsv",
+      "bytes": 461971,
+      "sha256": "79e5354a5c6aae0c979389786853e768201f8d129fb0f0ca5af392555f238f28",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "papers/SecureNLP.pdf",
+      "url": "https://aclanthology.org/S18-1113.pdf",
+      "final_url": "https://aclanthology.org/S18-1113.pdf",
+      "bytes": 242329,
+      "sha256": "38b634e147d89ec108d6501d4bb43d83fd438a90e31dd5b0d206c0ed0402d1d7",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "papers/MalwareTextDB.pdf",
+      "url": "https://aclanthology.org/P17-1143.pdf",
+      "final_url": "https://aclanthology.org/P17-1143.pdf",
+      "bytes": 1521879,
+      "sha256": "b2153304ac58c2d6b25ec502313e949fe2ca433b3663aa1a1bb6c1e2ca11f02d",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "papers/AnnoCTR.pdf",
+      "url": "https://aclanthology.org/2024.lrec-main.103.pdf",
+      "final_url": "https://aclanthology.org/2024.lrec-main.103.pdf",
+      "bytes": 447088,
+      "sha256": "32123c7ea44ddee90a86cb135bf90e5dc8e886f4951a8e849670123e9c4c4ded",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "papers/CySecED.pdf",
+      "url": "https://aclanthology.org/2020.emnlp-main.433.pdf",
+      "final_url": "https://aclanthology.org/2020.emnlp-main.433.pdf",
+      "bytes": 275498,
+      "sha256": "56e4630a94bfc4293b61262a1fdcbeff48da899aa08b5afe68bba91e31a0e262",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "papers/LADDER.pdf",
+      "url": "https://arxiv.org/pdf/2211.01753",
+      "final_url": "https://arxiv.org/pdf/2211.01753",
+      "bytes": 1449808,
+      "sha256": "c25d7c01c22bf561b6987e80bd2e5f19e7d19bac303c7db214ae985b91bd4946",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "papers/CASIE.pdf",
+      "url": "https://ojs.aaai.org/index.php/AAAI/article/download/6401/6257",
+      "final_url": "https://ojs.aaai.org/index.php/AAAI/article/download/6401/6257",
+      "bytes": 1579905,
+      "sha256": "df8a1770b6e909f1da7eaff34f9401b3a7b011964dbf31d5c6c0acfdfb433571",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "papers/SoK.pdf",
+      "url": "https://www.usenix.org/system/files/usenixsecurity25-buechel.pdf",
+      "final_url": "https://www.usenix.org/system/files/usenixsecurity25-buechel.pdf",
+      "bytes": 762154,
+      "sha256": "b44cdd0f6dd06e0c8d7dd2c1f4da665adac5ea7f0535f54492c742ad1ccf3b2b",
+      "status": "downloaded",
+      "receipt_file": "downloads.json"
+    },
+    {
+      "path": "SecurityTTP/datasets/derived_procedures/derived_procedure_dev.tsv",
+      "bytes": 214806,
+      "sha256": "242edfaa6da66f6c7b854cfb7699d4ebd4198c4cd9ddf1d1911fa2c7734ec251",
+      "url": "https://huggingface.co/datasets/tumeteor/Security-TTP-Mapping/resolve/main/datasets/derived_procedures/derived_procedure_dev.tsv",
+      "rows": 488,
+      "keys": [
+        "text1",
+        "labels"
+      ],
+      "empty_labels": 0,
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "path": "SecurityTTP/datasets/derived_procedures/derived_procedure_test.tsv",
+      "bytes": 225821,
+      "sha256": "d1e1ad8482e87910203582dfc4f5a1087dc4ef937adafa47938ecbe3d77bf0bc",
+      "url": "https://huggingface.co/datasets/tumeteor/Security-TTP-Mapping/resolve/main/datasets/derived_procedures/derived_procedure_test.tsv",
+      "rows": 521,
+      "keys": [
+        "text1",
+        "labels"
+      ],
+      "empty_labels": 0,
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "path": "SecurityTTP/datasets/derived_procedures/derived_procedure_train.tsv",
+      "bytes": 1130331,
+      "sha256": "7d62334b00eef61a3aa1b38ee031392c2012222ba6d4c9b93e63b318e922c167",
+      "url": "https://huggingface.co/datasets/tumeteor/Security-TTP-Mapping/resolve/main/datasets/derived_procedures/derived_procedure_train.tsv",
+      "rows": 2510,
+      "keys": [
+        "text1",
+        "labels"
+      ],
+      "empty_labels": 0,
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "path": "SecurityTTP/datasets/expert/expert_dev.tsv",
+      "bytes": 19020,
+      "sha256": "7815932d419aa98a54a1bafffa0c363fc0de3ef8aa3b754096eec9101e97fedb",
+      "url": "https://huggingface.co/datasets/tumeteor/Security-TTP-Mapping/resolve/main/datasets/expert/expert_dev.tsv",
+      "rows": 69,
+      "keys": [
+        "text1",
+        "labels"
+      ],
+      "empty_labels": 0,
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "path": "SecurityTTP/datasets/expert/expert_test.tsv",
+      "bytes": 79667,
+      "sha256": "674cbb8149df68f4c0661ea7738705900d0682f5837adb85c8040d856e0e1378",
+      "url": "https://huggingface.co/datasets/tumeteor/Security-TTP-Mapping/resolve/main/datasets/expert/expert_test.tsv",
+      "rows": 157,
+      "keys": [
+        "text1",
+        "labels"
+      ],
+      "empty_labels": 0,
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "path": "SecurityTTP/datasets/expert/expert_train.tsv",
+      "bytes": 128176,
+      "sha256": "e982b5464c70c257e2a0cf6ae6b4e63e5a227bc8acb1546c4c2d3d65082930fc",
+      "url": "https://huggingface.co/datasets/tumeteor/Security-TTP-Mapping/resolve/main/datasets/expert/expert_train.tsv",
+      "rows": 471,
+      "keys": [
+        "text1",
+        "labels"
+      ],
+      "empty_labels": 0,
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "path": "SecurityTTP/datasets/procedures/procedure_dev.tsv",
+      "bytes": 153483,
+      "sha256": "ab1989686dd30b088da332a9d2460c342200b22d52fd2857c1641986dccbd8f0",
+      "url": "https://huggingface.co/datasets/tumeteor/Security-TTP-Mapping/resolve/main/datasets/procedures/procedure_dev.tsv",
+      "rows": 1469,
+      "keys": [
+        "text1",
+        "labels"
+      ],
+      "empty_labels": 0,
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "path": "SecurityTTP/datasets/procedures/procedure_test.tsv",
+      "bytes": 183933,
+      "sha256": "0623e0105463af4956cd63d475cb55fe04abe74530e4c1b041e702042b202723",
+      "url": "https://huggingface.co/datasets/tumeteor/Security-TTP-Mapping/resolve/main/datasets/procedures/procedure_test.tsv",
+      "rows": 1767,
+      "keys": [
+        "text1",
+        "labels"
+      ],
+      "empty_labels": 0,
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "path": "SecurityTTP/datasets/procedures/procedure_train.tsv",
+      "bytes": 873679,
+      "sha256": "b2e60445c3f3c716d341b84001beb43e222b1e7876caa8fd1c43fbeec0b98654",
+      "url": "https://huggingface.co/datasets/tumeteor/Security-TTP-Mapping/resolve/main/datasets/procedures/procedure_train.tsv",
+      "rows": 8487,
+      "keys": [
+        "text1",
+        "labels"
+      ],
+      "empty_labels": 0,
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "path": "SecurityTTP/datasets/tram/tram_dev.tsv",
+      "bytes": 97362,
+      "sha256": "5145cb16221d573adad13ee78cce9aa4c3d840933cf306c5b726e23acfe535ac",
+      "url": "https://huggingface.co/datasets/tumeteor/Security-TTP-Mapping/resolve/main/datasets/tram/tram_dev.tsv",
+      "rows": 604,
+      "keys": [
+        "text1",
+        "labels"
+      ],
+      "empty_labels": 0,
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "path": "SecurityTTP/datasets/tram/tram_test.tsv",
+      "bytes": 115712,
+      "sha256": "2f12f2cfa909f99849f78d6101dc204bd2274877b04a643d00a452af216700a4",
+      "url": "https://huggingface.co/datasets/tumeteor/Security-TTP-Mapping/resolve/main/datasets/tram/tram_test.tsv",
+      "rows": 725,
+      "keys": [
+        "text1",
+        "labels"
+      ],
+      "empty_labels": 0,
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "path": "SecurityTTP/datasets/tram/tram_train.tsv",
+      "bytes": 546153,
+      "sha256": "a53b9d467b751de7eb22496167b01515a61de942b694d6c7575899b19512c777",
+      "url": "https://huggingface.co/datasets/tumeteor/Security-TTP-Mapping/resolve/main/datasets/tram/tram_train.tsv",
+      "rows": 3468,
+      "keys": [
+        "text1",
+        "labels"
+      ],
+      "empty_labels": 0,
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "path": "TTPXHunter.csv",
+      "bytes": 6867733,
+      "sha256": "150ccea7ed2e9a109cdf27efaa775d9f83f8edfb477f8e899b30fbb38da1955e",
+      "url": "https://raw.githubusercontent.com/nanda-rani/TTPXHunter-Actionable-Threat-Intelligence-Extraction-as-TTPs-from-Finished-Cyber-Threat-Reports/main/Dataset/MITRE_ATT%26CK_Dataset.csv",
+      "rows": 47860,
+      "keys": [
+        "Technique ID",
+        "Technique Name",
+        "Sentences"
+      ],
+      "empty_labels": 47860,
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "path": "CASIE-example.json",
+      "bytes": 5270,
+      "sha256": "57902fc1e26fd2b9bd6d85f1899787af9add5fd70f636ae7fef6687c79fda754",
+      "url": "https://raw.githubusercontent.com/Ebiquity/CASIE/master/data/annotation/10001.json",
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "path": "CTI-HAL-example.json",
+      "bytes": 24613,
+      "sha256": "615e2f85d8d815a020265dcf6beed778a57797b6c282e54647b7d985fd5e8937",
+      "url": "https://raw.githubusercontent.com/dessertlab/CTI-HAL/main/data/apt29/annotator%20L/COSMIC.json",
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "path": "DNRTI.rar",
+      "bytes": 287245,
+      "sha256": "5fb21664b5f82a7491f5367ea76284e5535cdf2ec9e98a49d424e1b636368043",
+      "url": "https://raw.githubusercontent.com/SCreaMxp/DNRTI-A-Large-scale-Dataset-for-Named-Entity-Recognition-in-Threat-Intelligence/master/DNRTI.rar",
+      "receipt_file": "more_downloads.json"
+    },
+    {
+      "name": "Text2TTP-sanitized.csv",
+      "error": "unknown encoding: utf8-sig",
+      "receipt_file": "final_downloads.json"
+    },
+    {
+      "name": "Text2TTP-pipeline.ipynb",
+      "url": "https://raw.githubusercontent.com/qcri/Text2TTP/main/Pipeline.ipynb",
+      "size": 7809,
+      "sha256": "560d85f0222937ba47aee250d3830eb3fb39ce49312858340fc28238ff14c9ea",
+      "receipt_file": "final_downloads.json"
+    },
+    {
+      "name": "CTIBench.pdf",
+      "url": "https://papers.neurips.cc/paper_files/paper/2024/file/5acd3c628aa1819fbf07c39ef73e7285-Paper-Datasets_and_Benchmarks_Track.pdf",
+      "size": 3133558,
+      "sha256": "09a0cc1b1f56ceac8916f61e43230c3957edd39560520ac2720c4d8e13dbe6a2",
+      "receipt_file": "final_downloads.json"
+    },
+    {
+      "name": "Atomic-LICENSE",
+      "url": "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/LICENSE.txt",
+      "size": 1078,
+      "sha256": "65af6027045d23175366eab50e460ab3ee7790e591cb84cc32c78ac63a4c90e1",
+      "receipt_file": "final_downloads.json"
+    },
+    {
+      "name": "AttackFlow-LICENSE",
+      "error": "HTTP Error 404: Not Found",
+      "receipt_file": "final_downloads.json"
+    },
+    {
+      "path": "data/training/archive/all_analyzed_reports.json",
+      "url": "https://raw.githubusercontent.com/center-for-threat-informed-defense/tram/f29793d8d665f7f552898696e00065ef24a29a20/data/training/archive/all_analyzed_reports.json",
+      "sha256": "53ffeb0bbe7fcab84e38f173488ebedafa4aacaae31204a6462aecac4b937494",
+      "bytes": 963344,
+      "length": 505,
+      "type": "dict",
+      "receipt_file": "tram_extra_manifest.json"
+    },
+    {
+      "path": "data/training/tram2_data/multi_label.json",
+      "url": "https://raw.githubusercontent.com/center-for-threat-informed-defense/tram/f29793d8d665f7f552898696e00065ef24a29a20/data/training/tram2_data/multi_label.json",
+      "sha256": "986db4e5607e11925b3671c6edb5cca02f4f476413f1a11116801f968e70336a",
+      "bytes": 5882360,
+      "length": 19178,
+      "type": "list",
+      "keys": [
+        "sentence",
+        "labels",
+        "doc_title"
+      ],
+      "empty": 15108,
+      "labels": 50,
+      "receipt_file": "tram_extra_manifest.json"
+    },
+    {
+      "path": "data/training/tram2_data/single_label.json",
+      "url": "https://raw.githubusercontent.com/center-for-threat-informed-defense/tram/f29793d8d665f7f552898696e00065ef24a29a20/data/training/tram2_data/single_label.json",
+      "sha256": "1f52567c05551738fc4548afba0916617fa0aa5d313b6020d425a9a9027067ed",
+      "bytes": 1033518,
+      "length": 5089,
+      "type": "list",
+      "keys": [
+        "text",
+        "label",
+        "doc_title"
+      ],
+      "receipt_file": "tram_extra_manifest.json"
+    },
+    {
+      "path": "Text2TTP-sanitized.csv",
+      "url": "https://raw.githubusercontent.com/qcri/Text2TTP/aa9e0bfa07b2ee81f5ddffc7ed72021159b423d8/data/sentences.sanitized.csv",
+      "bytes": 1326078,
+      "sha256": "6d248166488cb8529d452fe212bd3ca0ab2cf2e6411a921199830b608ea18156",
+      "status": "downloaded; local parse succeeded"
+    },
+    {
+      "path": "MalwareTextDB-ACL.zip",
+      "url": "https://aclanthology.org/attachments/P17-1143.Datasets.zip",
+      "bytes": 2143761,
+      "sha256": "0b9e570bc6e8f45a3392198982237f07774226e7bf80b07a8a6f6ee0c5e0330f",
+      "status": "downloaded; local parse succeeded"
+    }
+  ]
+}
