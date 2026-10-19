@@ -4,7 +4,36 @@ CyberCase is a full-stack prototype for general case summarization and prelimina
 
 The current production path is source-bounded and domain-neutral. MITRE ATT&CK retrieval is an optional external technical augmentation; it is not required for the core case-analysis path and is never treated as a Case source.
 
-Research notes and earlier design reviews are in [`research/notes/`](research/notes/). Each describes the project as it was on the date it was written.
+## Repository map
+
+The system is three services, each in its own folder.
+
+| Folder | What it holds |
+|---|---|
+| `frontend/` | The Next.js web app: pages in `src/app/`, one folder per feature in `src/features/`, unit tests in `src/test/` and browser tests in `e2e/`. [`frontend/README.md`](frontend/README.md) gives the rules its folders keep. |
+| `backend/` | The FastAPI API: one folder per feature in `app/`, tests in `tests/`, database migrations in `alembic/`, and in `scripts/` the scripts that copy the local model weights into `backend/models/` (not in git) and export the OpenAPI schema. [`backend/ARCHITECTURE.md`](backend/ARCHITECTURE.md) describes the analysis and the claim verifier. |
+| `rag_service/` | The ATT&CK retrieval service: the GraphRAG pipeline and its evaluation in `app/RAG/GraphRAG/`, the legal lookup in `app/RAG/legal_reference/`, and a fine-tuning module in `finetune/`. [`rag_service/ARCHITECTURE.md`](rag_service/ARCHITECTURE.md) describes it. |
+
+Around them:
+
+| Path | What it holds |
+|---|---|
+| `docker-compose.yml` | The three services and PostgreSQL, for running the system locally. |
+| `docker-compose.selfhosted.yml`, `deploy/selfhosted/` | The same stack with the models on self-hosted vLLM servers. [`deploy/selfhosted/README.md`](deploy/selfhosted/README.md) has the steps. |
+| `Mitre_ATT&CK Doc/` | The MITRE ATT&CK data in STIX 2.1, which the retrieval service ingests. |
+| `Documents/` | Reference PDFs, not read by the code: Thai laws on computer crime, electronic transactions, cybersecurity and personal data, the Criminal Code, and a summary of the system flow. |
+| `docs/design/` | The logo and two draw.io diagrams. |
+| `research/` | Studies run beside the system, listed below. The services do not import them. |
+| `.github/workflows/deploy.yml` | Builds and pushes the Docker images on every push to `main`. |
+| `install_deps.py` | Installs the backend and retrieval-service requirements into the active Python. |
+| `AGENTS.md`, `CLAUDE.md`, `.claude/` | Instructions and skills for the coding agents used in development. |
+
+| Research folder | What it holds |
+|---|---|
+| `research/nli_grounding/` | The experiment that chose the claim verifier, B1-LR. |
+| `research/attribution_benchmark/` | Benchmark runs and audits of that verifier. |
+| `research/analysis_arms/` | Ablation arms of the analysis. They run against the backend at commit `712aeeed`, and their README says how. |
+| `research/notes/` | Research notes and earlier design reviews. Each describes the project as it was on the date it was written. |
 
 ## Trust boundary and source roles
 
