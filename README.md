@@ -24,6 +24,7 @@ Around them:
 | `Documents/` | Reference PDFs, not read by the code: Thai laws on computer crime, electronic transactions, cybersecurity and personal data, the Criminal Code, and a summary of the system flow. |
 | `docs/design/` | The logo and two draw.io diagrams. |
 | `research/` | Studies run beside the system, listed below. The services do not import them. |
+| `evaluation/ocr_downstream/` | The OCR error study that the appendix of the thesis book reports: scripts, protocol and scores on 100 ThaiSum crime articles (MIT licence), with an OCR error bank built from ThaiOCRBench (CC BY-SA 4.0). The article text and the raw model outputs are not included. |
 | `.github/workflows/deploy.yml` | Builds and pushes the Docker images on every push to `main`. |
 | `install_deps.py` | Installs the backend and retrieval-service requirements into the active Python. |
 | `AGENTS.md`, `CLAUDE.md`, `.claude/` | Instructions and skills for the coding agents used in development. |
@@ -33,7 +34,11 @@ Around them:
 | `research/nli_grounding/` | The experiment that chose the claim verifier, B1-LR. |
 | `research/attribution_benchmark/` | Benchmark runs and audits of that verifier. |
 | `research/analysis_arms/` | Ablation arms of the analysis. They run against the backend at commit `712aeeed`, and their README says how. |
+| `research/analysis_baseline/` | The analysis study behind the numbers in chapters 5 and 6 of the thesis book: code, protocol, provenance cards and the recounted numbers. It runs on CASIE, which states no licence, so the cases and the raw outputs are not included. |
+| `research/traceability_properties/` | Measurements of the source units on public ThaiSum and AttributionBench text: losslessness, determinism, revision safety and segmentation cost. |
 | `research/notes/` | Research notes and earlier design reviews. Each describes the project as it was on the date it was written. |
+
+A study that runs against an older backend names its commit in `pinned/<commit>/COMMIT`. The tag `pre-squash-2026-10-19` keeps those commits.
 
 ## Trust boundary and source roles
 
