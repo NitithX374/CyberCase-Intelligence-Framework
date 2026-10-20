@@ -200,11 +200,11 @@ description. Nothing is checked against the Sources or the Claims and no Claim i
 attached, so `claim_ids` is empty; the service already located the sentence in the
 case file. A row without a re-read span still shows as retrieved context.
 
-There is no arm switch or config value. The alternative compositions the thesis
-measures are research code in `research/analysis_arms/`; each arm calls these
-same functions on an `AnalysisInput` directly, with no case row, and they run
-against the backend at commit `712aeeed`, the last one with the one-call
-contract they need. `run_case_analysis(pipeline=...)` also accepts a substitute
+There is no arm switch or config value. The alternative compositions measured
+during development called these same functions on an `AnalysisInput` directly,
+with no case row. They are no longer in the repository: commit `3b9ea357` still
+has them in `research/analysis_arms/`, and they ran against the backend at commit
+`712aeeed`, the last one with the one-call contract they need. `run_case_analysis(pipeline=...)` also accepts a substitute
 composition, as `tests/test_case_followup_postgres.py` does. When that composition returns bare `AnalysisArtifacts`, `think` in
 `analysis/run.py` wraps them as a `Proceed` with an empty assessment,
 so `store_outcome` only ever sees an `AnalysisAdvance`.

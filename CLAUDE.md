@@ -410,9 +410,10 @@ well: `decide_followup` would proceed whatever it found, and
 its assessment. `run_case_analysis(pipeline=...)` also accepts a substitute
 composition, as `tests/test_case_followup_postgres.py` does. There is no
 `CASE_ANALYSIS_ARM` setting. The ablation arms (`direct`, `verify`, `revise`,
-`single`) are research code in `research/analysis_arms/`; they need the one-call
-contract the backend no longer has, so they run against the backend at commit
-`712aeeed` (its README says how).
+`single`) needed the one-call contract the backend no longer has, and neither
+the book nor the paper reports them, so they are no longer in the repository;
+commit `3b9ea357` still has them in `research/analysis_arms/`, and they ran
+against the backend at commit `712aeeed`.
 
 ### Key Modules (under `rag_service/app/RAG/GraphRAG/`)
 | Module | Path | Purpose |

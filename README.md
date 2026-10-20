@@ -33,14 +33,12 @@ Around them:
 |---|---|
 | `research/nli_grounding/` | The experiment that chose the claim verifier, B1-LR. Section 5.4.3 of the thesis book reports it. |
 | `research/attribution_benchmark/` | Benchmark runs and audits of that verifier. Sections 5.4.1, 5.4.2 and 5.4.4 of the thesis book and the paper report them. |
-| `research/analysis_arms/` | Ablation arms of the analysis. They run against the backend at commit `712aeeed`, and their README says how. |
-| `research/analysis_baseline/` | An earlier analysis study, which compared the structured analysis with one free-form call on CASIE: code, protocol, provenance cards and the recounted numbers. The final thesis book uses only its setup, the model and its token budget. CASIE states no licence, so the cases and the raw outputs are not included. |
 | `research/traceability_properties/` | Measurements of the source units on public ThaiSum and AttributionBench text: losslessness, determinism, revision safety and segmentation cost. The paper reports them. |
 | `research/segmenter_comparison/` | Why the backend splits sentences with SaT and not PyThaiNLP crfcut: how the two cut the same 200 XL-Sum articles, and how fast they are. Section 5.4.5 of the thesis book reports it. The article text is not stored. |
 | `research/attack_applicability_search/` | A survey of released cybersecurity datasets for deciding whether ATT&CK applies to a case; none of them is labelled for that decision. The folder holds the survey and its receipts, not the datasets. |
-| `research/notes/` | Research notes and earlier design reviews. Each describes the project as it was on the date it was written. |
+| `research/notes/USABILITY_PROTOCOL.md` | The protocol of the usability test, which the paper cites. |
 
-A study that runs against an older backend names its commit in `pinned/<commit>/COMMIT`. The tag `pre-squash-2026-10-19` keeps those commits.
+A study that runs against an older backend names its commit in `pinned/<commit>/COMMIT`. The tag `pre-squash-2026-10-19` keeps those commits. Studies that neither the thesis book nor the paper reports were removed on 2026-10-20; commit `3b9ea357` still has them.
 
 ## Trust boundary and source roles
 
