@@ -36,7 +36,6 @@ Around them:
 | `research/segmenter_comparison/` | Why the backend splits sentences with SaT and not PyThaiNLP crfcut: how the two cut the same 200 XL-Sum articles, and how fast they are. Section 5.4.5 of the thesis book reports it. The article text is not stored. |
 | `research/attack_applicability_search/` | A survey of released cybersecurity datasets for deciding whether ATT&CK applies to a case; none of them is labelled for that decision. The folder holds the survey and its receipts, not the datasets. |
 | `research/ocr_downstream/` | The OCR error study that the appendix of the thesis book reports: scripts, protocol and scores on 100 ThaiSum crime articles (MIT licence), with an OCR error bank built from ThaiOCRBench (CC BY-SA 4.0). The article text and the raw model outputs are not included. |
-| `research/notes/USABILITY_PROTOCOL.md` | The protocol of the usability test, which the paper cites. |
 
 A study that runs against an older backend names its commit in `pinned/<commit>/COMMIT`. The tag `pre-squash-2026-10-19` keeps those commits. Studies that neither the thesis book nor the paper reports were removed on 2026-10-20; commit `3b9ea357` still has them.
 
