@@ -21,7 +21,7 @@ from app.trace.trace import CaseProviderJudgement, CaseProviderReadingReply, Cas
 pytestmark = pytest.mark.skipif(
     os.getenv("B1_REAL_MODEL") != "1", reason="Explicit pinned-model integration run required"
 )
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[4]
 
 
 @pytest.fixture
@@ -181,7 +181,7 @@ def test_real_selector_and_forward_nli_match_original_research_method(verifier):
 
     import numpy as np
 
-    sys.path.insert(0, str(ROOT / "research" / "nli_grounding"))
+    sys.path.insert(0, str(ROOT / "backend" / "research" / "nli_grounding"))
     from src.nli import NLIRunner
     from src.semantic_filter import SemanticFilter
 

@@ -15,7 +15,7 @@ from research.attribution_benchmark.data import read_split, verify_manifest
 from research.attribution_benchmark.receipts import digest, save
 
 ENDPOINT = "https://translation.googleapis.com/language/translate/v2"
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 
 
 class TranslationUnavailable(RuntimeError):

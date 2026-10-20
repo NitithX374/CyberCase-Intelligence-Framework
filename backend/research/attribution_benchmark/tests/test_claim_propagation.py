@@ -28,7 +28,7 @@ from app.trace.trace import CaseProviderJudgement
 
 VERIFIER_RUN = (
     harness.REPOSITORY
-    / "research/attribution_benchmark/runs/candidates_en_20261006T010418Z/minicheck_cuda_float32_b1"
+    / "backend/research/attribution_benchmark/runs/candidates_en_20261006T010418Z/minicheck_cuda_float32_b1"
 )
 
 

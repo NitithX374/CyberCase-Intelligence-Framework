@@ -102,9 +102,6 @@ scratch/
 /docs/audits/
 /docs/system/
 /docs/thesis/*.md
-/research/casie_clarification/
-/research/report_fidelity/
-/research/structured_output_reliability/
 
 # Local dataset indexes, OCR outputs and rendered inspection artifacts
 /all_pdfs_list*.txt
@@ -176,13 +173,11 @@ deliverables/**/*.log
 backend/experiments/*
 /evaluation/
 
-# Local research runs at the repository root are not versioned; versioned research lives in research/.
+# Local research runs at the repository root are not versioned; versioned research lives in backend/research/.
 /experiments/
 # Folders moved into research/ or removed on 2026-10-18; local leftovers at the old paths stay ignored.
 /docs/research/
 /nli_grounding_experiment/
-/research/mitre_gate/
-/research/projection_validation/
 
 .codex-remote-attachments/
 

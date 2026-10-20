@@ -2,6 +2,8 @@
 # Matches the frontend's Prettier width, so a file reads the same on either side.
 line-length = 100
 target-version = "py311"
+# backend/research holds study scripts kept as they were run, not service code.
+extend-exclude = ["research"]
 
 [tool.ruff.lint]
 select = [

@@ -72,14 +72,14 @@ def run(args):
         raise ValueError("Existing run requires explicit --resume")
     print(json.dumps({"phase": "load_pinned_model", "pairs": len(pairs)}), flush=True)
     model, runtime = load_model(args.model_path, args.device, args.precision)
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[3]
     contract = {
         "runtime": runtime,
         "input": {
             "rows": len(examples),
             "unique_text_pairs": len(pairs),
             "dataset_manifest_sha256": file_hash(
-                root / "research/attribution_benchmark/data/manifest.json"
+                root / "backend/research/attribution_benchmark/data/manifest.json"
             ),
             "translations_sha256": file_hash(args.translations / "translations.jsonl"),
             "paired_inputs_sha256": digest(pairs),

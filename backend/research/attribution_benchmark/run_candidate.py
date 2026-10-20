@@ -110,7 +110,7 @@ def main():
         "requested_batch_size": args.batch_size, "source_snapshot": "source_snapshot",
         "source_sha256": {filename: sha256(source_snapshot / filename) for filename in SOURCE_FILES},
         "platform": platform.platform(), "python": sys.version,
-        "command": f"& '.\\env_mitre\\Scripts\\python.exe' -u 'research/attribution_benchmark/run_candidate.py' --model {args.model} --device {args.device} --precision {args.precision} --batch-size {args.batch_size} --output '{output}'",
+        "command": f"& '.\\env_mitre\\Scripts\\python.exe' -u 'backend/research/attribution_benchmark/run_candidate.py' --model {args.model} --device {args.device} --precision {args.precision} --batch-size {args.batch_size} --output '{output}'",
     }
     write_json(output / "run_manifest.json", configuration)
     with (output / "run.log").open("x", encoding="utf-8") as logfile, redirect_stdout(Tee(logfile)):

@@ -11,7 +11,7 @@ The system is three services, each in its own folder.
 | Folder | What it holds |
 |---|---|
 | `frontend/` | The Next.js web app: pages in `src/app/`, one folder per feature in `src/features/`, unit tests in `src/test/` and browser tests in `e2e/`. [`frontend/README.md`](frontend/README.md) gives the rules its folders keep. |
-| `backend/` | The FastAPI API: one folder per feature in `app/`, tests in `tests/`, database migrations in `alembic/`, and in `scripts/` the scripts that copy the local model weights into `backend/models/` (not in git) and export the OpenAPI schema. [`backend/ARCHITECTURE.md`](backend/ARCHITECTURE.md) describes the analysis and the claim verifier. |
+| `backend/` | The FastAPI API: one folder per feature in `app/`, tests in `tests/`, database migrations in `alembic/`, and in `scripts/` the scripts that copy the local model weights into `backend/models/` (not in git) and export the OpenAPI schema. [`backend/ARCHITECTURE.md`](backend/ARCHITECTURE.md) describes the analysis and the claim verifier. `research/` holds the studies listed below; the services never import them. |
 | `rag_service/` | The ATT&CK retrieval service: the GraphRAG pipeline and its evaluation in `app/RAG/GraphRAG/`, the legal lookup in `app/RAG/legal_reference/`, and a fine-tuning module in `finetune/`. [`rag_service/ARCHITECTURE.md`](rag_service/ARCHITECTURE.md) describes it. |
 
 Around them:
@@ -23,21 +23,20 @@ Around them:
 | `Mitre_ATT&CK Doc/` | The MITRE ATT&CK data in STIX 2.1, which the retrieval service ingests. |
 | `Documents/` | Reference PDFs, not read by the code: Thai laws on computer crime, electronic transactions, cybersecurity and personal data, the Criminal Code, and a summary of the system flow. |
 | `docs/design/` | The logo and two draw.io diagrams. |
-| `research/` | Studies run beside the system, listed below. The services do not import them. |
 | `.github/workflows/deploy.yml` | Builds and pushes the Docker images on every push to `main`. |
 | `install_deps.py` | Installs the backend and retrieval-service requirements into the active Python. |
 | `AGENTS.md`, `CLAUDE.md`, `.claude/` | Instructions and skills for the coding agents used in development. |
 
 | Research folder | What it holds |
 |---|---|
-| `research/nli_grounding/` | The experiment that chose the claim verifier, B1-LR. Section 5.4.3 of the thesis book reports it. |
-| `research/attribution_benchmark/` | Benchmark runs and audits of that verifier. Sections 5.4.1, 5.4.2 and 5.4.4 of the thesis book and the paper report them. |
-| `research/traceability_properties/` | Measurements of the source units on public ThaiSum and AttributionBench text: losslessness, determinism, revision safety and segmentation cost. The paper reports them. |
-| `research/segmenter_comparison/` | Why the backend splits sentences with SaT and not PyThaiNLP crfcut: how the two cut the same 200 XL-Sum articles, and how fast they are. Section 5.4.5 of the thesis book reports it. The article text is not stored. |
-| `research/attack_applicability_search/` | A survey of released cybersecurity datasets for deciding whether ATT&CK applies to a case; none of them is labelled for that decision. The folder holds the survey and its receipts, not the datasets. |
-| `research/ocr_downstream/` | The OCR error study that the appendix of the thesis book reports: scripts, protocol and scores on 100 ThaiSum crime articles (MIT licence), with an OCR error bank built from ThaiOCRBench (CC BY-SA 4.0). The article text and the raw model outputs are not included. |
+| `backend/research/nli_grounding/` | The experiment that chose the claim verifier, B1-LR. Section 5.4.3 of the thesis book reports it. |
+| `backend/research/attribution_benchmark/` | Benchmark runs and audits of that verifier. Sections 5.4.1, 5.4.2 and 5.4.4 of the thesis book and the paper report them. |
+| `backend/research/traceability_properties/` | Measurements of the source units on public ThaiSum and AttributionBench text: losslessness, determinism, revision safety and segmentation cost. The paper reports them. |
+| `backend/research/segmenter_comparison/` | Why the backend splits sentences with SaT and not PyThaiNLP crfcut: how the two cut the same 200 XL-Sum articles, and how fast they are. Section 5.4.5 of the thesis book reports it. The article text is not stored. |
+| `backend/research/attack_applicability_search/` | A survey of released cybersecurity datasets for deciding whether ATT&CK applies to a case; none of them is labelled for that decision. The folder holds the survey and its receipts, not the datasets. |
+| `backend/research/ocr_downstream/` | The OCR error study that the appendix of the thesis book reports: scripts, protocol and scores on 100 ThaiSum crime articles (MIT licence), with an OCR error bank built from ThaiOCRBench (CC BY-SA 4.0). The article text and the raw model outputs are not included. |
 
-A study that runs against an older backend names its commit in `pinned/<commit>/COMMIT`. The tag `pre-squash-2026-10-19` keeps those commits. Studies that neither the thesis book nor the paper reports were removed on 2026-10-20; commit `3b9ea357` still has them.
+A study that runs against an older backend names its commit in `pinned/<commit>/COMMIT`. The tag `pre-squash-2026-10-19` keeps those commits. Studies that neither the thesis book nor the paper reports were removed on 2026-10-20; commit `3b9ea357` still has them. Study documents written before then give paths from the repository root, where the studies sat until they moved into `backend/research/`.
 
 ## Trust boundary and source roles
 

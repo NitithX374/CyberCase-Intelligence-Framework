@@ -3,7 +3,7 @@
 # The claim verifier stamps the SHA-256 of these exact bytes on every verdict, so a checkout must not convert its line endings.
 backend/app/trace/b1_lr.json -text
 # Research records keep the bytes they were written with, so a checkout must not convert their line endings.
-research/traceability_properties/** -text
-research/ocr_downstream/** -text
-research/segmenter_comparison/** -text
-research/attack_applicability_search/** -text
+backend/research/traceability_properties/** -text
+backend/research/ocr_downstream/** -text
+backend/research/segmenter_comparison/** -text
+backend/research/attack_applicability_search/** -text

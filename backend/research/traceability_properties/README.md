@@ -29,7 +29,7 @@ into the result.
 ```bash
 # from the repository root, with the backend requirements installed
 # (pythainlp, wtpsplit and torch for SaT; asyncpg/sqlalchemy for the app imports; pyarrow)
-python research/traceability_properties/run.py --thai-n 500 --en-n 1000
+python backend/research/traceability_properties/run.py --thai-n 500 --en-n 1000
 ```
 
 The SaT model `sat-3l-sm` is downloaded on first use. If it cannot be loaded, production falls
@@ -49,7 +49,7 @@ identifiers that still return their text, identifiers that return different text
 and typed failures.
 
 ```bash
-python research/traceability_properties/segmenter_switch.py --thai-n 500 --en-n 1000
+python backend/research/traceability_properties/segmenter_switch.py --thai-n 500 --en-n 1000
 ```
 
 Result: `results/segmenter_switch.json`. This is a limitation of the prototype (Discussion of the

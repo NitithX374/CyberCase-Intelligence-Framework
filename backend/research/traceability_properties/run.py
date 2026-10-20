@@ -18,7 +18,7 @@ Corpora (pinned revisions):
   AttributionBench test + test_ood references (osunlp/AttributionBench), all unique non-empty texts.
 
 Run from the repository root with the backend requirements installed:
-  python research/traceability_properties/run.py [--thai-n 1000] [--en-n 0]
+  python backend/research/traceability_properties/run.py [--thai-n 1000] [--en-n 0]
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "backend"))
 

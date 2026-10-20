@@ -139,8 +139,8 @@ def generate_oracle_chunks(raw_data_list: list[dict], word_num_in_chunk: int = 2
     return sampled_oracle_list
 
 if __name__ == "__main__":
-    train_raw_path = Path("research/nli_grounding/data/wice/train_raw.jsonl")
-    train_out_path = Path("research/nli_grounding/data/wice/train.jsonl")
+    train_raw_path = Path("backend/research/nli_grounding/data/wice/train_raw.jsonl")
+    train_out_path = Path("backend/research/nli_grounding/data/wice/train.jsonl")
 
     with open(train_raw_path, "r", encoding="utf-8") as f:
         raw_train = [json.loads(line) for line in f if line.strip()]

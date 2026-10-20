@@ -150,7 +150,7 @@ def execute(args, output):
                    "model_load_seconds": runner.load_seconds,
                    "batch_latency_p50_p95_seconds": np.quantile(runner.batch_times, [0.5, 0.95]).tolist(),
                    "amortized_unit_p50_p95_seconds": np.quantile(runner.unit_times, [0.5, 0.95]).tolist()},
-        "command": f"& '.\\env_mitre\\Scripts\\python.exe' -u 'research/attribution_benchmark/run.py' --device {args.device} --batch-size {args.batch_size}",
+        "command": f"& '.\\env_mitre\\Scripts\\python.exe' -u 'backend/research/attribution_benchmark/run.py' --device {args.device} --batch-size {args.batch_size}",
     }
     write_json(output / "summary.json", summary)
     write_report(output, summary)

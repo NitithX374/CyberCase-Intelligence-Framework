@@ -8,7 +8,7 @@ from pathlib import Path
 
 from research.attribution_benchmark.data import sha256
 
-REPOSITORY = Path(__file__).resolve().parents[2]
+REPOSITORY = Path(__file__).resolve().parents[3]
 
 
 def now() -> str:
@@ -44,15 +44,15 @@ def git_receipt() -> dict:
 
 def source_receipt() -> dict:
     paths = [
-        "research/attribution_benchmark/data.py",
-        "research/attribution_benchmark/propagation_data.py",
-        "research/attribution_benchmark/propagation_judgement.py",
-        "research/attribution_benchmark/propagation_metrics.py",
-        "research/attribution_benchmark/run_propagation.py",
-        "research/attribution_benchmark/receipts.py",
-        "research/attribution_benchmark/propagation_execution.py",
-        "research/attribution_benchmark/champion.py",
-        "research/attribution_benchmark/b1_cache_manifest.json",
+        "backend/research/attribution_benchmark/data.py",
+        "backend/research/attribution_benchmark/propagation_data.py",
+        "backend/research/attribution_benchmark/propagation_judgement.py",
+        "backend/research/attribution_benchmark/propagation_metrics.py",
+        "backend/research/attribution_benchmark/run_propagation.py",
+        "backend/research/attribution_benchmark/receipts.py",
+        "backend/research/attribution_benchmark/propagation_execution.py",
+        "backend/research/attribution_benchmark/champion.py",
+        "backend/research/attribution_benchmark/b1_cache_manifest.json",
         "backend/app/trace/b1_lr.json",
         "backend/app/analysis/write.py",
         "backend/app/analysis/prompts.py",

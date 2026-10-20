@@ -8,7 +8,7 @@ production EvidenceIndex. It counts identifiers that still return their text, id
 different text without any error, and identifiers that fail with a typed reason.
 
 Run from the repository root with the backend requirements installed:
-  python research/traceability_properties/segmenter_switch.py --thai-n 500 --en-n 1000
+  python backend/research/traceability_properties/segmenter_switch.py --thai-n 500 --en-n 1000
 """
 
 from __future__ import annotations

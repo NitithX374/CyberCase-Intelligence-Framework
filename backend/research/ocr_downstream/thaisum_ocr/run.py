@@ -24,7 +24,7 @@ CODE = HERE / "pinned" / "969d61a" / "backend"
 os.environ["MITRE_GATE_MODE"] = "never"
 os.environ["MITRE_GATE_SHADOW"] = "off"
 os.environ["RAG_SERVICE_URL"] = "http://127.0.0.1:9"
-os.chdir(HERE.parents[2] / "backend")
+os.chdir(HERE.parents[2])
 sys.path.insert(0, str(CODE))
 
 import app.analysis.write as write_module  # noqa: E402
