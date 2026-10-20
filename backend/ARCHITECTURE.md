@@ -401,11 +401,10 @@ quotations carried context has no `supporting_contexts`, and its quotes print
 alone. `supporting_quotes` stays a list of strings for that reason, with the
 contexts beside it.
 
-**The validator belongs to the report-fidelity experiment, not to the app.**
+**The validator belonged to the report-fidelity experiment, not to the app.**
 `StructuredReport`, `build_case_template_report` and
-`validate_case_structured_report` live in
-`experiments/report_fidelity/structured_report.py`, which is kept locally and
-not tracked in git; nothing in `app/` builds or checks that shape. The
+`validate_case_structured_report` lived in that local experiment, which was
+never tracked in git; nothing in `app/` builds or checks that shape. The
 validator also checks less than it looks like. It does not check that a
 report's `claim_id` exists in the trace, and every subset check passes
 trivially for an empty list — so a claim the model invented, with no

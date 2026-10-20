@@ -192,8 +192,8 @@ This profile has not been run: no machine here has such a GPU. Its vLLM flags ma
   API's reading: 6.5 s through the API, 10.4 s on the L4.
 - Modal usage for the whole session was $0.64, all of it from credits.
 
-The comparison script, `backend/experiments/selfhosted_compare.py`, stays local: the repository
-tracks nothing in that folder.
+The comparison script (`selfhosted_compare.py`) was a local experiment and is not in the
+repository.
 
 ### Grammar on this server
 
