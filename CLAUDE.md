@@ -41,7 +41,7 @@ python -m alembic upgrade head
 python -m ruff format .
 python -m ruff check .
 
-# Tests (backend/pytest.ini); the PostgreSQL tests skip unless
+# Tests (configured in backend/pyproject.toml); the PostgreSQL tests skip unless
 # CYBERCASE_TEST_DATABASE_URL points at a test database
 python -m pytest -q
 ```
@@ -566,7 +566,6 @@ The frontend loads and generates reports through the case-scoped report endpoint
 
 ## Data Sources
 - `Mitre_ATT&CK Doc/` — STIX 2.1 JSON bundles (enterprise, mobile, ICS attack patterns)
-- `Documents/` — reference documents and case-analysis knowledge assets
 
 ## Windows-Specific Notes
 - The project is developed on Windows; `rag_service/app/RAG/GraphRAG/main.py` includes UTF-8 encoding fixes for the console

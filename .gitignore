@@ -29,7 +29,6 @@ share/python-wheels/
 *.egg
 MANIFEST
 pytest*
-!backend/pytest.ini
 
 # Environments
 .env
@@ -41,6 +40,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+backend/**/.env.*
 
 # Alembic env.py must be tracked (not matched by env* above)
 !backend/alembic/env.py
@@ -59,6 +59,10 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+
+# Logs
+backend/**/logs/
+backend/**/*.log
 
 # ==============================================================================
 # Next.js / Node

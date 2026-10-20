@@ -21,7 +21,6 @@ Around them:
 | `docker-compose.yml` | The three services and PostgreSQL, for running the system locally. |
 | `docker-compose.selfhosted.yml`, `deploy/selfhosted/` | The same stack with the models on self-hosted vLLM servers. [`deploy/selfhosted/README.md`](deploy/selfhosted/README.md) has the steps. |
 | `Mitre_ATT&CK Doc/` | The MITRE ATT&CK data in STIX 2.1, which the retrieval service ingests. |
-| `Documents/` | Reference PDFs, not read by the code: Thai laws on computer crime, electronic transactions, cybersecurity and personal data, the Criminal Code, and a summary of the system flow. |
 | `.github/workflows/deploy.yml` | Builds and pushes the Docker images on every push to `main`. |
 | `install_deps.py` | Installs the backend and retrieval-service requirements into the active Python. |
 | `AGENTS.md`, `CLAUDE.md`, `.claude/` | Instructions and skills for the coding agents used in development. |
