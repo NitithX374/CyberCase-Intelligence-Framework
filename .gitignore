@@ -188,8 +188,5 @@ backend/experiments/*
 
 # Model weights: ~1.1 GB, distributed separately and mounted into the backend container (docker-compose.yml).
 backend/models/
-backend/xlmr_ladder_best/
-backend/nli_mdeberta/
-backend/source_selector_mpnet/
 # Weights the local-models profile of docker-compose.selfhosted.yml downloads: ~56 GB.
 local_model_cache/

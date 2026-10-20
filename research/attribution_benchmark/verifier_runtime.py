@@ -26,8 +26,8 @@ def load_runtime(device: str):
     if device == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("Requested CUDA research runtime is unavailable")
     root = Path(__file__).resolve().parents[2]
-    settings.claim_nli_path = str(root / "backend/nli_mdeberta")
-    settings.claim_selector_path = str(root / "backend/source_selector_mpnet")
+    settings.claim_nli_path = str(root / "backend/models/nli_mdeberta")
+    settings.claim_selector_path = str(root / "backend/models/source_selector_mpnet")
     original = load_verifier()
     original.selector.model.to(device)
     nli_model = original.nli.model.to(device).eval()
