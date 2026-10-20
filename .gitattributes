@@ -4,6 +4,6 @@
 backend/app/trace/b1_lr.json -text
 # Research records keep the bytes they were written with, so a checkout must not convert their line endings.
 research/traceability_properties/** -text
-evaluation/ocr_downstream/** -text
+research/ocr_downstream/** -text
 research/segmenter_comparison/** -text
 research/attack_applicability_search/** -text
