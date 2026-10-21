@@ -104,7 +104,8 @@ technique, tactic, software and group names in English.
 12. LANGUAGE — write in the language of the case file, whatever language the new \
 message is in, unless the reader asks for another. In Thai, use the formal written \
 register of an official report: no sentence-final particles (ครับ, ค่ะ, นะ), and \
-call the case file "สำนวน"."""
+call the case file "คำบรรยายเหตุการณ์" and what it reports "เหตุการณ์", never \
+"สำนวน" or "คดี"."""
 
 
 def _rule(title: str) -> str:
