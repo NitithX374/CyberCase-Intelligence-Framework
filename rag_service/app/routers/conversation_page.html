@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>สนทนารายคดี — MITRE ATT&amp;CK</title>
+<title>สนทนารายเหตุการณ์ — MITRE ATT&amp;CK</title>
 <style>
   :root {
     --bg: #f4f5f7; --panel: #ffffff; --ink: #1c2430; --muted: #5d6878; --line: #dde1e7;
@@ -181,9 +181,9 @@
 <body>
 <header class="bar">
   <svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="6.5" r="2.4"/><circle cx="18.5" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7.7 7.2l8.4-.9M6.7 8.6l4.1 7.3M17.3 8.1l-4.1 7.8"/></svg>
-  <h1>สนทนารายคดี · MITRE ATT&amp;CK</h1>
+  <h1>สนทนารายเหตุการณ์ · MITRE ATT&amp;CK</h1>
   <span class="sub" id="caseTitle"></span>
-  <button class="btn" id="newCase" hidden>คดีใหม่</button>
+  <button class="btn" id="newCase" hidden>เหตุการณ์ใหม่</button>
 </header>
 
 <main id="start">
@@ -191,16 +191,16 @@
     <section class="hero">
       <div class="pitch">
         <span class="eyebrow"><i></i>CIFra · โมดูล RAG ใช้งานเดี่ยว</span>
-        <h2>จากสำนวนภาษาไทย<br>สู่เทคนิคการโจมตีตาม <em>MITRE ATT&amp;CK</em></h2>
-        <p class="lead">วางคำบรรยายเหตุการณ์ของคดีหนึ่งฉบับ ระบบจะไล่การกระทำของผู้โจมตีทีละขั้น จับคู่กับเทคนิคใน ATT&amp;CK พร้อมชี้ประโยคในสำนวนที่ใช้อ้าง แล้วถามต่อเกี่ยวกับคดีนั้นได้ในหน้าเดียวกัน</p>
+        <h2>จากเหตุการณ์ที่เล่าเป็นภาษาไทย<br>สู่เทคนิคการโจมตีตาม <em>MITRE ATT&amp;CK</em></h2>
+        <p class="lead">วางคำบรรยายของเหตุการณ์หนึ่งเหตุการณ์ ระบบจะไล่การกระทำของผู้โจมตีทีละขั้น จับคู่กับเทคนิคใน ATT&amp;CK พร้อมชี้ประโยคในคำบรรยายเหตุการณ์ที่ใช้อ้าง แล้วถามต่อเกี่ยวกับเหตุการณ์นั้นได้ในหน้าเดียวกัน</p>
         <ol class="steps">
           <li>
             <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h5M10 16h5"/></svg></span>
-            <div><b>วางสำนวน</b><span>คำบรรยายเหตุการณ์เป็นภาษาไทยได้ตรง ๆ ไม่ต้องแปล</span></div>
+            <div><b>วางเหตุการณ์</b><span>คำบรรยายเหตุการณ์เป็นภาษาไทยได้ตรง ๆ ไม่ต้องแปล</span></div>
           </li>
           <li>
             <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="2.3"/><circle cx="18" cy="6" r="2.3"/><circle cx="12" cy="17" r="2.3"/><path d="M8.1 7.6l7.7-1M7.2 9l3.6 6M16.8 8l-3.6 7"/></svg></span>
-            <div><b>ระบบวิเคราะห์</b><span>แยกเหตุการณ์เป็นขั้น ค้นฐานความรู้ทั้งแบบความหมายและแบบกราฟ แล้วอ่านสำนวนซ้ำเพื่อตัดสินตาราง</span></div>
+            <div><b>ระบบวิเคราะห์</b><span>แยกเหตุการณ์เป็นขั้น ค้นฐานความรู้ทั้งแบบความหมายและแบบกราฟ แล้วอ่านคำบรรยายเหตุการณ์ซ้ำเพื่อตัดสินตาราง</span></div>
           </li>
           <li>
             <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H10l-4 4v-4H4z"/><path d="M8 9h8M8 12h5"/></svg></span>
@@ -210,12 +210,12 @@
       </div>
 
       <div class="card">
-        <label for="caseInput">สำนวนของคดี</label>
+        <label for="caseInput">คำบรรยายเหตุการณ์</label>
         <textarea id="caseInput" placeholder="เช่น เมื่อวันที่ … บริษัท … แจ้งความว่า …"></textarea>
         <div class="samples" id="samples"><span>ลองด้วยตัวอย่าง:</span></div>
         <div class="row">
           <span class="grow" id="startNote"></span>
-          <button class="btn primary" id="open">วิเคราะห์สำนวนนี้</button>
+          <button class="btn primary" id="open">วิเคราะห์เหตุการณ์นี้</button>
         </div>
         <div class="msg error" id="startError" hidden style="margin-top:12px"></div>
       </div>
@@ -224,14 +224,14 @@
     <section class="chain" aria-label="กลยุทธ์ของ MITRE ATT&amp;CK">
       <div class="cap">
         <span>กลยุทธ์ของ ATT&amp;CK Enterprise เรียงตามลำดับของการโจมตี</span>
-        <span>ตารางของแต่ละคดีบอกว่าการกระทำแต่ละขั้นอยู่ในช่วงใด</span>
+        <span>ตารางของแต่ละเหตุการณ์บอกว่าการกระทำแต่ละขั้นอยู่ในช่วงใด</span>
       </div>
       <ol id="chain"></ol>
     </section>
 
     <div class="foot">
       <span>ฐานความรู้คือ MITRE ATT&amp;CK Enterprise เก็บทั้งแบบ vector และ graph</span>
-      <span>แถวของตารางชี้กลับไปยังประโยคในสำนวน</span>
+      <span>แถวของตารางชี้กลับไปยังประโยคในคำบรรยายเหตุการณ์</span>
       <span>ผลวิเคราะห์เป็นข้อมูลทางเทคนิคประกอบการพิจารณา ไม่ใช่ความเห็นทางกฎหมาย</span>
     </div>
   </div>
@@ -257,7 +257,7 @@
   <aside id="side">
     <div class="tabs" role="tablist">
       <button role="tab" data-tab="table" aria-selected="true">ตาราง ATT&amp;CK</button>
-      <button role="tab" data-tab="case" aria-selected="false">สำนวน</button>
+      <button role="tab" data-tab="case" aria-selected="false">เหตุการณ์</button>
       <button role="tab" data-tab="legal" aria-selected="false">ตัวบทที่อาจเกี่ยวข้อง</button>
     </div>
     <div class="pane" id="pane-table"></div>
@@ -297,8 +297,8 @@ const TACTICS = ["Reconnais­sance", "Resource Develop­ment", "Initial Access",
   "Lateral Movement", "Collection", "Command and Control", "Exfiltra­tion", "Impact"];
 const START_NOTE = "การวิเคราะห์ครั้งแรกใช้เวลาประมาณ 1–2 นาที";
 const HINTS = {
-  question: "ตอบจากสำนวนและผลวิเคราะห์ที่มีอยู่ ค้น ATT&CK เพิ่มเมื่อจำเป็น ตารางไม่เปลี่ยน",
-  facts: "ระบบจะวิเคราะห์สำนวนใหม่ทั้งฉบับ (ประมาณ 1–2 นาที) ตารางอาจเปลี่ยน",
+  question: "ตอบจากเหตุการณ์และผลวิเคราะห์ที่มีอยู่ ค้น ATT&CK เพิ่มเมื่อจำเป็น ตารางไม่เปลี่ยน",
+  facts: "ระบบจะวิเคราะห์เหตุการณ์ใหม่ทั้งหมด (ประมาณ 1–2 นาที) ตารางอาจเปลี่ยน",
 };
 
 const $ = (id) => document.getElementById(id);
@@ -360,7 +360,7 @@ function addTurn(turn) {
   if (turn.role === "user") {
     const box = el("div", "msg user");
     if (turn.kind === "case") {
-      box.append(el("div", "who", `สำนวน · ${turn.text.length.toLocaleString("th-TH")} ตัวอักษร`));
+      box.append(el("div", "who", `เหตุการณ์ · ${turn.text.length.toLocaleString("th-TH")} ตัวอักษร`));
       box.append(document.createTextNode(turn.text.length > 320 ? turn.text.slice(0, 320) + " …" : turn.text));
     } else {
       if (turn.kind === "facts") box.append(el("div", "who", "ข้อเท็จจริงเพิ่มเติม"));
@@ -377,9 +377,9 @@ function addTurn(turn) {
       for (const id of turn.rows_removed) meta.append(el("span", "chip del", `− ${id}`));
       // The text is written first and the table is decided afterwards by a
       // second reading, so the two can disagree on a step.
-      meta.append(el("span", "", "ตารางตัดสินจากการอ่านสำนวนซ้ำ จึงอาจต่างจากรหัสในข้อความนี้ — ให้ยึดตาราง"));
+      meta.append(el("span", "", "ตารางตัดสินจากการอ่านคำบรรยายเหตุการณ์ซ้ำ จึงอาจต่างจากรหัสในข้อความนี้ — ให้ยึดตาราง"));
     } else if (!turn.lookup_queries.length && !turn.lookup_ids.length) {
-      meta.append(el("span", "chip", "ตอบจากสำนวนและผลวิเคราะห์เดิม"));
+      meta.append(el("span", "chip", "ตอบจากเหตุการณ์และผลวิเคราะห์เดิม"));
     } else {
       if (turn.lookup_ids.length) meta.append(el("span", "chip", `อ่านจากกราฟ ATT&CK: ${turn.lookup_ids.join(", ")}`));
       for (const q of turn.lookup_queries) meta.append(el("span", "chip", `ค้น ATT&CK: ${q}`));
@@ -439,8 +439,8 @@ function renderCase() {
   box.append(document.createTextNode(text.slice(at)));
   $("caseNote").textContent = selectedRow
     ? (spans.length ? `ส่วนที่ไฮไลต์คือประโยคที่แถว ${selectedRow.technique_id || selectedRow.name} อ้างถึง`
-                    : `แถว ${selectedRow.technique_id || selectedRow.name} ไม่มีประโยคอ้างอิงในสำนวน`)
-    : "เลือกแถวในตารางเพื่อดูว่าอ้างถึงประโยคใดของสำนวน";
+                    : `แถว ${selectedRow.technique_id || selectedRow.name} ไม่มีประโยคอ้างอิงในคำบรรยายเหตุการณ์`)
+    : "เลือกแถวในตารางเพื่อดูว่าอ้างถึงประโยคใดของคำบรรยายเหตุการณ์";
   if (first) first.scrollIntoView({ block: "center" });
 }
 
@@ -449,8 +449,8 @@ function renderTable() {
   pane.replaceChildren();
   const rows = analysis.mitre_table;
   pane.append(el("p", "note", rows.length
-    ? `${rows.length} แถว · คลิกแถวเพื่อดูประโยคในสำนวนที่แถวนั้นอ้างถึง`
-    : "ตารางว่าง — สำนวนอาจไม่ได้บรรยายการกระทำของผู้โจมตี"));
+    ? `${rows.length} แถว · คลิกแถวเพื่อดูประโยคในคำบรรยายเหตุการณ์ที่แถวนั้นอ้างถึง`
+    : "ตารางว่าง — คำบรรยายเหตุการณ์อาจไม่ได้กล่าวถึงการกระทำของผู้โจมตี"));
   for (const row of rows) {
     const card = el("div", "rowcard");
     card.setAttribute("aria-current", String(row === selectedRow));
@@ -466,7 +466,7 @@ function renderTable() {
     if (row.tactic) card.append(el("div", "tactic", row.tactic));
     const evidence = row.evidence || [];
     if (evidence.length) for (const span of evidence.slice(0, 2)) card.append(el("q", "", span.text));
-    else card.append(el("div", "none", "ไม่มีประโยคอ้างอิงในสำนวน"));
+    else card.append(el("div", "none", "ไม่มีประโยคอ้างอิงในคำบรรยายเหตุการณ์"));
     card.onclick = () => { selectedRow = row; renderTable(); renderCase(); showTab("case"); };
     pane.append(card);
   }
@@ -558,7 +558,7 @@ function setKind(next) {
   for (const b of document.querySelectorAll("#composer .modes button")) b.setAttribute("aria-pressed", String(b.dataset.kind === kind));
   $("hint").textContent = HINTS[kind];
   $("hint").className = kind === "facts" ? "hint warn" : "hint";
-  $("text").placeholder = kind === "facts" ? "พิมพ์ข้อเท็จจริงที่ได้มาเพิ่ม เช่น ผลตรวจพิสูจน์หลักฐานดิจิทัล" : "ถามเกี่ยวกับคดีนี้ เช่น ทำไมถึงจับคู่กับ T1190";
+  $("text").placeholder = kind === "facts" ? "พิมพ์ข้อเท็จจริงที่ได้มาเพิ่ม เช่น ผลตรวจพิสูจน์หลักฐานดิจิทัล" : "ถามเกี่ยวกับเหตุการณ์นี้ เช่น ทำไมถึงจับคู่กับ T1190";
 }
 
 $("open").onclick = async () => {
@@ -569,7 +569,7 @@ $("open").onclick = async () => {
   const started = Date.now();
   const tick = setInterval(() => {
     const s = Math.floor((Date.now() - started) / 1000);
-    $("startNote").textContent = `กำลังวิเคราะห์สำนวน… ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    $("startNote").textContent = `กำลังวิเคราะห์เหตุการณ์… ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   }, 1000);
   try {
     show(await call("POST", "/conversations", { case_file: caseFile }));
@@ -591,7 +591,7 @@ $("composer").onsubmit = async (event) => {
   addTurn({ role: "user", kind: sent, text });
   $("text").value = "";
   setBusy(true);
-  const done = waitBubble(sent === "facts" ? "กำลังวิเคราะห์สำนวนใหม่ทั้งฉบับ" : "กำลังตอบ");
+  const done = waitBubble(sent === "facts" ? "กำลังวิเคราะห์เหตุการณ์ใหม่ทั้งหมด" : "กำลังตอบ");
   try {
     const result = await call("POST", `/conversations/${conversationId}/messages`, { text, kind: sent });
     done();
@@ -600,7 +600,7 @@ $("composer").onsubmit = async (event) => {
     setKind("question");
   } catch (error) {
     done();
-    if (error.status === 404) errorBubble("ไม่พบการสนทนานี้แล้ว (หมดอายุหรือบริการเริ่มใหม่) กรุณาเริ่มคดีใหม่");
+    if (error.status === 404) errorBubble("ไม่พบการสนทนานี้แล้ว (หมดอายุหรือบริการเริ่มใหม่) กรุณาเริ่มเหตุการณ์ใหม่");
     else errorBubble(`ส่งข้อความไม่สำเร็จ: ${error.message}`);
     $("text").value = text;
   } finally {
