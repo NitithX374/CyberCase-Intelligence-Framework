@@ -21,7 +21,6 @@ BUNDLE = CaseSourceBundle(3, (SOURCE, SECOND))
 
 def reader_json():
     return {
-        "version": "case_analysis_trace_v1",
         "claims": [
             {
                 "claim_id": "A-01",
@@ -40,7 +39,7 @@ def reader_json():
 def test_reader_accepts_only_canonical_claims_and_selects_only_unit_references():
     reply = CaseProviderReadingReply.model_validate(reader_json())
     schema = structured_output_schema(CaseProviderReadingReply)
-    assert set(schema["properties"]) == {"version", "claims"}
+    assert set(schema["properties"]) == {"claims"}
     assert set(schema["$defs"]["CaseReadingClaim"]["properties"]) == {
         "claim_id",
         "claim_type",
@@ -54,10 +53,7 @@ def test_reader_accepts_only_canonical_claims_and_selects_only_unit_references()
         "evidence_unit_ids",
     }
     assert reply.model_dump() == reader_json()
-    assert (
-        CaseProviderReadingReply.model_validate({"version": reply.version, "claims": []}).claims
-        == []
-    )
+    assert CaseProviderReadingReply.model_validate({"claims": []}).claims == []
 
 
 @pytest.mark.parametrize(
@@ -166,9 +162,7 @@ def test_claims_only_trace_builds_a_deterministic_report_without_a_provider(monk
     trace = bound_references(
         joined_trace(
             checked,
-            CaseProviderJudgement(
-                version="case_analysis_trace_v1", summary="Jane reported losing 25,000 baht [A-01]."
-            ),
+            CaseProviderJudgement(summary="Jane reported losing 25,000 baht [A-01]."),
         )
     )
     report = build_case_report_content(

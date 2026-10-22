@@ -235,9 +235,7 @@ def test_reading_source_binding_and_judgement_announce_in_turn():
 
     bundle = case_with_one_narrative()
     reading = reply_of(reading_of(bundle))
-    judgement = CaseProviderJudgement(
-        version="case_analysis_trace_v1", summary="Nothing yet.", gaps=[]
-    )
+    judgement = CaseProviderJudgement(summary="Nothing yet.", gaps=[])
 
     async def request_stage(**kwargs):
         return reading if kwargs["stage"] == "case_reading" else judgement

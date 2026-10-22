@@ -140,7 +140,6 @@ def test_one_unit_can_support_different_claims():
 def test_provider_ids_survive_conversion_without_provider_generated_locations():
     reply = CaseProviderReadingReply.model_validate(
         {
-            "version": "case_analysis_trace_v1",
             "claims": [
                 {
                     "claim_id": "A-01",

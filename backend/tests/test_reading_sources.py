@@ -20,7 +20,6 @@ BUNDLE = CaseSourceBundle(4, (FIRST, SECOND))
 def reply_for(citations, contradicting=()):
     return CaseProviderReadingReply.model_validate(
         {
-            "version": "case_analysis_trace_v1",
             "claims": [
                 {
                     "claim_id": "A-01",

@@ -93,7 +93,7 @@ async def citing_input(payload, config, calls):
     summary = " ".join(
         f"{claim['text']} [{claim['claim_id']}]" for claim in payload["reading"]["claims"]
     )
-    return CaseProviderJudgement(version="case_analysis_trace_v1", summary=summary)
+    return CaseProviderJudgement(summary=summary)
 
 
 def test_selection_is_reproducible_and_keeps_original_rows(raw_rows):
@@ -279,9 +279,7 @@ async def test_live_bridge_uses_only_native_judgement_contract(raw_rows, monkeyp
 
     async def stub(**kwargs):
         received.append(kwargs)
-        return CaseProviderJudgement(
-            version="case_analysis_trace_v1", summary=actual_summary(cluster, accepted)
-        )
+        return CaseProviderJudgement(summary=actual_summary(cluster, accepted))
 
     monkeypatch.setattr("research.attribution_benchmark.propagation_judgement.request_stage", stub)
     await judge(payload, config, [])
@@ -372,9 +370,7 @@ async def test_actual_zero_admission_cluster_skips_judgement(tmp_path, monkeypat
 @pytest.mark.asyncio
 async def test_protocol_violation_is_preserved_and_fails_run(tmp_path, monkeypatch):
     async def uncited(payload, config, calls):
-        return CaseProviderJudgement(
-            version="case_analysis_trace_v1", summary=payload["reading"]["claims"][0]["text"]
-        )
+        return CaseProviderJudgement(summary=payload["reading"]["claims"][0]["text"])
 
     monkeypatch.setattr(harness, "judge", uncited)
     output = tmp_path / "invalid-summary"

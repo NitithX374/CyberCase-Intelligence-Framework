@@ -75,7 +75,6 @@ def written(bundle, reading, **options):
         if kwargs["stage"] == "case_reading":
             return CaseProviderReadingReply.model_validate(
                 {
-                    "version": "case_analysis_trace_v1",
                     "claims": [
                         {
                             **claim.model_dump(
@@ -95,9 +94,7 @@ def written(bundle, reading, **options):
                     ],
                 }
             )
-        return CaseProviderJudgement(
-            version="case_analysis_trace_v1", summary="The share was encrypted [A-01]."
-        )
+        return CaseProviderJudgement(summary="The share was encrypted [A-01].")
 
     with patch("app.analysis.write.request_stage", new=request_stage):
         trace = asyncio.run(

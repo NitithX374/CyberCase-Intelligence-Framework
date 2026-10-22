@@ -42,7 +42,6 @@ async def test_whole_case_claims_only_reading_direct_binding_judgement_and_join(
     ]
     reply = CaseProviderReadingReply.model_validate(
         {
-            "version": "case_analysis_trace_v1",
             "claims": [
                 {
                     "claim_id": f"A-0{index}",
@@ -82,7 +81,6 @@ async def test_whole_case_claims_only_reading_direct_binding_judgement_and_join(
             [second.text.splitlines(keepends=True)[1]],
         ]
         return CaseProviderJudgement(
-            version="case_analysis_trace_v1",
             summary="John is the victim [A-01]. The server was encrypted at 13:00, interrupting payroll [A-02, A-03].",
         )
 
@@ -126,7 +124,6 @@ def test_answered_followups_use_the_same_unit_contract_and_unanswered_ones_are_a
     assert unit["text"] == history[0].answer
     reply = CaseProviderReadingReply.model_validate(
         {
-            "version": "case_analysis_trace_v1",
             "claims": [
                 {
                     "claim_id": "A-01",

@@ -187,7 +187,6 @@ async def test_only_the_judgement_receives_the_judgement_override(monkeypatch):
         if kwargs["stage"] == "case_reading":
             return CaseProviderReadingReply.model_validate(
                 {
-                    "version": "case_analysis_trace_v1",
                     "claims": [
                         {
                             "claim_id": "A-01",
@@ -204,7 +203,7 @@ async def test_only_the_judgement_receives_the_judgement_override(monkeypatch):
                     ],
                 }
             )
-        return CaseProviderJudgement(version="case_analysis_trace_v1", summary="No claims.")
+        return CaseProviderJudgement(summary="No claims.")
 
     monkeypatch.setattr(write, "request_stage", request_stage)
     config = AnalysisPipelineConfig(
@@ -236,7 +235,6 @@ async def test_the_assess_override_reaches_no_other_stage_whatever_its_size(monk
         if kwargs["stage"] == "case_reading":
             return CaseProviderReadingReply.model_validate(
                 {
-                    "version": "case_analysis_trace_v1",
                     "claims": [
                         {
                             "claim_id": "A-01",
@@ -253,7 +251,7 @@ async def test_the_assess_override_reaches_no_other_stage_whatever_its_size(monk
                     ],
                 }
             )
-        return CaseProviderJudgement(version="case_analysis_trace_v1", summary="No claims.")
+        return CaseProviderJudgement(summary="No claims.")
 
     monkeypatch.setattr(write, "request_stage", request_stage)
     config = AnalysisPipelineConfig(
@@ -284,7 +282,6 @@ async def test_only_reading_receives_its_stage_override(monkeypatch):
         if kwargs["stage"] == "case_reading":
             return CaseProviderReadingReply.model_validate(
                 {
-                    "version": "case_analysis_trace_v1",
                     "claims": [
                         {
                             "claim_id": "A-01",
@@ -301,7 +298,7 @@ async def test_only_reading_receives_its_stage_override(monkeypatch):
                     ],
                 }
             )
-        return CaseProviderJudgement(version="case_analysis_trace_v1", summary="No claims.")
+        return CaseProviderJudgement(summary="No claims.")
 
     monkeypatch.setattr(write, "request_stage", request_stage)
     config = AnalysisPipelineConfig(model="test/model", reading_thinking_tokens=0)

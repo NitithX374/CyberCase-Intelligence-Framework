@@ -93,14 +93,13 @@ async def run_pipeline(
         if kwargs["stage"] == "case_reading":
             return CaseProviderReadingReply.model_validate(
                 {
-                    "version": "case_analysis_trace_v1",
                     "claims": initial if claims is None else claims,
                 }
             )
         assert kwargs["stage"] == "case_judgement"
         if on_judgement is not None:
             await on_judgement()
-        return CaseProviderJudgement(version="case_analysis_trace_v1", summary=summary)
+        return CaseProviderJudgement(summary=summary)
 
     async def views(accepted, *, config):
         view_inputs.extend(accepted)
@@ -459,9 +458,7 @@ def test_withheld_claim_ids_cannot_return_through_gaps():
             epistemic_status="reported",
         )
     ]
-    judgement = CaseProviderJudgement(
-        version="case_analysis_trace_v1", summary="John sent an email [A-01].", **fields
-    )
+    judgement = CaseProviderJudgement(summary="John sent an email [A-01].", **fields)
     with pytest.raises(CaseAnalysisFailure) as raised:
         check_judgement_references(judgement, given)
     assert raised.value.code == "case_judgement_invalid_claim"

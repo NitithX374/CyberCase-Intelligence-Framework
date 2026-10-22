@@ -17,12 +17,11 @@ from app.trace.trace import CaseProviderJudgement, CaseProviderReadingReply
 
 STAGES = [
     ("case_assessment", CaseAssessmentTrace, {"gaps": []}),
-    ("case_reading", CaseProviderReadingReply, {"version": "case_analysis_trace_v1", "claims": []}),
+    ("case_reading", CaseProviderReadingReply, {"claims": []}),
     (
         "case_judgement",
         CaseProviderJudgement,
         {
-            "version": "case_analysis_trace_v1",
             "summary": "No claims.",
             "gaps": [],
         },

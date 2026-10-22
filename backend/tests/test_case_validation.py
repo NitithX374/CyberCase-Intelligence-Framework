@@ -166,7 +166,6 @@ def gap_payload(**overrides) -> dict[str, object]:
 def test_judgement_gaps_are_normalized_instead_of_rejected():
     parsed = CaseProviderJudgement.model_validate(
         {
-            "version": "case_analysis_trace_v1",
             "summary": "Files were encrypted [A-01].",
             "gaps": [
                 gap_payload(

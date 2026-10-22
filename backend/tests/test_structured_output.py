@@ -39,21 +39,13 @@ def test_no_schema_sent_to_a_provider_has_a_const(model) -> None:
     assert "const" not in keys_in(structured_output_schema(model))
 
 
-def test_pydantic_writes_a_const_for_a_single_value_literal() -> None:
-    assert "const" in keys_in(CaseProviderJudgement.model_json_schema())
-
-
-def test_the_version_the_judgement_must_write_is_a_one_item_enum() -> None:
-    judgement = structured_output_schema(CaseProviderJudgement)
-
-    assert shape(judgement["properties"]["version"]) == {
-        "enum": ["case_analysis_trace_v1"],
-        "type": "string",
-    }
-
-
-def test_the_assessment_is_asked_for_its_gaps_alone() -> None:
+def test_no_contract_asks_a_model_for_a_version() -> None:
     assert list(structured_output_schema(CaseAssessmentTrace)["properties"]) == ["gaps"]
+    assert list(structured_output_schema(CaseProviderReadingReply)["properties"]) == ["claims"]
+    assert list(structured_output_schema(CaseProviderJudgement)["properties"]) == [
+        "summary",
+        "gaps",
+    ]
 
 
 class Kinds(BaseModel):
@@ -61,6 +53,10 @@ class Kinds(BaseModel):
     two: Literal["x", "y"]
     number: Literal[3]
     flag: Literal[True]
+
+
+def test_pydantic_writes_a_const_for_a_single_value_literal() -> None:
+    assert "const" in keys_in(Kinds.model_json_schema())
 
 
 def test_a_literal_becomes_an_enum_that_keeps_its_type() -> None:

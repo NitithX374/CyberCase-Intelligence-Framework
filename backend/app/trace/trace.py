@@ -155,14 +155,12 @@ class CaseAnalysisTrace(BaseModel):
 class CaseProviderReadingReply(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["case_analysis_trace_v1"]
     claims: list[CaseReadingClaim] = Field(max_length=64)
 
 
 class CaseProviderJudgement(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["case_analysis_trace_v1"]
     summary: str = Field(min_length=1, max_length=24_000)
     gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
 

@@ -97,7 +97,7 @@ function readingReply(request) {
       contradicting_citations: [],
     }));
   if (claims.length === 0) throw new Error("Unsupported E2E provider request");
-  return { version: "case_analysis_trace_v1", claims };
+  return { claims };
 }
 
 function judgementReply(request) {
@@ -131,7 +131,6 @@ function judgementReply(request) {
         ]
       : [];
   return {
-    version: "case_analysis_trace_v1",
     summary: `Deterministic E2E summary: ${claims
       .map((claim) => `${claim.text.trim()} [${claim.claim_id}]`)
       .join(" ")}`,

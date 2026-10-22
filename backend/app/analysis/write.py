@@ -63,7 +63,6 @@ async def write_trace(
         announce("verify")
         claims = await checked_claim_support(claims)
         judgement = CaseProviderJudgement(
-            version="case_analysis_trace_v1",
             summary=(
                 "ไม่มีข้อค้นพบที่ผ่านการตรวจการอ้างอิง Source จึงยังไม่สร้างบทสรุปคดี"
                 if language == "thai"

@@ -67,7 +67,6 @@ def reading_of(bundle: CaseSourceBundle) -> list[CaseAnalysisClaim]:
 
 def judgement(**overrides) -> CaseProviderJudgement:
     return CaseProviderJudgement(
-        version="case_analysis_trace_v1",
         summary=overrides.pop("summary", "A file share was encrypted overnight."),
         gaps=overrides.pop("gaps", []),
     )
@@ -76,7 +75,6 @@ def judgement(**overrides) -> CaseProviderJudgement:
 def reply_of(reading: list[CaseAnalysisClaim]) -> CaseProviderReadingReply:
     return CaseProviderReadingReply.model_validate(
         {
-            "version": "case_analysis_trace_v1",
             "claims": [
                 {
                     **claim.model_dump(

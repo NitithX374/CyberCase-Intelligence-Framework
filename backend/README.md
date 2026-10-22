@@ -39,7 +39,7 @@ An analysis reads one `CaseSourceBundle(revision, sources)` plus the separate fo
 
 Reading receives every source's exact unit text with local IDs such as `U001`, the unchanged `source_id`, and document/quality metadata. `app/analysis/reading_sources.py` captures revisions before the call and expands selected aliases to canonical IDs before binding; offsets and hashes stay backend-owned. `app/sources/evidence.py` and `app/trace/evidence_binding.py` retain deterministic exact spans, revision checks and document page locators. Stored traces keep full canonical IDs. Units are computed at analysis time and need no table or migration. Historical quote/pointer fields remain readable; new binding uses source-unit IDs without quote recovery.
 
-The Reader returns only `version` and canonical `claims`. The backend resolves
+The Reader returns only canonical `claims`. The backend resolves
 Source-unit IDs to original text/provenance. One prompt-structured LLM call batches
 exactly the Claims supplied to Judgement into Parties, Timeline and Impacts.
 Both calls run independently in parallel after binding, beside the frozen B1-LR Claim check; views never enter

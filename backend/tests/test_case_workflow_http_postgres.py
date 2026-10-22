@@ -35,7 +35,6 @@ HEAD = "The attacker logged in to the VPN gateway."
 TAIL = "The attacker exfiltrated the payroll archive."
 STAGES = {"suggestion": "answer", "summary": "judge", "gaps": "assess", "claims": "read"}
 JUDGED = {
-    "version": "case_analysis_trace_v1",
     "summary": "Files on the shared drive were encrypted.",
     "gaps": [],
 }
@@ -43,7 +42,6 @@ JUDGED = {
 
 def reading(*claims: dict) -> dict:
     return {
-        "version": "case_analysis_trace_v1",
         "claims": list(claims),
     }
 
@@ -91,7 +89,7 @@ def disconnecting(_content: dict) -> httpx.Response:
 
 
 def off_schema(_content: dict) -> dict:
-    return {"version": "case_analysis_trace_v1", "summary": "Half an answer."}
+    return {"summary": "Half an answer."}
 
 
 def unreadable(_content: dict) -> httpx.Response:
