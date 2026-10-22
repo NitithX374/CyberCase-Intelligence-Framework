@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from types import MappingProxyType
 
 from app.sources.bundle import CaseSourceItem
-from app.sources.evidence import EvidenceIndex, evidence_units
+from app.sources.evidence import EvidenceIndex
 from app.trace.citations import MAX_EVIDENCE_ID_CHARS, CaseEvidenceReference
 from app.trace.trace import CaseProviderReadingReply
 
@@ -32,19 +32,19 @@ def provider_source_payload(source: CaseSourceItem) -> dict[str, object]:
 
 class ReadingSources:
     def __init__(self, sources: Sequence[CaseSourceItem]) -> None:
-        index = EvidenceIndex(sources)
-        self.revisions = MappingProxyType(index.revisions)
+        self.evidence = EvidenceIndex(sources)
+        self.revisions = MappingProxyType(self.evidence.revisions)
         self.payloads = tuple(self.source_payload(source) for source in sources)
 
-    @staticmethod
-    def source_payload(source: CaseSourceItem) -> dict[str, object]:
+    def source_payload(self, source: CaseSourceItem) -> dict[str, object]:
         payload = provider_source_payload(source)
         del payload["text"]
+        units = self.evidence.units_of(source.source_id).values()
         return {
             **payload,
             "evidence_units": [
                 {"unit_id": f"U{number:03d}", "text": unit.text}
-                for number, unit in enumerate(evidence_units(source), 1)
+                for number, unit in enumerate(units, 1)
             ],
         }
 

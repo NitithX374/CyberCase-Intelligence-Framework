@@ -72,9 +72,15 @@ class EvidenceIndex:
         self.revisions = {source.source_id: evidence_revision(source.text) for source in sources}
         self.units: dict[str, dict[str, EvidenceUnit]] = {}
 
+    def units_of(self, source_id: str) -> dict[str, EvidenceUnit]:
+        if source_id not in self.units:
+            self.units[source_id] = {
+                unit.unit_id: unit for unit in evidence_units(self.sources[source_id])
+            }
+        return self.units[source_id]
+
     def resolve(self, source_id: str, unit_id: str) -> tuple[EvidenceUnit | None, str | None]:
-        source = self.sources.get(source_id)
-        if source is None:
+        if source_id not in self.sources:
             return None, "unknown_source"
         match = UNIT_PATTERN.fullmatch(unit_id)
         if (
@@ -87,9 +93,7 @@ class EvidenceIndex:
             return None, "cross_source"
         if match["revision"] != self.revisions[source_id]:
             return None, "stale_id"
-        if source_id not in self.units:
-            self.units[source_id] = {unit.unit_id: unit for unit in evidence_units(source)}
-        unit = self.units[source_id].get(unit_id)
+        unit = self.units_of(source_id).get(unit_id)
         if unit is None:
             return None, "unknown_unit"
         if not unit.text.strip():
