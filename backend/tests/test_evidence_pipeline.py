@@ -117,7 +117,8 @@ def test_answered_followups_use_the_same_unit_contract_and_unanswered_ones_are_a
         CaseFollowupExchange("QA-04", "when", "When?", None),
     )
     bundle = CaseSourceBundle(7, (native,))
-    payload = reading_request(bundle, "english", history)
+    sources = ReadingSources((*bundle.sources, *followup_registry_items(history)))
+    payload = reading_request(sources, "english", history)
     assert [source["source_id"] for source in payload["case_sources"]] == ["S1", "QA-03"]
     qa = payload["case_sources"][1]
     [unit] = qa["evidence_units"]

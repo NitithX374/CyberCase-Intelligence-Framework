@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from types import MappingProxyType
 
 from app.sources.bundle import CaseSourceItem
-from app.sources.evidence import EVIDENCE_VERSION, EvidenceIndex, evidence_units
+from app.sources.evidence import EvidenceIndex, evidence_units
 from app.trace.citations import MAX_EVIDENCE_ID_CHARS, CaseEvidenceReference
 from app.trace.trace import CaseProviderReadingReply
 
@@ -42,7 +42,6 @@ class ReadingSources:
         del payload["text"]
         return {
             **payload,
-            "evidence_version": EVIDENCE_VERSION,
             "evidence_units": [
                 {"unit_id": f"U{number:03d}", "text": unit.text}
                 for number, unit in enumerate(evidence_units(source), 1)

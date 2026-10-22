@@ -177,7 +177,7 @@ Backend (prefix `/api/v1`), one `routes.py` per feature folder. `tests/test_rout
   with `Accept: text/event-stream` with a Server-Sent Events stream on the same request, instead of one JSON body
   (`analysis/stream.py`):
   - a `step` event as the analysis reaches each step (`warmup` only when a self-hosted model server had to be woken,
-    `assess`, `gate`, `retrieve` only when the RAG service is asked, `read`, `bind`, `judge`), with the seconds since
+    `assess`, `gate`, `retrieve` only when the RAG service is asked, `read`, `bind`, `verify`, `views`, `judge`), with the seconds since
     it began;
   - a `: heartbeat` comment every 15 seconds of quiet, so the browser can tell a slow step from a lost connection;
   - then `result`, holding the JSON body a plain request gets, or `error`, holding its status and `detail`.
@@ -446,9 +446,8 @@ budget, and the `trigger_text` it returns is checked. `validate_mitre_applicabil
 a RETRIEVE only if every trigger, after NFKC normalization, is a substring of a source the
 gate cited and every cited source holds a trigger; otherwise it records SKIP with
 `mitre_applicability_invalid_grounding`. The RAG query is not the trigger text alone:
-`retrieval_query` in `technical_context/retrieve.py` joins the triggers, falls back to the
-whole source bundle (`build_rag_query`) when there are none, and appends each answered
-follow-up's question and answer.
+`retrieval_query` in `technical_context/retrieve.py` joins the triggers, which a RETRIEVE
+always carries, and appends each answered follow-up's question and answer.
 
 ### Source units and canonical claims (backend)
 

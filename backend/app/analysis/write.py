@@ -59,9 +59,7 @@ async def write_trace(
         config=config.for_reading(),
         stage="case_reading",
         system=CASE_READING_JSON_PROMPT,
-        content=reading_request(
-            sources, language, followup_history, reading_sources=reading_sources
-        ),
+        content=reading_request(reading_sources, language, followup_history),
         schema=CaseProviderReadingReply,
     )
     announce("bind")
@@ -76,7 +74,7 @@ async def write_trace(
             version="case_analysis_trace_v1",
             summary=(
                 "ไม่มีข้อค้นพบที่ผ่านการตรวจการอ้างอิง Source จึงยังไม่สร้างบทสรุปคดี"
-                if language in ("thai", "th")
+                if language == "thai"
                 else "No finding passed the Source citation checks; no case summary was generated."
             ),
         )
@@ -158,19 +156,12 @@ def reading_from(
 
 
 def reading_request(
-    sources: CaseSourceBundle,
+    reading_sources: ReadingSources,
     language: str,
     followup_history: Sequence[CaseFollowupExchange],
-    *,
-    reading_sources: ReadingSources | None = None,
 ) -> dict[str, object]:
-    if reading_sources is None:
-        reading_sources = ReadingSources(
-            (*sources.sources, *followup_registry_items(followup_history))
-        )
     return {
         "response_language": language,
-        "source_revision": sources.revision,
         "case_sources": list(reading_sources.payloads),
         "followup_history": followup_payload(followup_history),
     }

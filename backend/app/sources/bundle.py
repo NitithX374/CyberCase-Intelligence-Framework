@@ -30,12 +30,6 @@ class CaseSourceBundle:
     sources: tuple[CaseSourceItem, ...]
 
 
-def source_label(source: CaseSourceItem) -> str:
-    if source.filename:
-        return f"DOCUMENT {source.filename}"
-    return "CASE NARRATIVE" if source.source_kind == "narrative" else "CASE SOURCE"
-
-
 def case_source_item(source: CaseSource) -> CaseSourceItem:
     return CaseSourceItem(
         source_id=str(source.id),
@@ -104,24 +98,15 @@ def analysable_bundle(case: Case) -> CaseSourceBundle:
     return bundle
 
 
-def build_rag_query(bundle: CaseSourceBundle) -> str:
-    return "\n\n".join(
-        f"[{source_label(source)} · SOURCE {source.source_id}]\n{source.text.strip()}"
-        for source in bundle.sources
-    )
-
-
 __all__ = [
     "WITH_SOURCES",
     "CaseSourceBundle",
     "CaseSourceItem",
     "SourcesRead",
     "analysable_bundle",
-    "build_rag_query",
     "case_source_bundle_for_analysis",
     "case_source_bundle_from_case",
     "case_source_item",
     "source_ids_of_sources_read",
-    "source_label",
     "sources_read",
 ]

@@ -150,7 +150,7 @@ Gaps:
 - Do not create gaps for optional enrichment or information that would merely be useful.
 - For every askable high-priority gap, provide clarification_question as one concise,
   standalone question of at most {MAX_CLARIFICATION_QUESTION_CHARS} characters in the
-  requested language. A longer question is not asked. Use null when the gap is not askable.
+  requested language. Use null when the gap is not askable.
 - Do not ask for information merely to strengthen a MITRE mapping when it does not
   materially affect the Case analysis.
 """.strip()

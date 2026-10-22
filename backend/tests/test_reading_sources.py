@@ -153,15 +153,15 @@ def test_contradicting_unit_ids_are_decoded_without_changing_their_role():
     assert len(claim.supporting_citations) == len(claim.contradicting_citations) == 1
 
 
-def test_followup_answers_share_local_addressing_and_preserve_source_revision():
+def test_followup_answers_share_local_addressing():
     history = (
         CaseFollowupExchange("QA-03", "affected", "Who?", "John is the victim."),
         CaseFollowupExchange("QA-04", "when", "When?", None),
     )
     sources = ReadingSources((*BUNDLE.sources, *followup_registry_items(history)))
-    payload = reading_request(BUNDLE, "english", history, reading_sources=sources)
+    payload = reading_request(sources, "english", history)
+    assert set(payload) == {"response_language", "case_sources", "followup_history"}
     assert [item["source_id"] for item in payload["case_sources"]] == ["S1", "S2", "QA-03"]
-    assert payload["source_revision"] == 4
     assert payload["case_sources"][2]["evidence_units"] == [
         {"unit_id": "U001", "text": "John is the victim."}
     ]

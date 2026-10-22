@@ -310,7 +310,6 @@ def test_the_reading_is_given_the_case_sources_and_the_judgement_is_not():
     trace, (reading_call,) = written(CaseSourceBundle(revision=1, sources=(source,)), reading)
     assert reading_call["content"] == {
         "response_language": "english",
-        "source_revision": 1,
         "case_sources": [ReadingSources.source_payload(source)],
         "followup_history": [],
     }
