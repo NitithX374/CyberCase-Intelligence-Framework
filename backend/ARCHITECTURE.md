@@ -83,18 +83,24 @@ summary may have (one for every three Claims, from 2 to 8, computed by
 enforced); the former writes presentation views only. Neither is shown the technical
 context: the ATT&CK associations are built afterwards by `bind_to_case`.
 
-`analysis/reading_sources.py` captures each source's revision before Reading and
-sends exact unit text with source-local IDs (`U001`, etc.), unchanged Source IDs
-and document quality headers. The same request-owned mapping expands selected
-aliases to canonical revision-bearing IDs before `reading_from` builds claims.
-Offsets and hashes stay backend-owned; stored citation IDs and stale checks are
-unchanged. The prompt-JSON user message is minified without altering its values.
+`analysis/reading_sources.py` cuts each source into exact-offset Evidence Units
+once per request (`sources/evidence.py`), records each source's revision before
+Reading, and sends exact unit text with source-local IDs (`U001`, etc.), unchanged
+Source IDs and document quality headers. Offsets and hashes stay backend-owned;
+stored citation IDs and stale checks are unchanged. The prompt-JSON user message is
+minified without altering its values.
 
-Between the two calls, `bound_claims` in `trace/bind.py` checks the reading
-against the sources:
-- `sources/evidence.py` partitions each source into exact-offset Evidence Units;
-- `trace/evidence_binding.py` resolves selected IDs to original text and document/page locators;
-  a citation that names no unit is recorded as an invalid reference, never looked up as text;
+Between the two calls, `ReadingSources.bound_claims` binds the reply in one pass,
+against the units the Reader was shown; no source is cut a second time:
+- `trace/evidence_binding.py` expands each selected alias with the revision recorded
+  before Reading and checks it in a fixed order (`unknown_source`, `malformed_id`,
+  `cross_source`, `stale_id`, `unknown_unit`, `empty_unit`; an ID the claim already
+  selected is `duplicate_id`), then resolves it to original text and document/page
+  locators; a failure is kept as an invalid pointer with the expanded ID, and a
+  citation that names no unit is recorded as an invalid reference, never looked up
+  as text;
+- a repeated claim ID is dropped, and each claim is built once, its source-ID lists
+  the sorted known sources it named;
 - a `reported` claim left with no resolved supporting evidence becomes `not_confirmed`.
 
 **The claim verifier.** `analysis/claim_gate.py` runs `trace/claim_validation.py`

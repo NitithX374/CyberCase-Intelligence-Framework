@@ -247,9 +247,11 @@ trace/                  what the analysis, chat and reports share
                         loaded; Source units and the sentence around a
                         quotation use it, and segmenter_identity names the one
                         in use
-  bind.py               stable orchestration: resolve claim source references
-                        before Judgement; check final references and
-                        derive summary units afterwards; item_support gives
+  bind.py               the claim rules binding applies (a repeated claim ID
+                        is dropped, a reported claim left without support
+                        becomes not_confirmed, source-ID lists are sorted);
+                        check final references and derive summary units
+                        after Judgement; item_support gives
                         bound/mixed/unbound/no_claim, which describe evidence
                         binding of linked claims, never semantic or factual
                         confirmation
@@ -257,9 +259,11 @@ trace/                  what the analysis, chat and reports share
                         a re-read span become ATT&CK associations, each showing
                         that sentence as the service sent it: no check, no
                         Claim attached
-  evidence_binding.py   validate selected IDs, materialize original source spans
-                        and page locators, reject duplicate references; a
-                        citation that names no unit is an invalid reference
+  evidence_binding.py   check each selected ID (a reading's alias is first
+                        expanded with the revision its request recorded),
+                        materialize original source spans and page locators,
+                        reject duplicate references; a citation that names no
+                        unit is an invalid reference
   quotes.py             find_document_locator: the page or pages a quote sits
                         on in a document
   messages.py           what a chat message carries: the trace attached to it,
@@ -280,7 +284,9 @@ cases/                  routes, schemas, service (case CRUD and whether the
 sources/                routes (sources and documents), schemas, service, and
                         bundle.py: the one bundle an analysis reads from
   evidence.py           analysis-time exact-offset units, with source-scoped and
-                        text-fingerprinted IDs; no evidence table or migration
+                        text-fingerprinted IDs; EvidenceIndex cuts each source
+                        once and resolves IDs against those units; no evidence
+                        table or migration
   markup.py             source_tables: the tables in an extracted text;
                         evidence.py starts a unit at each table row
   ingestion/            upload to text: service, files (detect, count and
@@ -302,7 +308,8 @@ analysis/               producing an analysis of a case; routes, schemas
                         nothing worth asking
   write.py              write_trace: a claims-only reading call (selected Source
                         unit IDs; prompt JSON, no grammar), deterministic source
-                        binding (bound_claims), the Claim/Source warning check,
+                        binding of the reply against the units it was shown
+                        (ReadingSources.bound_claims), the Claim/Source warning check,
                         independent batched LLM views for display, concurrent
                         with a judgement call (summary and gaps) over the
                         checked claims alone: no case sources, no technical
@@ -320,8 +327,11 @@ analysis/               producing an analysis of a case; routes, schemas
                         attribution, uncertainty and whole-Case
                         consolidation), the views, assessment and Judgement
                         prompts, and CASE_CHECKLIST
-  reading_sources.py    compact local unit IDs for the Reader; request-owned
-                        revision mapping back to canonical IDs before binding;
+  reading_sources.py    cuts each source once per request: compact local unit
+                        IDs for the Reader and, from the same units, the
+                        one-pass binding of its reply (each alias expanded
+                        with the revision recorded before Reading, then
+                        resolved; each claim built once);
                         provider_source_payload, the Source/document
                         extraction-quality header
   views.py              one structured LLM call over Judgement's canonical
@@ -447,7 +457,7 @@ always carries, and appends each answered follow-up's question and answer.
 
 ### Source units and canonical claims (backend)
 
-`sources/evidence.py` partitions every source at analysis time, reusing sentence spans and preserving all separators. Each frozen `EvidenceUnit(unit_id, source_id, start, end, text)` satisfies `text == source.text[start:end]`; ordered units reconstruct the source exactly. Canonical IDs have the form `source_id:U001-<16 hex characters>`. The hex part hashes the segmentation version (`evidence_units_v4`), the identity of the segmenter in use (`segmenter_identity`: the SaT model with its pinned revision, threshold and wtpsplit version, or the PyThaiNLP version for the crfcut fallback) and the full source text, so a segmenter change makes every earlier ID resolve to `stale_id` instead of naming other text. The splitter is chosen once per process: SaT, or crfcut for every source when SaT cannot be loaded. A SaT error on one line is raised; that line is never split by crfcut instead. Reading receives all native sources and answered QA text together using local IDs such as `U001`, with unchanged Source identity and document/quality metadata. `analysis/reading_sources.py` captures revisions before Reading and expands its selections to canonical IDs before binding; offsets and hashes are omitted from the compact model payload. `trace/evidence_binding.py` checks source ownership, existence, syntax, stale hashes and duplicates before reproducing original text. Stored traces keep canonical IDs. On the direct path, citation `exact_quote` is backend-produced text with offsets, document identity and page locator when available. New analyses accept source-unit IDs only, and binding never looks a quotation up in a source: a citation that names no unit is recorded as an invalid reference. A chat answer cites each claim with the citations its analysis stored and does not bind them again, so a stored analysis keeps its quotes after the segmenter changes. A stored citation is left out of the answer once its source is no longer in the case bundle, because it was turned off or a document was read again and its earlier reading turned off, or no longer holds the quote at the citation's offsets, as a source whose text was replaced before reingest added a new source instead; a citation without offsets is left out too, and no stored analysis has one.
+`sources/evidence.py` partitions every source at analysis time, reusing sentence spans and preserving all separators. Each frozen `EvidenceUnit(unit_id, source_id, start, end, text)` satisfies `text == source.text[start:end]`; ordered units reconstruct the source exactly. Canonical IDs have the form `source_id:U001-<16 hex characters>`. The hex part hashes the segmentation version (`evidence_units_v4`), the identity of the segmenter in use (`segmenter_identity`: the SaT model with its pinned revision, threshold and wtpsplit version, or the PyThaiNLP version for the crfcut fallback) and the full source text, so a segmenter change makes every earlier ID resolve to `stale_id` instead of naming other text. The splitter is chosen once per process: SaT, or crfcut for every source when SaT cannot be loaded. A SaT error on one line is raised; that line is never split by crfcut instead. Reading receives all native sources and answered QA text together using local IDs such as `U001`, with unchanged Source identity and document/quality metadata. `analysis/reading_sources.py` cuts each source once per request, records each source's revision before Reading, and builds both the compact payload and the binding from those same units; offsets and hashes are omitted from the compact model payload. It binds the reply in one pass: for each selection `trace/evidence_binding.py` expands the alias with the recorded revision and checks it in a fixed order (unknown source, malformed ID, another source, stale revision, unknown unit, whitespace-only unit; a repeat within the claim is a duplicate) before reproducing original text, and each claim is built once. Stored traces keep canonical IDs. On the direct path, citation `exact_quote` is backend-produced text with offsets, document identity and page locator when available. New analyses accept source-unit IDs only, and binding never looks a quotation up in a source: a citation that names no unit is recorded as an invalid reference. A chat answer cites each claim with the citations its analysis stored and does not bind them again, so a stored analysis keeps its quotes after the segmenter changes. A stored citation is left out of the answer once its source is no longer in the case bundle, because it was turned off or a document was read again and its earlier reading turned off, or no longer holds the quote at the citation's offsets, as a source whose text was replaced before reingest added a new source instead; a citation without offsets is left out too, and no stored analysis has one.
 
 The dedicated Reader contract contains `claims` only. Each claim contains its ID, type, text, epistemic status and supporting/contradicting unit citations. The backend derives source-ID lists and citation locations; the Reader cannot generate copied quotations, reasoning summaries, metadata or separate parties/timeline/impacts. `reported` covers attributed or qualified source assertions; `unknown` describes uncertainty explicitly stated in a source. Higher-level inference belongs to Judgement. Removing duplicated structured facts also removes projection-specific NLI verification. Historical views and saved verdicts remain readable for existing records but are never input authority for Judgement or chat. `support=bound` means linked claims have resolved supporting citations, not semantic or factual confirmation.
 
