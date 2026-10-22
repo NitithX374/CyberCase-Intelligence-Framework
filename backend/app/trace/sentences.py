@@ -148,7 +148,7 @@ def quote_context(index: SentenceIndex, quote: str) -> CaseQuoteContext | None:
     if start < 0 or text.find(quote, start + 1) >= 0:
         return None
     end = start + len(quote)
-    first_line, last_line = index.line_of(start), index.line_of(end - 1)
+    first_line, last_line = max(index.line_of(start), 0), index.line_of(end - 1)
     touching = [
         span
         for line in range(first_line, last_line + 1)
@@ -157,7 +157,7 @@ def quote_context(index: SentenceIndex, quote: str) -> CaseQuoteContext | None:
     ]
     if not touching:
         return None
-    previous = index.previous(first_line, touching[0])
+    previous = index.previous(index.line_of(touching[0][0]), touching[0])
     before = text[(previous or touching[0])[0] : start]
     after = text[end : touching[-1][1]]
     if previous is not None and len(before) + len(after) > MAX_CONTEXT_CHARS:

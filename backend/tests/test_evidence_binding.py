@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from app.analysis.reading_sources import ReadingSources
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import evidence_units
 from app.trace.bind import resolve_case_trace
+from app.trace.citations import CaseQuoteContext
 from app.trace.claims import CaseAnalysisClaim, CaseReadingClaim, CaseSourceCitation
 from app.trace.trace import CaseAnalysisTrace, CaseProviderReadingReply
 
@@ -245,3 +248,29 @@ def test_repeated_document_text_uses_the_selected_offset_for_its_page():
     trace = resolved([reference(source, selected.unit_id)], CaseSourceBundle(1, (source,)))
     assert trace.claims[0].supporting_citations[0].page_numbers == [2]
     assert trace.claims[0].supporting_citations[0].start == cut
+
+
+def test_the_first_unit_of_a_source_that_starts_with_a_blank_line_gets_its_context():
+    plain = CaseSourceItem(
+        "S1", "narrative", "John reported the outage.\nThe report came at 13:00."
+    )
+    reply = CaseProviderReadingReply.model_validate(
+        {
+            "claims": [
+                {
+                    "claim_id": "A-01",
+                    "claim_type": "reported",
+                    "epistemic_status": "reported",
+                    "text": "John reported the outage.",
+                    "supporting_citations": [{"source_id": "S1", "evidence_unit_ids": ["U001"]}],
+                }
+            ],
+        }
+    )
+    contexts = []
+    for source in (plain, replace(plain, text="\n\n" + plain.text)):
+        [claim] = ReadingSources((source,)).bound_claims(reply)
+        [citation] = claim.supporting_citations
+        assert citation.start == 0
+        contexts.append(citation.context)
+    assert contexts == [CaseQuoteContext(), CaseQuoteContext()]
