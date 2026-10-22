@@ -36,7 +36,6 @@ function technicalContextFixture(
     retrieval_context_id: retrievalContextId,
     external_context_json: {
       technical_augmentation: {
-        version: "case_mitre_augmentation_v1",
         status,
         retrieval_context_id: retrievalContextId,
         mitre_table: rows,

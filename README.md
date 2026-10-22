@@ -48,7 +48,7 @@ A study that runs against an older backend names its commit in `pinned/<commit>/
 ```text
 CASE SOURCES + FOLLOW-UP HISTORY
               ↓
-Gap-only assessment (case_assessment_v1)
+Gap-only assessment
               ↓
 Deterministic follow-up policy
        ┌──────┴──────┐

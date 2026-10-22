@@ -12,7 +12,7 @@ from app.analysis.prompts import (
 )
 from app.errors import CaseAnalysisFailure
 from app.llm.request import decode_response
-from app.trace.claims import MAX_CLARIFICATION_QUESTION_CHARS, CaseAssessmentTrace
+from app.trace.claims import MAX_CLARIFICATION_QUESTION_CHARS
 from app.trace.trace import CaseProviderJudgement, CaseProviderReadingReply
 
 
@@ -22,13 +22,17 @@ from app.trace.trace import CaseProviderJudgement, CaseProviderReadingReply
         (CASE_READING_SYSTEM_PROMPT, CaseProviderReadingReply),
         (CASE_READING_JSON_PROMPT, CaseProviderReadingReply),
         (CASE_JUDGEMENT_SYSTEM_PROMPT, CaseProviderJudgement),
-        (case_assessment_prompt(), CaseAssessmentTrace),
     ],
 )
 def test_a_prompt_names_only_the_version_its_schema_requires(prompt, schema) -> None:
     [required] = get_args(schema.model_fields["version"].annotation)
 
     assert set(re.findall(r"[a-z]+(?:_[a-z]+)*_v\d+", prompt)) == {required}
+
+
+def test_the_assessment_prompt_names_no_version() -> None:
+    assert re.findall(r"[a-z]+(?:_[a-z]+)*_v\d+", case_assessment_prompt()) == []
+    assert "Return only the requested JSON." in " ".join(case_assessment_prompt().split())
 
 
 def test_the_judgement_is_asked_for_the_json_it_is_validated_against() -> None:

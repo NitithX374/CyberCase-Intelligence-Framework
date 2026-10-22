@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import selectinload
@@ -56,7 +55,6 @@ def case_source_bundle_from_case(case: Case) -> CaseSourceBundle:
 class SourcesRead(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["sources_read_v1"] = "sources_read_v1"
     source_ids: list[str]
 
 

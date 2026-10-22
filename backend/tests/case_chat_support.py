@@ -24,9 +24,7 @@ GAP = {
     "clarification_question": "When did the incident happen?",
 }
 TRACE = {
-    "version": "case_analysis_trace_v1",
     "analysis_mode": "case_overview",
-    "validation_status": "validated",
     "summary": NARRATIVE,
     "claims": [],
     "gaps": [GAP],

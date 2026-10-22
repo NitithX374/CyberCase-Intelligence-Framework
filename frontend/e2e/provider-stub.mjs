@@ -149,8 +149,8 @@ function responseFor(body) {
       trigger_text: [],
     };
   }
-  if (system.includes("case_assessment_v1")) {
-    return { version: "case_assessment_v1", gaps: assessedGaps(asObject(content)) };
+  if (system.includes("Case Assessment component of CyberCase")) {
+    return { gaps: assessedGaps(asObject(content)) };
   }
   if (system.includes("in the chat of an investigative case")) {
     return {

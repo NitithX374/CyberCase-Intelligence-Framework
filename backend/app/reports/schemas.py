@@ -93,7 +93,6 @@ class ReportSource(ReportRow):
 class CaseReportContent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["case_report_content_v1"] = "case_report_content_v1"
     title: str
     analysed: str | None = None
     summary: str

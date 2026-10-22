@@ -34,7 +34,6 @@ const analysis = analysisResult({
   external_context_json: {
     followup_history: followupHistory("How did the attacker get in?", answer),
     technical_augmentation: {
-      version: "case_mitre_augmentation_v1",
       status: "retrieved_with_matches",
       retrieval_context_id: "retrieval-1",
       mitre_table: [

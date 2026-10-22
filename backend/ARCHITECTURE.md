@@ -481,7 +481,9 @@ and `0002_source_deactivation.py`, and
 `tests/test_database_schema_parity_alembic.py` checks that it matches the
 models. `0003_strip_retired_fields.py` changes no schema: it removes the keys of
 dropped fields from stored analyses, chat messages and reports, each only where
-its model held that field. The PostgreSQL tests skip unless `CYBERCASE_TEST_DATABASE_URL` is set.
+its model held that field. `0004_strip_version_labels.py` changes no schema
+either: it removes the `version` and `validation_status` labels from the same
+records, again only where a model held them. The PostgreSQL tests skip unless `CYBERCASE_TEST_DATABASE_URL` is set.
 
 Two tests in `tests/test_case_report_presentation.py` render a real PDF and need
 WeasyPrint's native libraries (GTK on Windows). They pass inside the Docker

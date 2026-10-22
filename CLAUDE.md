@@ -509,7 +509,11 @@ summaries, the verifier diagnostics, projection verdicts, view field spans, the
 GLiNER2 extraction settings and the shadow gate decision. It removes each key only
 where its model held that field, because names such as `model` and `label` are live
 fields elsewhere. Nothing it removed had been read or printed since its field was
-dropped, and no model lists those keys any more. Quote-era citations themselves
+dropped, and no model lists those keys any more. Migration `0004_strip_version_labels`
+removed the version labels from the same records: `version` and `validation_status`
+on each analysis trace and its chat copy, and `version` on assessments, reports, the
+technical augmentation and its applicability record, and the recorded follow-up answers
+and sources read. Every stored record reads and prints as before. Quote-era citations themselves
 still read. Quote contexts are current, and there is no quote
 matcher in new analysis binding. `nli_model.py` serves the
 Claim support check; unavailable weights leave Claims unassessed rather than

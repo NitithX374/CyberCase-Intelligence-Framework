@@ -232,7 +232,6 @@ class CaseAnalysisGap(BaseModel):
 class CaseAssessmentTrace(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["case_assessment_v1"] = "case_assessment_v1"
     gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
 
 
@@ -277,7 +276,6 @@ class FollowupSnapshotItem(BaseModel):
 class FollowupSnapshot(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["followup_snapshot_v1"] = "followup_snapshot_v1"
     items: list[FollowupSnapshotItem]
 
 

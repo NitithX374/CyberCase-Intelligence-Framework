@@ -43,18 +43,17 @@ def test_pydantic_writes_a_const_for_a_single_value_literal() -> None:
     assert "const" in keys_in(CaseProviderJudgement.model_json_schema())
 
 
-def test_each_version_the_judgement_and_the_assessment_must_write_is_a_one_item_enum() -> None:
+def test_the_version_the_judgement_must_write_is_a_one_item_enum() -> None:
     judgement = structured_output_schema(CaseProviderJudgement)
-    assessment = structured_output_schema(CaseAssessmentTrace)
 
     assert shape(judgement["properties"]["version"]) == {
         "enum": ["case_analysis_trace_v1"],
         "type": "string",
     }
-    assert shape(assessment["properties"]["version"]) == {
-        "enum": ["case_assessment_v1"],
-        "type": "string",
-    }
+
+
+def test_the_assessment_is_asked_for_its_gaps_alone() -> None:
+    assert list(structured_output_schema(CaseAssessmentTrace)["properties"]) == ["gaps"]
 
 
 class Kinds(BaseModel):

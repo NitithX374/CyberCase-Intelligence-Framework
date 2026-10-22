@@ -35,8 +35,6 @@ function analysisMessage(
 ): ChatMessageRead {
   return message("analysis-1", 3, "assistant", "Case analysis", {
     analysis_trace: {
-      version: "case_analysis_trace_v1",
-      validation_status: "validated",
       analysis_mode: "case_overview",
       summary: "Case analysis",
       claims: claims as CaseAnalysisClaim[],
@@ -406,7 +404,9 @@ describe("ChatTranscript answer units", () => {
     );
 
     expect(
-      screen.getByText("All member data on the server had been encrypted. Access was gained without 2FA."),
+      screen.getByText(
+        "All member data on the server had been encrypted. Access was gained without 2FA.",
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/\[A-0\d\]/)).not.toBeInTheDocument();
   });

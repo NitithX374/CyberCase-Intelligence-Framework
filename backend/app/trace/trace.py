@@ -138,8 +138,6 @@ class CaseViewExtraction(BaseModel):
 class CaseAnalysisTrace(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["case_analysis_trace_v1"] = "case_analysis_trace_v1"
-    validation_status: Literal["validated"] = "validated"
     analysis_mode: CaseAnalysisMode
     summary: str = Field(min_length=1, max_length=MAX_SUMMARY_CHARS)
     summary_units: list[CaseSummaryUnit] = Field(default_factory=list)

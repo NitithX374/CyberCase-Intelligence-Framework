@@ -8,7 +8,6 @@ from collections.abc import Sequence
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from app.analysis.technical_context.contracts import (
-    MITRE_APPLICABILITY_GATE_VERSION,
     MitreApplicabilityDecision,
     MitreApplicabilityRecord,
     skipped_mitre_applicability,
@@ -245,11 +244,7 @@ async def evaluate_mitre_applicability(
     except Exception:
         result = skipped_mitre_applicability("mitre_applicability_provider_error")
     if result.failure_code is not None:
-        logger.warning(
-            "MITRE applicability failed closed gate_version=%s failure_code=%s",
-            MITRE_APPLICABILITY_GATE_VERSION,
-            result.failure_code,
-        )
+        logger.warning("MITRE applicability failed closed failure_code=%s", result.failure_code)
     return result.model_copy(update={"input_truncated": gate_input_truncated(case_sources)})
 
 

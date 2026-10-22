@@ -16,7 +16,7 @@ from app.trace.claims import CaseAssessmentTrace
 from app.trace.trace import CaseProviderJudgement, CaseProviderReadingReply
 
 STAGES = [
-    ("case_assessment", CaseAssessmentTrace, {"version": "case_assessment_v1", "gaps": []}),
+    ("case_assessment", CaseAssessmentTrace, {"gaps": []}),
     ("case_reading", CaseProviderReadingReply, {"version": "case_analysis_trace_v1", "claims": []}),
     (
         "case_judgement",

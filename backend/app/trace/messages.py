@@ -31,8 +31,6 @@ class ChatAnswerUnit(BaseModel):
 
 
 class MessageAnalysisTrace(BaseModel):
-    version: Literal["case_analysis_trace_v1"] = "case_analysis_trace_v1"
-    validation_status: Literal["validated"] = "validated"
     analysis_mode: CaseAnalysisMode
     summary: str
     claims: list[CaseAnalysisClaim]

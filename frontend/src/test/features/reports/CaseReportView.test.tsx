@@ -18,7 +18,6 @@ function report(version: number, analysisResultId = "analysis-1"): CaseReportRea
     version_number: version,
     analysis_result_id: analysisResultId,
     report: {
-      version: "case_report_content_v1",
       title: "Traceable report",
       summary: "",
       techniques_matched: false,

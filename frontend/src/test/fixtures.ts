@@ -90,13 +90,12 @@ export function followupHistory(
   gapKey = "topic:incident-time",
 ) {
   return {
-    version: "followup_snapshot_v1",
     items: [{ qa_id: qaId, gap_key: gapKey, question, answer }],
   };
 }
 
 export function sourcesRead(...sourceIds: string[]) {
-  return { version: "sources_read_v1", source_ids: sourceIds };
+  return { source_ids: sourceIds };
 }
 
 export function claim(
@@ -135,8 +134,6 @@ export function association(
 
 export function trace(overrides: Partial<CaseAnalysisTrace> = {}): CaseAnalysisTrace {
   return {
-    version: "case_analysis_trace_v1",
-    validation_status: "validated",
     analysis_mode: "case_overview",
     summary: "",
     claims: [],

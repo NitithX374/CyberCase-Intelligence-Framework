@@ -341,8 +341,6 @@ export interface components {
             readonly retrieval_context_id: string | null;
         };
         CaseAnalysisTrace: {
-            version: "case_analysis_trace_v1";
-            validation_status: "validated";
             analysis_mode: "case_overview" | "question_answer";
             summary: string;
             summary_units?: components["schemas"]["CaseSummaryUnit"][];
@@ -427,7 +425,6 @@ export interface components {
             updated_at: string;
         };
         CaseReportContent: {
-            version: "case_report_content_v1";
             title: string;
             analysed?: string | null;
             summary: string;
@@ -560,8 +557,6 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         MessageAnalysisTrace: {
-            version: "case_analysis_trace_v1";
-            validation_status: "validated";
             analysis_mode: "case_overview" | "question_answer";
             summary: string;
             claims: components["schemas"]["CaseAnalysisClaim"][];

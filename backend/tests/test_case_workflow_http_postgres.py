@@ -29,8 +29,8 @@ from app.trace.claims import CaseAnalysisClaim
 
 pytestmark = pytest.mark.asyncio
 
-NO_GAPS = {"version": "case_assessment_v1", "gaps": []}
-ASKING = {"version": "case_assessment_v1", "gaps": [{**GAP, "affected_claim_ids": []}]}
+NO_GAPS = {"gaps": []}
+ASKING = {"gaps": [{**GAP, "affected_claim_ids": []}]}
 HEAD = "The attacker logged in to the VPN gateway."
 TAIL = "The attacker exfiltrated the payroll archive."
 STAGES = {"suggestion": "answer", "summary": "judge", "gaps": "assess", "claims": "read"}

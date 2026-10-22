@@ -423,7 +423,6 @@ async def test_an_analysis_records_the_answers_it_read_and_not_later_ones():
         async with session_factory() as db:
             stored = await db.get(CaseAnalysisResult, step.result.id)
         assert stored.external_context_json["followup_history"] == {
-            "version": "followup_snapshot_v1",
             "items": [
                 {
                     "qa_id": "QA-01",
@@ -462,7 +461,6 @@ async def test_an_analysis_records_the_sources_it_read_and_not_later_ones():
         async with session_factory() as db:
             stored = await db.get(CaseAnalysisResult, step.result.id)
         assert stored.external_context_json["sources_read"] == {
-            "version": "sources_read_v1",
             "source_ids": [str(read)],
         }, "the source added while the model was thinking was never read"
 

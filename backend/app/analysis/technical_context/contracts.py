@@ -91,16 +91,12 @@ class QueryResponse(BaseModel):
         return None if value == "" else value
 
 
-MITRE_APPLICABILITY_GATE_VERSION = "mitre_applicability_v1"
-
-
 MitreApplicabilityDecision = Literal["SKIP", "RETRIEVE"]
 
 
 class MitreApplicabilityRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["mitre_applicability_v1"] = MITRE_APPLICABILITY_GATE_VERSION
     decision: MitreApplicabilityDecision
     source_message_ids: list[str] = Field(default_factory=list, max_length=64)
     trigger_text: list[str] = Field(default_factory=list, max_length=16)
@@ -129,9 +125,6 @@ def skipped_mitre_applicability(
     )
 
 
-CASE_MITRE_AUGMENTATION_VERSION = "case_mitre_augmentation_v1"
-
-
 CaseTechnicalAugmentationStatus = Literal[
     "not_applicable",
     "insufficient_context",
@@ -144,7 +137,6 @@ CaseTechnicalAugmentationStatus = Literal[
 class CaseTechnicalAugmentation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["case_mitre_augmentation_v1"] = CASE_MITRE_AUGMENTATION_VERSION
     status: CaseTechnicalAugmentationStatus
     applicability: MitreApplicabilityRecord
     retrieval_context_id: str | None = None
@@ -163,13 +155,11 @@ class CaseRagContextPayload:
 
 
 __all__ = [
-    "CASE_MITRE_AUGMENTATION_VERSION",
     "CaseRagContextPayload",
     "CaseTechnicalAugmentation",
     "CaseTechnicalAugmentationStatus",
     "LegalProvision",
     "LegalReferenceResult",
-    "MITRE_APPLICABILITY_GATE_VERSION",
     "MitreApplicabilityDecision",
     "MitreApplicabilityRecord",
     "MitreTableRow",
