@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CaseAnalysisResultRead, CaseAnalysisTrace, CaseSourceRead } from "@/lib/api/types";
+import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
 import { analysisResult, association, claim, narrativeSource, trace } from "@/test/fixtures";
 import {
   buildTechnicalContext,
@@ -178,12 +178,12 @@ describe("buildTechnicalContext", () => {
     expect(result.hasContext).toBe(false);
   });
 
-  it("withholds context when the saved trace is not a validated case overview", () => {
+  it("withholds context when the saved trace is not a case overview", () => {
     const fixture = technicalContextFixture("retrieved_from_rag", [row]);
     fixture.result.trace_json = {
       ...fixture.result.trace_json!,
-      validation_status: "failed",
-    } as unknown as CaseAnalysisTrace;
+      analysis_mode: "question_answer",
+    };
     const result = buildTechnicalContext(fixture.result, fixture.sources);
     expect(result.status).toBe("invalid_trace");
     expect(result.failureCode).toBe("invalid_trace");

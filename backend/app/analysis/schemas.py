@@ -16,7 +16,6 @@ class CaseAnalysisResultRead(BaseModel):
     id: UUID
     case_id: UUID
     source_revision: int
-    schema_version: Literal["case_analysis_trace_v1"] = "case_analysis_trace_v1"
     status: Literal["validated"]
     summary: str
     trace_json: CaseAnalysisTrace | None

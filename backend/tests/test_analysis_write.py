@@ -23,11 +23,7 @@ from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import evidence_units
 from app.trace.bind import bound_claims, bound_references, resolve_case_trace
 from app.trace.claims import CaseAnalysisClaim, CaseAnalysisGap, CaseSourceCitation
-from app.trace.trace import (
-    CaseProviderJudgement,
-    CaseProviderReading,
-    CaseProviderReadingReply,
-)
+from app.trace.trace import CaseProviderJudgement, CaseProviderReadingReply
 
 SOURCE_TEXT = "The finance share was encrypted overnight."
 
@@ -50,26 +46,23 @@ def case_with_one_narrative() -> CaseSourceBundle:
     )
 
 
-def reading_of(bundle: CaseSourceBundle) -> CaseProviderReading:
+def reading_of(bundle: CaseSourceBundle) -> list[CaseAnalysisClaim]:
     source_id = bundle.sources[0].source_id
-    return CaseProviderReading(
-        version="case_analysis_trace_v1",
-        claims=[
-            CaseAnalysisClaim(
-                claim_id="A-01",
-                claim_type="reported",
-                text="The finance share was encrypted.",
-                epistemic_status="reported",
-                supporting_source_ids=[source_id],
-                supporting_citations=[
-                    CaseSourceCitation(
-                        source_id=source_id,
-                        evidence_unit_ids=[evidence_units(bundle.sources[0])[0].unit_id],
-                    )
-                ],
-            )
-        ],
-    )
+    return [
+        CaseAnalysisClaim(
+            claim_id="A-01",
+            claim_type="reported",
+            text="The finance share was encrypted.",
+            epistemic_status="reported",
+            supporting_source_ids=[source_id],
+            supporting_citations=[
+                CaseSourceCitation(
+                    source_id=source_id,
+                    evidence_unit_ids=[evidence_units(bundle.sources[0])[0].unit_id],
+                )
+            ],
+        )
+    ]
 
 
 def judgement(**overrides) -> CaseProviderJudgement:
@@ -80,30 +73,34 @@ def judgement(**overrides) -> CaseProviderJudgement:
     )
 
 
-def written(bundle: CaseSourceBundle, reading: CaseProviderReading, **options):
+def reply_of(reading: list[CaseAnalysisClaim]) -> CaseProviderReadingReply:
+    return CaseProviderReadingReply.model_validate(
+        {
+            "version": "case_analysis_trace_v1",
+            "claims": [
+                {
+                    **claim.model_dump(
+                        include={"claim_id", "claim_type", "text", "epistemic_status"}
+                    ),
+                    "supporting_citations": [
+                        citation.model_dump(include={"source_id", "evidence_unit_ids"})
+                        for citation in claim.supporting_citations
+                    ],
+                    "contradicting_citations": [],
+                }
+                for claim in reading
+            ],
+        }
+    )
+
+
+def written(bundle: CaseSourceBundle, reading: list[CaseAnalysisClaim], **options):
     seen: list[dict] = []
 
     async def request_stage(**kwargs):
         seen.append(kwargs)
         if kwargs["stage"] == "case_reading":
-            return CaseProviderReadingReply.model_validate(
-                {
-                    "version": reading.version,
-                    "claims": [
-                        {
-                            **claim.model_dump(
-                                include={"claim_id", "claim_type", "text", "epistemic_status"}
-                            ),
-                            "supporting_citations": [
-                                citation.model_dump(include={"source_id", "evidence_unit_ids"})
-                                for citation in claim.supporting_citations
-                            ],
-                            "contradicting_citations": [],
-                        }
-                        for claim in reading.claims
-                    ],
-                }
-            )
+            return reply_of(reading)
         return judgement()
 
     with patch("app.analysis.write.request_stage", new=request_stage):
@@ -151,27 +148,22 @@ def test_the_reading_prompt_selects_units_and_states_the_json():
     )
 
 
-def test_a_stored_legacy_reading_still_reads_with_its_quote():
+def test_a_stored_legacy_claim_still_reads_with_its_quote():
     source_id = str(uuid4())
-    reading = CaseProviderReading.model_validate(
+    claim = CaseAnalysisClaim.model_validate(
         {
-            "version": "case_analysis_trace_v1",
-            "claims": [
-                {
-                    "claim_id": "A-01",
-                    "claim_type": "reported",
-                    "text": "The finance share was encrypted.",
-                    "epistemic_status": "reported",
-                    "supporting_source_ids": [source_id],
-                    "contradicting_source_ids": [],
-                    "supporting_citations": [{"source_id": source_id, "exact_quote": SOURCE_TEXT}],
-                    "contradicting_citations": [],
-                }
-            ],
+            "claim_id": "A-01",
+            "claim_type": "reported",
+            "text": "The finance share was encrypted.",
+            "epistemic_status": "reported",
+            "supporting_source_ids": [source_id],
+            "contradicting_source_ids": [],
+            "supporting_citations": [{"source_id": source_id, "exact_quote": SOURCE_TEXT}],
+            "contradicting_citations": [],
         }
     )
 
-    [citation] = reading.claims[0].supporting_citations
+    [citation] = claim.supporting_citations
     assert citation.exact_quote == SOURCE_TEXT
     assert citation.pointer_state == "recovered"
     assert citation.page_numbers == []
@@ -215,10 +207,7 @@ def invented_claim(source_id: str) -> CaseAnalysisClaim:
 
 def test_the_judgement_excludes_a_claim_whose_unit_was_not_found_but_retains_it_for_review():
     bundle = case_with_one_narrative()
-    reading = reading_of(bundle)
-    reading = reading.model_copy(
-        update={"claims": [*reading.claims, invented_claim(bundle.sources[0].source_id)]}
-    )
+    reading = [*reading_of(bundle), invented_claim(bundle.sources[0].source_id)]
 
     trace, (_, judgement_call) = written(bundle, reading)
 
@@ -235,10 +224,7 @@ def test_the_judgement_excludes_a_claim_whose_unit_was_not_found_but_retains_it_
 
 def test_the_judgement_is_not_told_the_claims_were_verified():
     bundle = case_with_one_narrative()
-    reading = reading_of(bundle)
-    reading = reading.model_copy(
-        update={"claims": [*reading.claims, invented_claim(bundle.sources[0].source_id)]}
-    )
+    reading = [*reading_of(bundle), invented_claim(bundle.sources[0].source_id)]
 
     _, (_, judgement_call) = written(bundle, reading)
 
@@ -256,13 +242,8 @@ def test_checking_the_claims_before_the_judgement_binds_them_as_checking_after_i
     _, _, _, _, context = _fixtures()
     bundle = case_with_one_narrative()
     source_id = bundle.sources[0].source_id
-    reading = reading_of(bundle)
-    [first] = reading.claims
-    reading = reading.model_copy(
-        update={
-            "claims": [first, invented_claim(source_id), first],
-        }
-    )
+    [first] = reading_of(bundle)
+    reading = [first, invented_claim(source_id), first]
     verdict = judgement(
         gaps=[
             CaseAnalysisGap(
@@ -302,11 +283,7 @@ def test_the_reading_is_given_the_case_sources_and_the_judgement_is_not():
         filename="report.pdf",
         provenance={"verification_status": "machine_read"},
     )
-    reading = CaseProviderReading(
-        version="case_analysis_trace_v1",
-        claims=[],
-    )
-    trace, (reading_call,) = written(CaseSourceBundle(revision=1, sources=(source,)), reading)
+    trace, (reading_call,) = written(CaseSourceBundle(revision=1, sources=(source,)), [])
     assert reading_call["content"] == {
         "response_language": "english",
         "case_sources": [ReadingSources.source_payload(source)],

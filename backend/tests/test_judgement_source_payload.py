@@ -1,6 +1,6 @@
 from app.analysis.write import judgement_request
 from app.trace.claims import CaseAnalysisClaim, CaseClaimGrounding, CaseSourceCitation
-from app.trace.trace import CaseAnalysisTrace, CaseProviderReading
+from app.trace.trace import CaseAnalysisTrace
 
 
 def citation(source_id: str, text: str) -> CaseSourceCitation:
@@ -17,25 +17,22 @@ def citation(source_id: str, text: str) -> CaseSourceCitation:
     )
 
 
-def reading() -> CaseProviderReading:
-    return CaseProviderReading(
-        version="case_analysis_trace_v1",
-        claims=[
-            CaseAnalysisClaim(
-                claim_id="A-01",
-                claim_type="reported",
-                text="Alice reported losing 25,000 baht.",
-                epistemic_status="reported",
-                supporting_source_ids=["S1", "S2"],
-                supporting_citations=[
-                    citation("S1", "Alice reported the incident."),
-                    citation("S2", "The reported loss was 25,000 baht."),
-                ],
-                contradicting_source_ids=["S3"],
-                contradicting_citations=[citation("S3", "The loss was disputed.")],
-            )
-        ],
-    )
+def reading() -> list[CaseAnalysisClaim]:
+    return [
+        CaseAnalysisClaim(
+            claim_id="A-01",
+            claim_type="reported",
+            text="Alice reported losing 25,000 baht.",
+            epistemic_status="reported",
+            supporting_source_ids=["S1", "S2"],
+            supporting_citations=[
+                citation("S1", "Alice reported the incident."),
+                citation("S2", "The reported loss was 25,000 baht."),
+            ],
+            contradicting_source_ids=["S3"],
+            contradicting_citations=[citation("S3", "The loss was disputed.")],
+        )
+    ]
 
 
 def test_judgement_keeps_claim_ids_and_source_text_without_source_locators():
@@ -59,23 +56,23 @@ def test_judgement_keeps_claim_ids_and_source_text_without_source_locators():
 
 def test_judgement_serialization_preserves_original_grounding_and_saved_trace():
     original = reading()
-    claim = original.claims[0]
+    [claim] = original
     claim.semantic_grounding = CaseClaimGrounding(
         verdict="supported", reason="lr_supported", method="b1-lr-wice-train-v1"
     )
-    before = original.model_dump(mode="json")
+    before = claim.model_dump(mode="json")
 
     judgement_request(original, "en", ())
 
-    assert original.model_dump(mode="json") == before
+    assert claim.model_dump(mode="json") == before
     trace = CaseAnalysisTrace(
         analysis_mode="case_overview",
         summary="Alice reported losing 25,000 baht [A-01].",
-        claims=original.claims,
+        claims=original,
     )
     [saved] = trace.model_dump(mode="json")["claims"]
     assert saved["supporting_source_ids"] == ["S1", "S2"]
     assert saved["contradicting_source_ids"] == ["S3"]
-    assert saved["supporting_citations"] == before["claims"][0]["supporting_citations"]
-    assert saved["contradicting_citations"] == before["claims"][0]["contradicting_citations"]
-    assert saved["semantic_grounding"] == before["claims"][0]["semantic_grounding"]
+    assert saved["supporting_citations"] == before["supporting_citations"]
+    assert saved["contradicting_citations"] == before["contradicting_citations"]
+    assert saved["semantic_grounding"] == before["semantic_grounding"]

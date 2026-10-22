@@ -85,11 +85,7 @@ export function buildCaseOverview(
   if (!result) return emptyCaseOverview();
   if (!rows) return unavailableCaseOverview("The case sources are not available yet.");
   const trace = result.trace_json;
-  if (
-    trace?.version !== "case_analysis_trace_v1" ||
-    trace.validation_status !== "validated" ||
-    trace.analysis_mode !== "case_overview"
-  ) {
+  if (!trace || trace.analysis_mode !== "case_overview") {
     return unavailableCaseOverview("The saved Case analysis trace is unavailable or unsupported.");
   }
   const sources = parseCaseSources(rows, analysisFollowups(result));

@@ -309,9 +309,8 @@ analysis/               producing an analysis of a case; routes, schemas
                         context and no sentence around each quotation; its
                         request carries summary_sentence_limit, worked out
                         from the claim count by summary_sentence_limit()
-  claim_gate.py         worker-thread verification (a warning label), the
-                        structural filter and final summary/gap claim-ID
-                        checks
+  claim_gate.py         worker-thread verification (a warning label) and the
+                        final summary/gap claim-ID checks
   language.py           which language to write in: Thai when any source has
                         a Thai character; a chat question in its own language
   stream.py             the progress stream: steps, heartbeats, then the

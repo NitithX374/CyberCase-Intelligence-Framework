@@ -144,6 +144,6 @@ def test_answered_followups_use_the_same_unit_contract_and_unanswered_ones_are_a
 
     sources = ReadingSources((*bundle.sources, *followup_registry_items(history)))
     reading = bound_claims(reading_from(reply, reading_sources=sources), bundle, history)
-    assert reading.claims[0].supporting_citations[0].source_id == "QA-03"
-    assert reading.claims[0].supporting_citations[0].pointer_state == "direct"
+    assert reading[0].supporting_citations[0].source_id == "QA-03"
+    assert reading[0].supporting_citations[0].pointer_state == "direct"
     assert bundle.revision == 7

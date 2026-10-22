@@ -19,7 +19,6 @@ from app.trace.trace import (
     CaseAnalysisTrace,
     CaseImpactItem,
     CaseInvolvedParty,
-    CaseProviderReading,
     CaseSummaryUnit,
     CaseTimelineItem,
     SupportStatus,
@@ -68,19 +67,17 @@ def resolve_case_trace(
     mitre_table: object = None,
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseAnalysisTrace:
-    return bound_references(bound_claims(trace, source_bundle, followup_history), mitre_table)
+    claims = bound_claims(trace.claims, source_bundle, followup_history)
+    return bound_references(trace.model_copy(update={"claims": claims}), mitre_table)
 
 
 def bound_claims(
-    written: CaseAnalysisTrace | CaseProviderReading,
+    claims: list[CaseAnalysisClaim],
     source_bundle: CaseSourceBundle,
     followup_history: Sequence[CaseFollowupExchange] = (),
-) -> CaseAnalysisTrace | CaseProviderReading:
+) -> list[CaseAnalysisClaim]:
     evidence = EvidenceIndex((*source_bundle.sources, *followup_registry_items(followup_history)))
-    claims = deduplicated_claims(written.claims)
-    return written.model_copy(
-        update={"claims": [resolve_claim(claim, evidence) for claim in claims]}
-    )
+    return [resolve_claim(claim, evidence) for claim in deduplicated_claims(claims)]
 
 
 def bound_references(trace: CaseAnalysisTrace, mitre_table: object = None) -> CaseAnalysisTrace:

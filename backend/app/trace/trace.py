@@ -154,13 +154,6 @@ class CaseAnalysisTrace(BaseModel):
     stop_reason: str | None = Field(default=None, max_length=40)
 
 
-class CaseProviderReading(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal["case_analysis_trace_v1"]
-    claims: list[CaseAnalysisClaim] = Field(max_length=64)
-
-
 class CaseProviderReadingReply(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -182,7 +175,6 @@ __all__ = [
     "CaseInvolvedParty",
     "CaseMitreAssociation",
     "CaseProviderJudgement",
-    "CaseProviderReading",
     "CaseProviderReadingReply",
     "CaseSummaryUnit",
     "CaseTimelineItem",

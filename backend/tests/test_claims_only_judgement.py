@@ -26,12 +26,7 @@ from app.trace.claims import (
     CaseSourceCitation,
 )
 from app.trace.sentences import SentenceIndex, quote_context
-from app.trace.trace import (
-    CaseAnalysisTrace,
-    CaseProviderJudgement,
-    CaseProviderReading,
-    CaseProviderReadingReply,
-)
+from app.trace.trace import CaseAnalysisTrace, CaseProviderJudgement, CaseProviderReadingReply
 
 QUOTE = "encrypted overnight"
 AROUND = "by an unknown actor"
@@ -39,31 +34,28 @@ SOURCE_TEXT = f"The finance share was {QUOTE} {AROUND}."
 ANSWER = "The ransom note asked for two bitcoin."
 
 
-def bundle_and_reading() -> tuple[CaseSourceBundle, CaseProviderReading]:
+def bundle_and_reading() -> tuple[CaseSourceBundle, list[CaseAnalysisClaim]]:
     source_id = str(uuid4())
     bundle = CaseSourceBundle(
         revision=1,
         sources=(CaseSourceItem(source_id=source_id, source_kind="narrative", text=SOURCE_TEXT),),
     )
-    reading = CaseProviderReading(
-        version="case_analysis_trace_v1",
-        claims=[
-            CaseAnalysisClaim(
-                claim_id="A-01",
-                claim_type="reported",
-                text="A share was encrypted.",
-                epistemic_status="reported",
-                supporting_source_ids=[source_id],
-                supporting_citations=[
-                    CaseSourceCitation(
-                        source_id=source_id,
-                        exact_quote=QUOTE,
-                        context=quote_context(SentenceIndex(SOURCE_TEXT), QUOTE),
-                    )
-                ],
-            )
-        ],
-    )
+    reading = [
+        CaseAnalysisClaim(
+            claim_id="A-01",
+            claim_type="reported",
+            text="A share was encrypted.",
+            epistemic_status="reported",
+            supporting_source_ids=[source_id],
+            supporting_citations=[
+                CaseSourceCitation(
+                    source_id=source_id,
+                    exact_quote=QUOTE,
+                    context=quote_context(SentenceIndex(SOURCE_TEXT), QUOTE),
+                )
+            ],
+        )
+    ]
     return bundle, reading
 
 
@@ -83,7 +75,7 @@ def written(bundle, reading, **options):
         if kwargs["stage"] == "case_reading":
             return CaseProviderReadingReply.model_validate(
                 {
-                    "version": reading.version,
+                    "version": "case_analysis_trace_v1",
                     "claims": [
                         {
                             **claim.model_dump(
@@ -99,7 +91,7 @@ def written(bundle, reading, **options):
                             ],
                             "contradicting_citations": [],
                         }
-                        for claim in reading.claims
+                        for claim in reading
                     ],
                 }
             )
@@ -133,7 +125,7 @@ def test_the_judgement_request_has_no_case_sources():
 
 def test_no_citation_sent_to_the_judgement_carries_the_sentence_around_its_quote():
     _, reading = bundle_and_reading()
-    assert reading.claims[0].supporting_citations[0].context is not None
+    assert reading[0].supporting_citations[0].context is not None
 
     content = judgement_request(reading, "english", ())
     [claim] = content["reading"]["claims"]
@@ -180,9 +172,7 @@ def test_a_source_no_claim_cites_changes_nothing_in_the_judgement_request():
 
 def test_the_chat_still_receives_the_sources_and_the_sentence_around_each_quote():
     bundle, reading = bundle_and_reading()
-    trace = CaseAnalysisTrace(
-        analysis_mode="case_overview", summary="A summary.", claims=reading.claims
-    )
+    trace = CaseAnalysisTrace(analysis_mode="case_overview", summary="A summary.", claims=reading)
 
     material = chat_request(
         question="What happened?",
@@ -205,12 +195,12 @@ def test_the_chat_still_receives_the_sources_and_the_sentence_around_each_quote(
 def test_the_chat_never_sees_a_verdict_or_the_reason_for_it():
     _, reading = bundle_and_reading()
     labelled = [
-        reading.claims[0].model_copy(
+        reading[0].model_copy(
             update={"semantic_grounding": CaseClaimGrounding(verdict=verdict, reason=reason)}
         )
         for verdict, reason in (("not_supported", "lr_not_supported"),)
     ]
-    unchecked = reading.claims[0].model_copy(
+    unchecked = reading[0].model_copy(
         update={
             "claim_id": "A-09",
             "semantic_grounding": CaseClaimGrounding(
@@ -272,13 +262,9 @@ def test_the_judgement_prompt_asks_every_summary_sentence_to_end_with_claim_ids(
     assert "Those belong to the fields that hold them" not in prompt
 
 
-def reading_of(count: int) -> CaseProviderReading:
-    _, reading = bundle_and_reading()
-    claim = reading.claims[0]
-    return CaseProviderReading(
-        version="case_analysis_trace_v1",
-        claims=[claim.model_copy(update={"claim_id": f"A-{n:02d}"}) for n in range(1, count + 1)],
-    )
+def reading_of(count: int) -> list[CaseAnalysisClaim]:
+    _, [claim] = bundle_and_reading()
+    return [claim.model_copy(update={"claim_id": f"A-{n:02d}"}) for n in range(1, count + 1)]
 
 
 @pytest.mark.parametrize(

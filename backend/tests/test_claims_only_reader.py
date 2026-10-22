@@ -112,7 +112,7 @@ def test_source_id_lists_are_derived_uniquely_from_selected_citations():
     payload["claims"][0]["contradicting_citations"] = [
         {"source_id": "S2", "evidence_unit_ids": [evidence_units(SECOND)[0].unit_id]}
     ]
-    [claim] = reading_from(CaseProviderReadingReply.model_validate(payload)).claims
+    [claim] = reading_from(CaseProviderReadingReply.model_validate(payload))
     assert claim.supporting_source_ids == ["S1"]
     assert claim.contradicting_source_ids == ["S2"]
     assert claim.supporting_citations[0].exact_quote == ""
@@ -135,7 +135,7 @@ def test_invalid_provider_pointers_are_diagnosed_before_judgement(source_id, uni
     ]
     reading = reading_from(CaseProviderReadingReply.model_validate(payload))
     checked = bound_claims(reading, BUNDLE)
-    [claim] = checked.claims
+    [claim] = checked
     assert claim.supporting_citations == []
     assert claim.invalid_evidence[0].reason == reason
     assert claim.epistemic_status == "not_confirmed"
@@ -167,7 +167,7 @@ def test_claims_only_trace_builds_a_deterministic_report_without_a_provider(monk
         joined_trace(
             checked,
             CaseProviderJudgement(
-                version=checked.version, summary="Jane reported losing 25,000 baht [A-01]."
+                version="case_analysis_trace_v1", summary="Jane reported losing 25,000 baht [A-01]."
             ),
         )
     )

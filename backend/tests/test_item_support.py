@@ -18,7 +18,6 @@ from app.trace.trace import (
     CaseImpactItem,
     CaseInvolvedParty,
     CaseProviderJudgement,
-    CaseProviderReading,
     CaseProviderReadingReply,
     CaseTimelineItem,
 )
@@ -162,10 +161,6 @@ def test_a_reply_that_names_a_status_is_refused():
 def test_neither_model_is_shown_the_status():
     bundle, trace = bundle_and_trace()
     bound = resolve_case_trace(trace, bundle)
-    reading = CaseProviderReading(
-        version="case_analysis_trace_v1",
-        claims=bound.claims,
-    )
 
-    for payload in (reading_payload(reading), analysis_payload(bound, None)):
+    for payload in (reading_payload(bound.claims), analysis_payload(bound, None)):
         assert not {"involved_parties", "timeline", "impacts"} & payload.keys()

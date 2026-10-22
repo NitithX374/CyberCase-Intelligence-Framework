@@ -327,7 +327,6 @@ export interface components {
             id: string;
             case_id: string;
             source_revision: number;
-            schema_version: "case_analysis_trace_v1";
             status: "validated";
             summary: string;
             trace_json: components["schemas"]["CaseAnalysisTrace"] | null;

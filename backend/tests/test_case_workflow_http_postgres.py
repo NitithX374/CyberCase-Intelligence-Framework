@@ -26,7 +26,6 @@ from app.main import app
 from app.models.chat_message import ChatMessage
 from app.models.source import CaseSource
 from app.trace.claims import CaseAnalysisClaim
-from app.trace.trace import CaseProviderReading
 
 pytestmark = pytest.mark.asyncio
 
@@ -217,19 +216,16 @@ def legacy_citing(text: str, quote: str, monkeypatch):
             for item in content["case_sources"]
             if "".join(unit["text"] for unit in item["evidence_units"]) == text
         ]
-        legacy = CaseProviderReading(
-            version="case_analysis_trace_v1",
-            claims=[
-                CaseAnalysisClaim(
-                    claim_id="A-01",
-                    claim_type="reported",
-                    text="The incident was reported.",
-                    epistemic_status="reported",
-                    supporting_source_ids=[source["source_id"]],
-                    supporting_citations=[{"source_id": source["source_id"], "exact_quote": quote}],
-                )
-            ],
-        )
+        legacy = [
+            CaseAnalysisClaim(
+                claim_id="A-01",
+                claim_type="reported",
+                text="The incident was reported.",
+                epistemic_status="reported",
+                supporting_source_ids=[source["source_id"]],
+                supporting_citations=[{"source_id": source["source_id"], "exact_quote": quote}],
+            )
+        ]
         monkeypatch.setattr("app.analysis.write.reading_from", lambda reply, **kwargs: legacy)
         return reading()
 

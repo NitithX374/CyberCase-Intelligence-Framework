@@ -152,7 +152,7 @@ def test_provider_ids_survive_conversion_without_provider_generated_locations():
             ],
         }
     )
-    [citation] = reading_from(reply).claims[0].supporting_citations
+    [citation] = reading_from(reply)[0].supporting_citations
     assert citation.evidence_unit_ids == reference(FIRST)["evidence_unit_ids"]
     assert citation.exact_quote == "" and citation.start is None
     assert citation.pointer_state == "unresolved"
