@@ -9,6 +9,7 @@ from app.trace.associations import mapped_associations
 from app.trace.citations import CaseUnverifiedCitation
 from app.trace.claims import (
     CaseAnalysisClaim,
+    CaseClaimContent,
     CaseEpistemicStatus,
     CaseFollowupExchange,
     CaseSourceCitation,
@@ -25,6 +26,7 @@ from app.trace.trace import (
 )
 
 Projection = TypeVar("Projection", CaseInvolvedParty, CaseTimelineItem, CaseImpactItem)
+Claim = TypeVar("Claim", bound=CaseClaimContent)
 
 
 def item_support(
@@ -109,9 +111,9 @@ def summary_units(
     return units
 
 
-def deduplicated_claims(claims: list[CaseAnalysisClaim]) -> list[CaseAnalysisClaim]:
+def deduplicated_claims(claims: Sequence[Claim]) -> list[Claim]:
     seen: set[str] = set()
-    kept: list[CaseAnalysisClaim] = []
+    kept: list[Claim] = []
     for claim in claims:
         if claim.claim_id in seen:
             continue
@@ -138,14 +140,9 @@ def resolve_claim(claim: CaseAnalysisClaim, evidence: EvidenceIndex) -> CaseAnal
     contradicting, contradicting_invalid, contradicting_unverified = bind_citations(
         claim.contradicting_citations, "contradicting", evidence, seen
     )
-    unverified: list[CaseUnverifiedCitation] = []
-    for item in [
-        *claim.unverified_citations,
-        *supporting_unverified,
-        *contradicting_unverified,
-    ]:
-        if item not in unverified:
-            unverified.append(item)
+    unverified = unique_unverified(
+        [*claim.unverified_citations, *supporting_unverified, *contradicting_unverified]
+    )
     return claim.model_copy(
         update={
             "epistemic_status": confirmed_status(claim.epistemic_status, supporting),
@@ -161,6 +158,14 @@ def resolve_claim(claim: CaseAnalysisClaim, evidence: EvidenceIndex) -> CaseAnal
             "invalid_evidence": [*supporting_invalid, *contradicting_invalid],
         }
     )
+
+
+def unique_unverified(items: Sequence[CaseUnverifiedCitation]) -> list[CaseUnverifiedCitation]:
+    unverified: list[CaseUnverifiedCitation] = []
+    for item in items:
+        if item not in unverified:
+            unverified.append(item)
+    return unverified
 
 
 def confirmed_status(
@@ -181,9 +186,13 @@ def role_source_ids(
 __all__ = [
     "bound_claims",
     "bound_references",
+    "confirmed_status",
+    "deduplicated_claims",
     "followup_registry_items",
     "item_support",
     "resolve_case_trace",
     "resolve_claim",
+    "role_source_ids",
+    "unique_unverified",
     "with_support",
 ]

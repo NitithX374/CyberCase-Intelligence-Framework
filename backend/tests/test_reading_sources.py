@@ -3,10 +3,10 @@ from dataclasses import replace
 import pytest
 
 from app.analysis.reading_sources import ReadingSources
-from app.analysis.write import reading_from, reading_request
+from app.analysis.write import reading_request
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import EvidenceIndex, evidence_units
-from app.trace.bind import bound_claims, followup_registry_items
+from app.trace.bind import followup_registry_items
 from app.trace.claims import CaseFollowupExchange
 from app.trace.trace import CaseProviderReadingReply
 
@@ -70,7 +70,7 @@ def test_compact_payload_preserves_every_source_character_and_stable_local_ids(t
 def test_local_unit_numbers_are_source_scoped_and_a_claim_can_select_multiple_documents():
     sources = ReadingSources(BUNDLE.sources)
     original = reply_for([citation("S1", "U001", "U002"), citation("S2", "U001")])
-    reading = bound_claims(reading_from(original, reading_sources=sources), BUNDLE)
+    reading = sources.bound_claims(original)
     [claim] = reading
     assert claim.supporting_source_ids == ["S1", "S2"]
     assert [item.document_id for item in claim.supporting_citations] == ["D1", "D1", "D2"]
@@ -102,7 +102,7 @@ def test_local_unit_numbers_are_source_scoped_and_a_claim_can_select_multiple_do
 def test_invalid_addresses_keep_existing_binding_diagnostics(source_id, unit_id, reason):
     sources = ReadingSources(BUNDLE.sources)
     reply = reply_for([citation(source_id, unit_id)])
-    reading = bound_claims(reading_from(reply, reading_sources=sources), BUNDLE)
+    reading = sources.bound_claims(reply)
     [claim] = reading
     assert claim.supporting_citations == []
     assert claim.invalid_evidence[0].reason == reason
@@ -114,7 +114,7 @@ def test_duplicates_are_diagnosed_after_alias_decoding_including_canonical_dupli
     sources = ReadingSources(BUNDLE.sources)
     canonical = evidence_units(FIRST)[0].unit_id
     reply = reply_for([citation("S1", "U001", "U001", canonical), citation("S2", "U001")])
-    reading = bound_claims(reading_from(reply, reading_sources=sources), BUNDLE)
+    reading = sources.bound_claims(reply)
     [claim] = reading
     assert len(claim.supporting_citations) == 2
     assert [item.reason for item in claim.invalid_evidence] == ["duplicate_id", "duplicate_id"]
@@ -124,18 +124,19 @@ def test_decoding_uses_the_request_revision_and_cannot_rebind_a_reply_to_changed
     request_sources = ReadingSources(BUNDLE.sources)
     reply = reply_for([citation("S1", "U001")])
     updated = replace(FIRST, text="John did not send an email.")
-    changed = CaseSourceBundle(5, (updated, SECOND))
-    reading = bound_claims(reading_from(reply, reading_sources=request_sources), changed)
-    assert reading[0].supporting_citations == []
-    assert reading[0].invalid_evidence[0].reason == "stale_id"
+    expanded = request_sources.canonical_id("S1", "U001")
+    assert expanded == evidence_units(FIRST)[0].unit_id
+    assert EvidenceIndex((updated, SECOND)).resolve("S1", expanded) == (None, "stale_id")
+    [claim] = request_sources.bound_claims(reply)
+    assert [item.exact_quote for item in claim.supporting_citations] == [
+        FIRST.text[: evidence_units(FIRST)[0].end]
+    ]
 
 
 def test_canonical_historical_ids_still_resolve_without_a_transport_address_book():
-    reply = reply_for([citation("S1", evidence_units(FIRST)[0].unit_id)])
-    historical = bound_claims(reading_from(reply), BUNDLE)
-    decoded = bound_claims(
-        reading_from(reply, reading_sources=ReadingSources(BUNDLE.sources)), BUNDLE
-    )
+    sources = ReadingSources(BUNDLE.sources)
+    historical = sources.bound_claims(reply_for([citation("S1", evidence_units(FIRST)[0].unit_id)]))
+    decoded = sources.bound_claims(reply_for([citation("S1", "U001")]))
     assert historical == decoded
     assert historical[0].supporting_citations[0].pointer_state == "direct"
 
@@ -143,7 +144,7 @@ def test_canonical_historical_ids_still_resolve_without_a_transport_address_book
 def test_contradicting_unit_ids_are_decoded_without_changing_their_role():
     sources = ReadingSources(BUNDLE.sources)
     reply = reply_for([citation("S1", "U001")], [citation("S2", "U001")])
-    reading = bound_claims(reading_from(reply, reading_sources=sources), BUNDLE)
+    reading = sources.bound_claims(reply)
     assert reading[0].contradicting_source_ids == ["S2"]
     assert reading[0].contradicting_citations[0].evidence_unit_ids == [
         evidence_units(SECOND)[0].unit_id
@@ -165,7 +166,7 @@ def test_followup_answers_share_local_addressing():
         {"unit_id": "U001", "text": "John is the victim."}
     ]
     reply = reply_for([citation("QA-03", "U001")])
-    reading = bound_claims(reading_from(reply, reading_sources=sources), BUNDLE, history)
+    reading = sources.bound_claims(reply)
     assert [item.source_id for item in reading[0].supporting_citations] == ["QA-03"]
 
 
@@ -189,7 +190,7 @@ def test_compact_ocr_payload_retains_provenance_and_resolved_page_location():
         "warnings": ["OCR uncertainty"],
     }
     reply = reply_for([citation("S1", "U002")])
-    reading = bound_claims(reading_from(reply, reading_sources=sources), bundle)
+    reading = sources.bound_claims(reply)
     [resolved] = reading[0].supporting_citations
     assert resolved.page_numbers == [2]
     assert resolved.exact_quote == source.text[resolved.start : resolved.end] == "Jane received it."

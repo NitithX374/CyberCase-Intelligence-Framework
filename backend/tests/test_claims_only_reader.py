@@ -4,14 +4,15 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from app.analysis.write import joined_trace, reading_from, reading_payload
+from app.analysis.reading_sources import ReadingSources
+from app.analysis.write import joined_trace, reading_payload
 from app.llm.schema import structured_output_schema
 from app.reports.contracts import CaseReportInput
 from app.reports.display import build_case_report_content
 from app.reports.render import render_case_report_html
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import evidence_units
-from app.trace.bind import bound_claims, bound_references
+from app.trace.bind import bound_references
 from app.trace.trace import CaseProviderJudgement, CaseProviderReadingReply
 
 SOURCE = CaseSourceItem("S1", "document", "Jane reported losing 25,000 baht.", "D1", "report.pdf")
@@ -108,11 +109,11 @@ def test_source_id_lists_are_derived_uniquely_from_selected_citations():
     payload["claims"][0]["contradicting_citations"] = [
         {"source_id": "S2", "evidence_unit_ids": [evidence_units(SECOND)[0].unit_id]}
     ]
-    [claim] = reading_from(CaseProviderReadingReply.model_validate(payload))
+    [claim] = ReadingSources(BUNDLE.sources).bound_claims(
+        CaseProviderReadingReply.model_validate(payload)
+    )
     assert claim.supporting_source_ids == ["S1"]
     assert claim.contradicting_source_ids == ["S2"]
-    assert claim.supporting_citations[0].exact_quote == ""
-    assert claim.supporting_citations[0].start is None
 
 
 @pytest.mark.parametrize(
@@ -129,8 +130,9 @@ def test_invalid_provider_pointers_are_diagnosed_before_judgement(source_id, uni
     payload["claims"][0]["supporting_citations"] = [
         {"source_id": source_id, "evidence_unit_ids": [unit_id]}
     ]
-    reading = reading_from(CaseProviderReadingReply.model_validate(payload))
-    checked = bound_claims(reading, BUNDLE)
+    checked = ReadingSources(BUNDLE.sources).bound_claims(
+        CaseProviderReadingReply.model_validate(payload)
+    )
     [claim] = checked
     assert claim.supporting_citations == []
     assert claim.invalid_evidence[0].reason == reason
@@ -156,8 +158,8 @@ def test_claims_only_trace_builds_a_deterministic_report_without_a_provider(monk
 
     monkeypatch.setattr("app.llm.request.request_stage", forbidden)
     monkeypatch.setattr("app.analysis.write.request_stage", forbidden)
-    checked = bound_claims(
-        reading_from(CaseProviderReadingReply.model_validate(reader_json())), BUNDLE
+    checked = ReadingSources(BUNDLE.sources).bound_claims(
+        CaseProviderReadingReply.model_validate(reader_json())
     )
     trace = bound_references(
         joined_trace(

@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from typing import Literal
 
 from app.sources.bundle import CaseSourceItem
 from app.sources.evidence import EvidenceIndex, EvidenceUnit
-from app.trace.citations import CaseInvalidEvidence, CaseSourceCitation, CaseUnverifiedCitation
+from app.trace.citations import (
+    CaseEvidenceReference,
+    CaseInvalidEvidence,
+    CaseSourceCitation,
+    CaseUnverifiedCitation,
+)
 from app.trace.quotes import find_document_locator
 from app.trace.sentences import SentenceIndex, quote_context
 
@@ -38,10 +44,11 @@ def direct_citation(unit: EvidenceUnit, source: CaseSourceItem) -> CaseSourceCit
 
 
 def bind_citations(
-    citations: list[CaseSourceCitation],
+    citations: Sequence[CaseEvidenceReference] | Sequence[CaseSourceCitation],
     role: Literal["supporting", "contradicting"],
     index: EvidenceIndex,
     seen: set[str],
+    canonical_id: Callable[[str, str], str] | None = None,
 ) -> tuple[list[CaseSourceCitation], list[CaseInvalidEvidence], list[CaseUnverifiedCitation]]:
     bound: list[CaseSourceCitation] = []
     invalid: list[CaseInvalidEvidence] = []
@@ -55,7 +62,8 @@ def bind_citations(
                     reason="malformed_id",
                 )
             )
-        for unit_id in citation.evidence_unit_ids:
+        for selected_id in citation.evidence_unit_ids:
+            unit_id = canonical_id(citation.source_id, selected_id) if canonical_id else selected_id
             unit, reason = index.resolve(citation.source_id, unit_id)
             if unit_id in seen:
                 unit, reason = None, "duplicate_id"

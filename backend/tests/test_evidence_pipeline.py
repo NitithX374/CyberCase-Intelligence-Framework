@@ -4,7 +4,7 @@ from app.analysis.pipeline import AnalysisArtifacts, AnalysisInput, bind_to_case
 from app.analysis.reading_sources import ReadingSources
 from app.analysis.write import reading_request
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace.bind import bound_claims, followup_registry_items
+from app.trace.bind import followup_registry_items
 from app.trace.claims import CaseFollowupExchange
 from app.trace.trace import CaseAnalysisTrace, CaseProviderJudgement, CaseProviderReadingReply
 
@@ -137,10 +137,7 @@ def test_answered_followups_use_the_same_unit_contract_and_unanswered_ones_are_a
             ],
         }
     )
-    from app.analysis.write import reading_from
-
-    sources = ReadingSources((*bundle.sources, *followup_registry_items(history)))
-    reading = bound_claims(reading_from(reply, reading_sources=sources), bundle, history)
+    reading = sources.bound_claims(reply)
     assert reading[0].supporting_citations[0].source_id == "QA-03"
     assert reading[0].supporting_citations[0].pointer_state == "direct"
     assert bundle.revision == 7

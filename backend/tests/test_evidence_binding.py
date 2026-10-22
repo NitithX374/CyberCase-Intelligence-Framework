@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.analysis.write import reading_from
+from app.analysis.reading_sources import ReadingSources
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import evidence_units
 from app.trace.bind import resolve_case_trace
@@ -151,10 +151,10 @@ def test_provider_ids_survive_conversion_without_provider_generated_locations():
             ],
         }
     )
-    [citation] = reading_from(reply)[0].supporting_citations
+    [citation] = ReadingSources(BUNDLE.sources).bound_claims(reply)[0].supporting_citations
     assert citation.evidence_unit_ids == reference(FIRST)["evidence_unit_ids"]
-    assert citation.exact_quote == "" and citation.start is None
-    assert citation.pointer_state == "unresolved"
+    assert citation.exact_quote == FIRST.text[citation.start : citation.end]
+    assert citation.pointer_state == "direct"
 
 
 def test_resolved_unit_expansion_survives_trace_storage_without_truncation():

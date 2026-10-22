@@ -55,9 +55,7 @@ async def write_trace(
         schema=CaseProviderReadingReply,
     )
     announce("bind")
-    claims = await checked_reading(
-        reading_from(reply, reading_sources=reading_sources), reading_sources
-    )
+    claims = await checked_reading(reply, reading_sources)
     judged = usable_claims(claims)
     if not judged:
         announce("verify")
@@ -105,10 +103,10 @@ async def write_trace(
 
 
 async def checked_reading(
-    claims: list[CaseAnalysisClaim], reading_sources: ReadingSources
+    reply: CaseProviderReadingReply, reading_sources: ReadingSources
 ) -> list[CaseAnalysisClaim]:
     try:
-        return await asyncio.to_thread(reading_sources.bound_claims, claims)
+        return await asyncio.to_thread(reading_sources.bound_claims, reply)
     except ValidationError as error:
         logger.exception("Checking the reading against the case built an invalid trace")
         raise CaseAnalysisFailure(
@@ -116,27 +114,6 @@ async def checked_reading(
             "The analysis could not be bound to the case sources",
             status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from error
-
-
-def reading_from(
-    reply: CaseProviderReadingReply, *, reading_sources: ReadingSources | None = None
-) -> list[CaseAnalysisClaim]:
-    if reading_sources is not None:
-        reply = reading_sources.canonical_reply(reply)
-    return [
-        CaseAnalysisClaim.model_validate(
-            {
-                **claim.model_dump(),
-                "supporting_source_ids": list(
-                    dict.fromkeys(citation.source_id for citation in claim.supporting_citations)
-                ),
-                "contradicting_source_ids": list(
-                    dict.fromkeys(citation.source_id for citation in claim.contradicting_citations)
-                ),
-            }
-        )
-        for claim in reply.claims
-    ]
 
 
 def reading_request(
@@ -209,7 +186,6 @@ __all__ = [
     "checked_reading",
     "joined_trace",
     "judgement_request",
-    "reading_from",
     "reading_payload",
     "reading_request",
     "summary_sentence_limit",
