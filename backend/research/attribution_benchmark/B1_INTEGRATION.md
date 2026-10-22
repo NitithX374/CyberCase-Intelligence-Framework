@@ -7,7 +7,9 @@ experiment; its production sections describe the code as it was then.
 
 Updated 2026-10-07. The working tree integrates the selected verifier; deployment
 into a newly built Docker image must be checked separately. Historical saved
-analyses retain their original methods and thresholds.
+analyses retain their original methods and thresholds. Updated 2026-10-23: no
+stored analysis holds a verdict of the earlier .80 rule, and the verdict model no
+longer accepts its reasons.
 
 Updated 2026-10-09 (owner decision): the verdict is a warning label, not a filter.
 The sections below describe the label; the matched downstream experiment measured

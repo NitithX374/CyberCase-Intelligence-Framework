@@ -474,8 +474,9 @@ Unresolved support, missing support, conflicts and uncertain status still withho
 before inference. Missing/invalid model assets are logged and mark the Claims
 `unassessed` (`verifier_unavailable`) without failing the analysis. Judgement and
 the views still run when every Claim is `not_supported`; they are skipped only when
-no Claim passes those structural checks. Historical .80 verdicts keep their original meaning; rerunning
-analysis is required to obtain B1-LR verdicts.
+no Claim passes those structural checks. No stored verdict came from the earlier .80 rule, so its
+reasons (`entailed`, `neutral`, `contradiction`, `low_entailment`, `input_too_long`) are no longer
+accepted.
 
 The extractor uses the configured analysis model and provider order, without
 thinking, with at most 4,096 output tokens and a 60-second overall deadline. It

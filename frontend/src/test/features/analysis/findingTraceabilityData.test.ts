@@ -23,10 +23,10 @@ describe("Saved Finding Source linkage", () => {
             verdict,
             reason:
               verdict === "supported"
-                ? "entailed"
+                ? "lr_supported"
                 : verdict === "not_supported"
-                  ? "neutral"
-                  : "input_too_long",
+                  ? "lr_not_supported"
+                  : "no_resolved_source",
           },
         }),
       );

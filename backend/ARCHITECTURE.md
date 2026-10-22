@@ -135,8 +135,9 @@ with reason `verifier_unavailable`; the analysis still completes. Every Claim th
 passes the structural checks reaches the Views and Judgement whatever its verdict,
 and an analysis abstains without Views or Judgement only when no Claim passes them.
 Judgement receives each Claim's bound citation text (`exact_quote` only); the
-selection shapes the verification premise and nothing else. Historical .80 verdicts
-keep their original meaning.
+selection shapes the verification premise and nothing else. No stored verdict came
+from the earlier .80 rule, so its reasons (`entailed`, `neutral`, `contradiction`,
+`low_entailment`, `input_too_long`) are no longer accepted.
 
 The weights live in `backend/models/nli_mdeberta` and
 `backend/models/source_selector_mpnet` (`CLAIM_NLI_PATH`, `CLAIM_SELECTOR_PATH`),

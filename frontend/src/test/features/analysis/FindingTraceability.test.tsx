@@ -69,13 +69,13 @@ function Findings({
 
 describe("Finding traceability", () => {
   it.each([
-    ["supported", "entailed", "Source check: the cited Source passages support this finding"],
+    ["supported", "lr_supported", "Source check: the cited Source passages support this finding"],
     [
       "not_supported",
       "lr_not_supported",
       "Source check: the cited Source did not clearly support this finding. Check it before relying on it.",
     ],
-    ["unassessed", "input_too_long", "Support could not be assessed — not used in the summary"],
+    ["unassessed", "no_resolved_source", "Support could not be assessed — not used in the summary"],
     ["unassessed", "verifier_unavailable", "Source check unavailable — not assessed"],
   ] as const)(
     "shows the saved semantic verdict %s independently of Source binding",

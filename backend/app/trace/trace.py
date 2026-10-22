@@ -125,7 +125,7 @@ class CaseSummaryUnit(BaseModel):
 class CaseViewExtraction(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    method: str = Field(default="legacy", min_length=1, max_length=200)
+    method: str = Field(min_length=1, max_length=200)
     model: str
     input_claim_ids: ClaimIds
     excluded_claim_ids: ClaimIds

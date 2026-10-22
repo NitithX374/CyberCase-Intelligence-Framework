@@ -130,15 +130,10 @@ class CaseClaimGrounding(BaseModel):
 
     verdict: Literal["supported", "not_supported", "unassessed"]
     reason: Literal[
-        "entailed",
-        "neutral",
-        "contradiction",
-        "low_entailment",
         "no_resolved_source",
         "unresolved_source_reference",
         "conflicting_source",
         "claim_uncertain",
-        "input_too_long",
         "lr_supported",
         "lr_not_supported",
         "verifier_unavailable",
