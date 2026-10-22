@@ -8,6 +8,7 @@ from app.models.case import Case
 from app.models.chat_message import ChatMessage
 from app.models.source import CaseSource
 from app.models.user import User
+from app.trace.claims import CaseAssessmentTrace
 from app.trace.trace import CaseAnalysisTrace
 
 NARRATIVE = "Files on the shared drive were reported encrypted."
@@ -23,9 +24,7 @@ GAP = {
     "clarification_question": "When did the incident happen?",
 }
 TRACE = {
-    "version": "case_analysis_trace_v1",
     "analysis_mode": "case_overview",
-    "validation_status": "validated",
     "summary": NARRATIVE,
     "claims": [],
     "gaps": [GAP],
@@ -88,6 +87,16 @@ async def seeded_case(
         case.latest_analysis_result_id = analysis.id
         if not asking:
             return SeededCase(case.id, user.id, None)
+        assessment = CaseAnalysisResult(
+            case_id=case.id,
+            source_revision=1,
+            status="assessment",
+            summary="",
+            trace_json=CaseAssessmentTrace(gaps=trace["gaps"]).model_dump(mode="json"),
+            pipeline_config={},
+        )
+        db.add(assessment)
+        await db.flush()
         gap = trace["gaps"][0]
         question = ChatMessage(
             case_id=case.id,
@@ -96,7 +105,7 @@ async def seeded_case(
             content=gap["clarification_question"],
             message_kind="followup_question",
             gap_key=gap["gap_key"],
-            analysis_result_id=analysis.id,
+            analysis_result_id=assessment.id,
         )
         db.add(question)
         await db.flush()

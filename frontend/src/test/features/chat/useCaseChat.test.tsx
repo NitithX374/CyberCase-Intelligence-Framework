@@ -120,7 +120,6 @@ describe("whether a send is in flight", () => {
       id: "analysis-2",
       case_id: "a",
       source_revision: 2,
-      schema_version: "case_analysis_trace_v1",
       status: "validated" as const,
       summary: "Updated summary",
       trace_json: null,

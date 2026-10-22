@@ -97,7 +97,7 @@ function readingReply(request) {
       contradicting_citations: [],
     }));
   if (claims.length === 0) throw new Error("Unsupported E2E provider request");
-  return { version: "case_analysis_trace_v1", claims };
+  return { claims };
 }
 
 function judgementReply(request) {
@@ -131,7 +131,6 @@ function judgementReply(request) {
         ]
       : [];
   return {
-    version: "case_analysis_trace_v1",
     summary: `Deterministic E2E summary: ${claims
       .map((claim) => `${claim.text.trim()} [${claim.claim_id}]`)
       .join(" ")}`,
@@ -149,8 +148,8 @@ function responseFor(body) {
       trigger_text: [],
     };
   }
-  if (system.includes("case_assessment_v1")) {
-    return { version: "case_assessment_v1", gaps: assessedGaps(asObject(content)) };
+  if (system.includes("Case Assessment component of CyberCase")) {
+    return { gaps: assessedGaps(asObject(content)) };
   }
   if (system.includes("in the chat of an investigative case")) {
     return {

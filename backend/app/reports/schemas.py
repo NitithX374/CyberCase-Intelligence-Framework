@@ -4,22 +4,9 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
-from app.trace.retired import without_retired
 from app.trace.trace import SupportStatus
-
-RETIRED_VIEW_ROW_FIELDS = frozenset({"projection_grounding"})
-RETIRED_UNVERIFIED_QUOTE_FIELDS = frozenset({"written_quote", "places", "meaning_passage"})
-RETIRED_FINDING_FIELDS = frozenset(
-    {
-        "supporting_tolerated",
-        "contradicting_tolerated",
-        "supporting_marked",
-        "contradicting_marked",
-        "reasoning_summary",
-    }
-)
 
 
 class ReportRow(BaseModel):
@@ -29,37 +16,22 @@ class ReportRow(BaseModel):
 class ReportParty(ReportRow):
     name: str
     role: str | None
-    claim_context: list[str] = Field(default_factory=list)
+    claim_context: list[str]
     references: list[str] = Field(default_factory=list)
-    support: SupportStatus | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_VIEW_ROW_FIELDS)
+    support: SupportStatus | None
 
 
 class ReportEvent(ReportRow):
     time: str | None
     event: str
     references: list[str] = Field(default_factory=list)
-    support: SupportStatus | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_VIEW_ROW_FIELDS)
+    support: SupportStatus | None
 
 
 class ReportImpact(ReportRow):
     description: str
     references: list[str] = Field(default_factory=list)
-    support: SupportStatus | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_VIEW_ROW_FIELDS)
+    support: SupportStatus | None
 
 
 class ReportSummaryUnit(ReportRow):
@@ -76,32 +48,21 @@ class ReportQuoteContext(ReportRow):
 
 
 class ReportUnverifiedQuote(ReportRow):
-    evidence_unit_id: str | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_UNVERIFIED_QUOTE_FIELDS)
+    evidence_unit_id: str | None
 
 
 class ReportFinding(ReportRow):
     ordinal: int
     text: str
     status: str
-    is_inference: bool
     source_labels: list[str] = Field(default_factory=list)
     contradicting_source_labels: list[str] = Field(default_factory=list)
     supporting_quotes: list[str] = Field(default_factory=list)
     contradicting_quotes: list[str] = Field(default_factory=list)
-    supporting_contexts: list[ReportQuoteContext | None] = Field(default_factory=list)
-    contradicting_contexts: list[ReportQuoteContext | None] = Field(default_factory=list)
-    unverified_quotes: list[ReportUnverifiedQuote] = Field(default_factory=list)
+    supporting_contexts: list[ReportQuoteContext | None]
+    contradicting_contexts: list[ReportQuoteContext | None]
+    unverified_quotes: list[ReportUnverifiedQuote]
     source_check: Literal["not_supported"] | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_FINDING_FIELDS)
 
 
 class ReportTechnique(ReportRow):
@@ -131,12 +92,11 @@ class ReportSource(ReportRow):
 class CaseReportContent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["case_report_content_v1"] = "case_report_content_v1"
     title: str
     analysed: str | None = None
     summary: str
-    views_derived_from_claims: bool = False
-    summary_units: list[ReportSummaryUnit] = Field(default_factory=list)
+    views_derived_from_claims: bool
+    summary_units: list[ReportSummaryUnit]
     parties: list[ReportParty] = Field(default_factory=list)
     timeline: list[ReportEvent] = Field(default_factory=list)
     impacts: list[ReportImpact] = Field(default_factory=list)

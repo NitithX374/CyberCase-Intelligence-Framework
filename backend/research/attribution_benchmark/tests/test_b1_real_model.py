@@ -84,7 +84,6 @@ async def test_real_en_th_cross_document_and_qa_gate_completes_native_pipeline(
     )
     reply = CaseProviderReadingReply.model_validate(
         {
-            "version": "case_analysis_trace_v1",
             "claims": [
                 {
                     "claim_id": claim_id,
@@ -107,7 +106,6 @@ async def test_real_en_th_cross_document_and_qa_gate_completes_native_pipeline(
         if kwargs["stage"] == "case_reading":
             return reply
         return CaseProviderJudgement(
-            version="case_analysis_trace_v1",
             summary="\n".join(
                 f"{claim['text']} [{claim['claim_id']}]."
                 for claim in kwargs["content"]["reading"]["claims"]

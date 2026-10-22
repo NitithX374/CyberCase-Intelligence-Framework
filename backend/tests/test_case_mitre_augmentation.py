@@ -11,27 +11,11 @@ from app.analysis.pipeline import (
 )
 from app.analysis.store import external_context
 from app.analysis.technical_context.contracts import (
-    CaseTechnicalAugmentation,
     LegalReferenceResult,
     QueryResponse,
-    skipped_mitre_applicability,
 )
 from app.analysis.technical_context.rag_client import RagCallFailure
 from app.analysis.technical_context.retrieve import run_case_mitre_augmentation
-
-
-def test_a_record_stored_with_a_shadow_decision_still_reads_without_it():
-    _, _, _, applicability, _ = _fixtures()
-    stored = {
-        "status": "not_applicable",
-        "applicability": skipped_mitre_applicability().model_dump(mode="json"),
-        "shadow_applicability": applicability.model_dump(mode="json"),
-    }
-
-    record = CaseTechnicalAugmentation.model_validate(stored)
-
-    assert record.status == "not_applicable"
-    assert "shadow_applicability" not in record.model_dump()
 
 
 def test_nontechnical_case_does_not_call_rag():

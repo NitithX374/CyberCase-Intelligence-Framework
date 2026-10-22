@@ -5,20 +5,12 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from app.trace.quotes import MAX_PAGE_SPANS_PER_QUOTE, MAX_QUOTE_CHARS, MAX_SUPPORTED_DOCUMENT_PAGES
-from app.trace.retired import without_retired
 
 MAX_CONTEXT_CHARS = 400
 MAX_EVIDENCE_ID_CHARS = 240
 
 EvidencePointerState = Literal["direct", "recovered", "unresolved"]
 EvidenceUnitId = Annotated[str, Field(max_length=MAX_EVIDENCE_ID_CHARS)]
-
-RETIRED_CITATION_FIELDS = frozenset({"tolerated_differences", "review_flags"})
-RETIRED_UNVERIFIED_FIELDS = frozenset({"written_quote", "near_passage", "meaning_passage"})
-
-
-def legacy_pointer_schema(schema: dict[str, object]) -> None:
-    schema.pop("default", None)
 
 
 class CaseEvidenceReference(BaseModel):
@@ -66,29 +58,13 @@ class CaseSourceCitation(BaseModel):
     source_id: str = Field(min_length=1, max_length=160)
     exact_quote: str = Field(default="", max_length=MAX_QUOTE_CHARS)
     evidence_unit_ids: list[EvidenceUnitId] = Field(default_factory=list, max_length=64)
-    pointer_state: EvidencePointerState = Field(
-        default="recovered", json_schema_extra=legacy_pointer_schema
-    )
+    pointer_state: EvidencePointerState = "recovered"
     start: int | None = Field(default=None, ge=0)
     end: int | None = Field(default=None, gt=0)
     document_id: str | None = Field(default=None, min_length=1, max_length=160)
     filename: str | None = Field(default=None, min_length=1, max_length=255)
     page_numbers: list[int] = Field(default_factory=list, max_length=MAX_PAGE_SPANS_PER_QUOTE)
     context: CaseQuoteContext | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_CITATION_FIELDS)
-
-    @model_validator(mode="before")
-    @classmethod
-    def normalize_legacy_quote(cls, data: object) -> object:
-        if isinstance(data, dict) and not data.get("evidence_unit_ids"):
-            data = dict(data)
-            if isinstance(data.get("exact_quote"), str):
-                data["exact_quote"] = data["exact_quote"].strip()
-        return data
 
     @field_validator("source_id", "document_id", "filename")
     @classmethod
@@ -134,11 +110,6 @@ class CaseUnverifiedCitation(BaseModel):
     role: Literal["supporting", "contradicting"]
     evidence_unit_id: str | None = Field(default=None, max_length=MAX_EVIDENCE_ID_CHARS)
 
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_UNVERIFIED_FIELDS)
-
 
 def normalized_citation(data: object) -> dict[str, object] | None:
     if not isinstance(data, dict):
@@ -162,7 +133,7 @@ def normalized_citation(data: object) -> dict[str, object] | None:
         "source_id": source_id,
         "exact_quote": quote,
         "evidence_unit_ids": unit_ids,
-        "pointer_state": data.get("pointer_state", "unresolved" if unit_ids else "recovered"),
+        "pointer_state": data.get("pointer_state", "unresolved"),
         "start": data.get("start"),
         "end": data.get("end"),
         "document_id": bounded_locator(data.get("document_id"), 160),

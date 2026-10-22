@@ -40,7 +40,6 @@ from app.models.analysis_result import CaseAnalysisResult
 from app.models.case import Case
 from app.models.chat_message import ChatMessage
 from app.trace.claims import CaseAssessmentTrace
-from app.trace.trace import CaseAnalysisTrace
 
 SEND_KEY_INDEX = "ux_chat_messages_case_id_client_request_id"
 
@@ -274,10 +273,7 @@ async def next_question_of_round(
     result = await db.get(CaseAnalysisResult, analysis_result_id)
     if result is None:
         return None
-    if result.status == "assessment":
-        gaps = CaseAssessmentTrace.model_validate(result.trace_json).gaps
-    else:
-        gaps = CaseAnalysisTrace.model_validate(result.trace_json).gaps
+    gaps = CaseAssessmentTrace.model_validate(result.trace_json).gaps
     chat = await case_messages(db, case_id)
     decision = decide_followup(
         gaps=gaps,

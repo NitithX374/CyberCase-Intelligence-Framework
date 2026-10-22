@@ -91,7 +91,7 @@ def test_the_sentence_is_shown_as_the_service_sent_it_with_nothing_checked_again
 
 
 def test_the_judgement_can_no_longer_return_associations():
-    base = {"version": "case_analysis_trace_v1", "summary": "A share was encrypted. [A-01]"}
+    base = {"summary": "A share was encrypted. [A-01]"}
 
     assert CaseProviderJudgement.model_validate({**base, "gaps": []}).gaps == []
     with pytest.raises(ValidationError):

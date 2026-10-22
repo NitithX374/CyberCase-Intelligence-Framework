@@ -4,7 +4,7 @@ from app.analysis.pipeline import AnalysisArtifacts, AnalysisInput, bind_to_case
 from app.analysis.reading_sources import ReadingSources
 from app.analysis.write import reading_request
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace.bind import bound_claims, followup_registry_items
+from app.trace.bind import followup_registry_items
 from app.trace.claims import CaseFollowupExchange
 from app.trace.trace import CaseAnalysisTrace, CaseProviderJudgement, CaseProviderReadingReply
 
@@ -42,7 +42,6 @@ async def test_whole_case_claims_only_reading_direct_binding_judgement_and_join(
     ]
     reply = CaseProviderReadingReply.model_validate(
         {
-            "version": "case_analysis_trace_v1",
             "claims": [
                 {
                     "claim_id": f"A-0{index}",
@@ -82,7 +81,6 @@ async def test_whole_case_claims_only_reading_direct_binding_judgement_and_join(
             [second.text.splitlines(keepends=True)[1]],
         ]
         return CaseProviderJudgement(
-            version="case_analysis_trace_v1",
             summary="John is the victim [A-01]. The server was encrypted at 13:00, interrupting payroll [A-02, A-03].",
         )
 
@@ -117,7 +115,8 @@ def test_answered_followups_use_the_same_unit_contract_and_unanswered_ones_are_a
         CaseFollowupExchange("QA-04", "when", "When?", None),
     )
     bundle = CaseSourceBundle(7, (native,))
-    payload = reading_request(bundle, "english", history)
+    sources = ReadingSources((*bundle.sources, *followup_registry_items(history)))
+    payload = reading_request(sources, "english", history)
     assert [source["source_id"] for source in payload["case_sources"]] == ["S1", "QA-03"]
     qa = payload["case_sources"][1]
     [unit] = qa["evidence_units"]
@@ -125,7 +124,6 @@ def test_answered_followups_use_the_same_unit_contract_and_unanswered_ones_are_a
     assert unit["text"] == history[0].answer
     reply = CaseProviderReadingReply.model_validate(
         {
-            "version": "case_analysis_trace_v1",
             "claims": [
                 {
                     "claim_id": "A-01",
@@ -139,10 +137,7 @@ def test_answered_followups_use_the_same_unit_contract_and_unanswered_ones_are_a
             ],
         }
     )
-    from app.analysis.write import reading_from
-
-    sources = ReadingSources((*bundle.sources, *followup_registry_items(history)))
-    reading = bound_claims(reading_from(reply, reading_sources=sources), bundle, history)
-    assert reading.claims[0].supporting_citations[0].source_id == "QA-03"
-    assert reading.claims[0].supporting_citations[0].pointer_state == "direct"
+    reading = sources.bound_claims(reply)
+    assert reading[0].supporting_citations[0].source_id == "QA-03"
+    assert reading[0].supporting_citations[0].pointer_state == "direct"
     assert bundle.revision == 7

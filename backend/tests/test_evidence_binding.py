@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
-from app.analysis.write import reading_from
+from app.analysis.reading_sources import ReadingSources
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import evidence_units
 from app.trace.bind import resolve_case_trace
+from app.trace.citations import CaseQuoteContext
 from app.trace.claims import CaseAnalysisClaim, CaseReadingClaim, CaseSourceCitation
 from app.trace.trace import CaseAnalysisTrace, CaseProviderReadingReply
 
@@ -140,7 +143,6 @@ def test_one_unit_can_support_different_claims():
 def test_provider_ids_survive_conversion_without_provider_generated_locations():
     reply = CaseProviderReadingReply.model_validate(
         {
-            "version": "case_analysis_trace_v1",
             "claims": [
                 {
                     "claim_id": "A-01",
@@ -152,10 +154,10 @@ def test_provider_ids_survive_conversion_without_provider_generated_locations():
             ],
         }
     )
-    [citation] = reading_from(reply).claims[0].supporting_citations
+    [citation] = ReadingSources(BUNDLE.sources).bound_claims(reply)[0].supporting_citations
     assert citation.evidence_unit_ids == reference(FIRST)["evidence_unit_ids"]
-    assert citation.exact_quote == "" and citation.start is None
-    assert citation.pointer_state == "unresolved"
+    assert citation.exact_quote == FIRST.text[citation.start : citation.end]
+    assert citation.pointer_state == "direct"
 
 
 def test_resolved_unit_expansion_survives_trace_storage_without_truncation():
@@ -205,12 +207,12 @@ def test_reader_invalid_reference_shapes_fail_instead_of_disappearing(citation):
         )
 
 
-def test_pointer_state_remains_optional_for_stored_legacy_api_citations():
-    schema = CaseSourceCitation.model_json_schema()
-    assert "pointer_state" not in schema.get("required", [])
-    assert "default" not in schema["properties"]["pointer_state"]
-    assert (
-        CaseSourceCitation(source_id="S1", exact_quote="Legacy text").pointer_state == "recovered"
+def test_a_quote_chat_finds_without_a_unit_is_recovered_with_its_offsets():
+    citation = CaseSourceCitation(source_id="S1", exact_quote="John reported", start=0, end=13)
+
+    assert citation.pointer_state == "recovered"
+    assert CaseSourceCitation.model_json_schema()["properties"]["pointer_state"]["default"] == (
+        "recovered"
     )
 
 
@@ -246,3 +248,29 @@ def test_repeated_document_text_uses_the_selected_offset_for_its_page():
     trace = resolved([reference(source, selected.unit_id)], CaseSourceBundle(1, (source,)))
     assert trace.claims[0].supporting_citations[0].page_numbers == [2]
     assert trace.claims[0].supporting_citations[0].start == cut
+
+
+def test_the_first_unit_of_a_source_that_starts_with_a_blank_line_gets_its_context():
+    plain = CaseSourceItem(
+        "S1", "narrative", "John reported the outage.\nThe report came at 13:00."
+    )
+    reply = CaseProviderReadingReply.model_validate(
+        {
+            "claims": [
+                {
+                    "claim_id": "A-01",
+                    "claim_type": "reported",
+                    "epistemic_status": "reported",
+                    "text": "John reported the outage.",
+                    "supporting_citations": [{"source_id": "S1", "evidence_unit_ids": ["U001"]}],
+                }
+            ],
+        }
+    )
+    contexts = []
+    for source in (plain, replace(plain, text="\n\n" + plain.text)):
+        [claim] = ReadingSources((source,)).bound_claims(reply)
+        [citation] = claim.supporting_citations
+        assert citation.start == 0
+        contexts.append(citation.context)
+    assert contexts == [CaseQuoteContext(), CaseQuoteContext()]

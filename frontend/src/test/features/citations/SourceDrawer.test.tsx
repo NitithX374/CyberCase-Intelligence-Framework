@@ -82,6 +82,7 @@ describe("SourceDrawer", () => {
     const quoted = openCited({
       source_id: "narrative-1",
       exact_quote: "a transfer of 52,000 baht",
+      pointer_state: "recovered",
       context: {
         before: "The caller said the account had been frozen. He asked for ",
         after: " to a safe account.",
@@ -115,6 +116,7 @@ describe("SourceDrawer", () => {
     const quoted = openCited({
       source_id: "narrative-1",
       exact_quote: "a transfer of 52,000 baht",
+      pointer_state: "recovered",
     });
 
     expect(quoted).toHaveTextContent(/^a transfer of 52,000 baht$/);
@@ -167,6 +169,7 @@ describe("SourceDrawer", () => {
           {
             source_id: "doc-2",
             exact_quote: "crime scene",
+            pointer_state: "recovered",
             page_numbers: [1],
           },
         ],
@@ -200,6 +203,7 @@ describe("SourceDrawer", () => {
           {
             source_id: "doc-3",
             exact_quote: "<tr><td>นายถนอม รอดสุข</td><td>ผู้กล่าวหา</td></tr>",
+            pointer_state: "recovered",
             page_numbers: [1],
           },
         ],
@@ -236,6 +240,7 @@ describe("SourceDrawer", () => {
           {
             source_id: "doc-4",
             exact_quote: "นายถนอม รอดสุข | ผู้กล่าวหา",
+            pointer_state: "recovered",
             page_numbers: [1],
           },
         ],
@@ -270,6 +275,7 @@ describe("SourceDrawer", () => {
           {
             source_id: "doc-5",
             exact_quote: "<table><tr><td>นายถนอม รอดสุข</td></tr>",
+            pointer_state: "recovered",
             page_numbers: [1],
           },
         ],
@@ -291,6 +297,7 @@ describe("SourceDrawer", () => {
           {
             source_id: "doc-5",
             exact_quote: "<tr><td>นางสาวสุรัตนา</td></tr></table>",
+            pointer_state: "recovered",
             page_numbers: [1],
           },
         ],

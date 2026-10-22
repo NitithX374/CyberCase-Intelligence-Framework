@@ -23,10 +23,10 @@ describe("Saved Finding Source linkage", () => {
             verdict,
             reason:
               verdict === "supported"
-                ? "entailed"
+                ? "lr_supported"
                 : verdict === "not_supported"
-                  ? "neutral"
-                  : "input_too_long",
+                  ? "lr_not_supported"
+                  : "no_resolved_source",
           },
         }),
       );
@@ -35,13 +35,12 @@ describe("Saved Finding Source linkage", () => {
     },
   );
 
-  it("does not imply semantic support from direct, recovered and legacy pointers", () => {
+  it("does not imply semantic support from direct and recovered pointers", () => {
     const state = findingTraceabilityData(
       claim("John sent an email.", "S1", {
         supporting_citations: [
           direct,
           { source_id: "S2", exact_quote: "An email was sent.", pointer_state: "recovered" },
-          { source_id: "S3", exact_quote: "An email." },
         ],
       }),
     );

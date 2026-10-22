@@ -6,14 +6,12 @@ import type { SourceMessageRef } from "./types";
 const POINTER_LABELS = {
   direct: "Linked directly",
   recovered: "Recovered location",
-  legacy: "Legacy citation",
   unresolved: "Unresolved reference",
 };
 
 const THAI_POINTER_LABELS = {
   direct: "เชื่อม Source โดยตรง",
   recovered: "ค้นคืนตำแหน่งใน Source",
-  legacy: "การอ้างอิงแบบเดิม",
   unresolved: "เชื่อมตำแหน่งใน Source ไม่ได้",
 };
 

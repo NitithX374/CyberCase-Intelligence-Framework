@@ -15,7 +15,7 @@ from app.analysis.technical_context.contracts import (
 )
 from app.analysis.technical_context.gate import mitre_gate
 from app.analysis.technical_context.rag_client import RagCallFailure, request_rag
-from app.sources.bundle import CaseSourceBundle, build_rag_query
+from app.sources.bundle import CaseSourceBundle
 from app.trace.claims import CaseFollowupExchange
 
 logger = logging.getLogger(__name__)
@@ -32,13 +32,10 @@ def technical_context_key(
 
 
 def retrieval_query(
-    source_bundle: CaseSourceBundle,
     trigger_text: Sequence[str],
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> str:
-    query = ("\n".join(trigger_text).strip() if trigger_text else "") or build_rag_query(
-        source_bundle
-    )
+    query = "\n".join(trigger_text).strip()
     answers = [
         f"{item.question.strip()} {item.answer.strip()}"
         for item in followup_history
@@ -96,7 +93,7 @@ async def run_case_mitre_augmentation(
         context = reused_context
         is_reused = True
     else:
-        rag_query = retrieval_query(source_bundle, applicability.trigger_text, followup_history)
+        rag_query = retrieval_query(applicability.trigger_text, followup_history)
         announce("retrieve")
         try:
             response = await rag_request(rag_query)

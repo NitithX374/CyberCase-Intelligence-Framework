@@ -423,7 +423,6 @@ async def test_an_analysis_records_the_answers_it_read_and_not_later_ones():
         async with session_factory() as db:
             stored = await db.get(CaseAnalysisResult, step.result.id)
         assert stored.external_context_json["followup_history"] == {
-            "version": "followup_snapshot_v1",
             "items": [
                 {
                     "qa_id": "QA-01",
@@ -462,7 +461,6 @@ async def test_an_analysis_records_the_sources_it_read_and_not_later_ones():
         async with session_factory() as db:
             stored = await db.get(CaseAnalysisResult, step.result.id)
         assert stored.external_context_json["sources_read"] == {
-            "version": "sources_read_v1",
             "source_ids": [str(read)],
         }, "the source added while the model was thinking was never read"
 
@@ -571,27 +569,3 @@ async def test_assessment_row_asks_without_becoming_the_latest_analysis():
         assert stored is not None
         assert case.latest_analysis_result_id is None
         assert latest is None
-
-
-async def test_assessment_round_keeps_serving_its_remaining_gaps():
-    async with isolated_database() as session_factory:
-        trace = CaseAssessmentTrace(gaps=numbered_gaps(4).gaps).model_dump(mode="json")
-        case_id, user_id, first_id = await seeded_case(session_factory, trace=trace)
-        async with session_factory() as db, db.begin():
-            result = await db.scalar(
-                select(CaseAnalysisResult).where(CaseAnalysisResult.case_id == case_id)
-            )
-            result.status = "assessment"
-            case = await db.get(Case, case_id)
-            case.latest_analysis_result_id = None
-
-        produced, analysis = await post_case_message(
-            case_id=case_id,
-            user_id=user_id,
-            request=ChatMessageCreate(content="Around two in the morning."),
-            session_factory=session_factory,
-        )
-
-        assert analysis is None
-        assert produced[0].in_reply_to_message_id == first_id
-        assert produced[1].gap_key == "topic:2"

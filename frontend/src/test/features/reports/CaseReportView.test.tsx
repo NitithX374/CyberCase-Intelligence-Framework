@@ -18,11 +18,11 @@ function report(version: number, analysisResultId = "analysis-1"): CaseReportRea
     version_number: version,
     analysis_result_id: analysisResultId,
     report: {
-      version: "case_report_content_v1",
       title: "Traceable report",
       summary: "",
       techniques_matched: false,
       views_derived_from_claims: false,
+      summary_units: [],
     },
     created_at: "2026-09-20T00:00:00Z",
   };

@@ -23,34 +23,12 @@ from app.trace.citations import (
 from app.trace.citations import (
     CaseSourceCitation as CaseSourceCitation,
 )
-from app.trace.retired import without_retired
 
 MAX_CLARIFICATION_QUESTION_CHARS = 300
 MAX_RESOLVED_EVIDENCE_REFERENCES = 64 * 64
-RETIRED_CLAIM_FIELDS = frozenset({"reasoning_summary"})
-RETIRED_VERIFIER_FIELDS = frozenset(
-    {
-        "model",
-        "label",
-        "entailment",
-        "threshold",
-        "neutral",
-        "contradiction",
-        "p_supported",
-        "selected_citation_indices",
-        "considered_citation_indices",
-        "selected_evidence_unit_ids",
-        "source_similarities",
-        "selector_threshold",
-        "selection_ms",
-        "raw_tokens",
-        "truncated",
-        "duration_ms",
-    }
-)
 
 
-CaseClaimType = Literal["reported", "analytical_inference", "unknown"]
+CaseClaimType = Literal["reported", "unknown"]
 
 
 CaseEpistemicStatus = Literal[
@@ -152,26 +130,16 @@ class CaseClaimGrounding(BaseModel):
 
     verdict: Literal["supported", "not_supported", "unassessed"]
     reason: Literal[
-        "entailed",
-        "neutral",
-        "contradiction",
-        "low_entailment",
         "no_resolved_source",
         "unresolved_source_reference",
         "conflicting_source",
         "claim_uncertain",
-        "input_too_long",
         "lr_supported",
         "lr_not_supported",
         "verifier_unavailable",
     ]
     method: str | None = None
     artifact_sha256: str | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_VERIFIER_FIELDS)
 
 
 class CaseAnalysisClaim(CaseClaimFields):
@@ -186,11 +154,6 @@ class CaseAnalysisClaim(CaseClaimFields):
     )
     invalid_evidence: list[CaseInvalidEvidence] = Field(default_factory=list)
     semantic_grounding: CaseClaimGrounding | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_CLAIM_FIELDS)
 
     @model_validator(mode="before")
     @classmethod
@@ -269,7 +232,6 @@ class CaseAnalysisGap(BaseModel):
 class CaseAssessmentTrace(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["case_assessment_v1"] = "case_assessment_v1"
     gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
 
 
@@ -314,7 +276,6 @@ class FollowupSnapshotItem(BaseModel):
 class FollowupSnapshot(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["followup_snapshot_v1"] = "followup_snapshot_v1"
     items: list[FollowupSnapshotItem]
 
 

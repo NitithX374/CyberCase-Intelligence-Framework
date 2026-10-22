@@ -2,7 +2,7 @@ import type { SourceMessageRef } from "@/features/citations/types";
 import type { UnconfirmedStatus } from "@/features/citations/unconfirmed";
 import type { FindingTraceabilityData } from "./findingTraceabilityData";
 
-export type ClaimType = "reported" | "analytical_inference" | "unknown";
+export type ClaimType = "reported" | "unknown";
 
 export type EpistemicStatus =
   "reported" | "suspected" | "contradicted" | "not_established" | "unknown" | "not_confirmed";
@@ -50,7 +50,6 @@ export interface SummaryUnit {
 
 export interface ClaimBacked {
   sources: SourceMessageRef[];
-  inferred: boolean;
   supportNote?: string | null;
   unconfirmed: UnconfirmedStatus[];
   linkedClaims?: Pick<CaseFinding, "id" | "text">[];

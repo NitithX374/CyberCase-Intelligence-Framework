@@ -166,7 +166,6 @@ def gap_payload(**overrides) -> dict[str, object]:
 def test_judgement_gaps_are_normalized_instead_of_rejected():
     parsed = CaseProviderJudgement.model_validate(
         {
-            "version": "case_analysis_trace_v1",
             "summary": "Files were encrypted [A-01].",
             "gaps": [
                 gap_payload(
@@ -294,21 +293,6 @@ def test_case_evidence_citation_normalizes_partial_document_locators():
     assert citation_complete.document_id == "doc-01"
     assert citation_complete.filename == "ลำดับ01 รายงานการสอบสวน.pdf"
     assert citation_complete.page_numbers == [1, 2]
-
-
-def test_a_stored_claim_with_a_reasoning_summary_reads_without_it():
-    claim = CaseAnalysisClaim.model_validate(
-        {
-            "claim_id": "A-01",
-            "claim_type": "reported",
-            "text": "Valid factual claim text",
-            "epistemic_status": "reported",
-            "supporting_source_ids": ["s1"],
-            "reasoning_summary": "Written by an earlier reader.",
-        }
-    )
-    assert claim.text == "Valid factual claim text"
-    assert "reasoning_summary" not in claim.model_dump()
 
 
 def test_claim_malformed_raw_citations_dropped_without_failing_claim():

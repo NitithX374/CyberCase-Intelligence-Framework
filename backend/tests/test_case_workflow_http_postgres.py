@@ -25,18 +25,15 @@ from app.llm.openrouter import CoreLlmTarget
 from app.main import app
 from app.models.chat_message import ChatMessage
 from app.models.source import CaseSource
-from app.trace.claims import CaseAnalysisClaim
-from app.trace.trace import CaseProviderReading
 
 pytestmark = pytest.mark.asyncio
 
-NO_GAPS = {"version": "case_assessment_v1", "gaps": []}
-ASKING = {"version": "case_assessment_v1", "gaps": [{**GAP, "affected_claim_ids": []}]}
+NO_GAPS = {"gaps": []}
+ASKING = {"gaps": [{**GAP, "affected_claim_ids": []}]}
 HEAD = "The attacker logged in to the VPN gateway."
 TAIL = "The attacker exfiltrated the payroll archive."
 STAGES = {"suggestion": "answer", "summary": "judge", "gaps": "assess", "claims": "read"}
 JUDGED = {
-    "version": "case_analysis_trace_v1",
     "summary": "Files on the shared drive were encrypted.",
     "gaps": [],
 }
@@ -44,7 +41,6 @@ JUDGED = {
 
 def reading(*claims: dict) -> dict:
     return {
-        "version": "case_analysis_trace_v1",
         "claims": list(claims),
     }
 
@@ -92,7 +88,7 @@ def disconnecting(_content: dict) -> httpx.Response:
 
 
 def off_schema(_content: dict) -> dict:
-    return {"version": "case_analysis_trace_v1", "summary": "Half an answer."}
+    return {"summary": "Half an answer."}
 
 
 def unreadable(_content: dict) -> httpx.Response:
@@ -210,38 +206,24 @@ async def case_with_source(factory, text: str) -> tuple:
     return case_id, user_id
 
 
-def legacy_citing(text: str, quote: str, monkeypatch):
+def citing(text: str, unit_ids: list[str]):
     def cite(content: dict) -> dict:
         [source] = [
             item
             for item in content["case_sources"]
             if "".join(unit["text"] for unit in item["evidence_units"]) == text
         ]
-        legacy = CaseProviderReading(
-            version="case_analysis_trace_v1",
-            claims=[
-                CaseAnalysisClaim(
-                    claim_id="A-01",
-                    claim_type="reported",
-                    text="The incident was reported.",
-                    epistemic_status="reported",
-                    supporting_source_ids=[source["source_id"]],
-                    supporting_citations=[{"source_id": source["source_id"], "exact_quote": quote}],
-                )
-            ],
-        )
-        monkeypatch.setattr("app.analysis.write.reading_from", lambda reply, **kwargs: legacy)
-        return reading()
+        return reading(claim("A-01", source["source_id"], unit_ids))
 
     return cite
 
 
-async def test_a_legacy_elided_quote_is_dropped_not_a_500(monkeypatch, model):
+async def test_an_elided_quote_given_as_a_unit_is_an_invalid_pointer_not_a_500(monkeypatch, model):
     async with isolated_database() as factory:
         case_id, user_id = await case_with_source(factory, LONG_TEXT)
         model(
             assess=[NO_GAPS],
-            read=[legacy_citing(LONG_TEXT, f"{HEAD} ... {TAIL}", monkeypatch)],
+            read=[citing(LONG_TEXT, [f"{HEAD} ... {TAIL}"])],
             judge=[JUDGED],
         )
         async with signed_in(monkeypatch, factory, user_id) as client:
@@ -265,11 +247,10 @@ async def test_a_trace_the_binder_cannot_store_is_a_coded_server_error(monkeypat
         def failing_bound_claims(*args, **kwargs):
             raise ValidationError.from_exception_data("CaseAnalysisTrace", [])
 
-        monkeypatch.setattr("app.analysis.write.bound_claims", failing_bound_claims)
-        quote = " ".join(MARKED_WORDS)
-        model(
-            assess=[NO_GAPS], read=[legacy_citing(MARKED_TEXT, quote, monkeypatch)], judge=[JUDGED]
+        monkeypatch.setattr(
+            "app.analysis.reading_sources.ReadingSources.bound_claims", failing_bound_claims
         )
+        model(assess=[NO_GAPS], read=[citing(MARKED_TEXT, ["U001"])], judge=[JUDGED])
         async with signed_in(monkeypatch, factory, user_id) as client:
             ran = await client.post(f"/cases/{case_id}/analysis")
             stored = await client.get(f"/cases/{case_id}/analysis")

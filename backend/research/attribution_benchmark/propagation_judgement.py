@@ -8,7 +8,7 @@ from app.sources.bundle import CaseSourceItem
 from app.sources.evidence import evidence_units
 from app.trace.claims import CaseAnalysisClaim
 from app.trace.evidence_binding import direct_citation
-from app.trace.trace import CaseProviderJudgement, CaseProviderReading
+from app.trace.trace import CaseProviderJudgement
 
 from research.attribution_benchmark.propagation_data import ResponseCluster
 
@@ -59,15 +59,10 @@ def prepare_payload(cluster: ResponseCluster, accepted: set[str]) -> dict:
     known = {claim_id for claim_id, _ in cluster.assigned_rows}
     if not accepted <= known:
         raise ValueError("Admission contains unknown claim IDs")
-    reading = CaseProviderReading(
-        version="case_analysis_trace_v1",
-        claims=[
-            row_claim(claim_id, row)
-            for claim_id, row in cluster.assigned_rows
-            if claim_id in accepted
-        ],
-    )
-    return judgement_request(reading, "en", ())
+    claims = [
+        row_claim(claim_id, row) for claim_id, row in cluster.assigned_rows if claim_id in accepted
+    ]
+    return judgement_request(claims, "en", ())
 
 
 async def judge(

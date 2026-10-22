@@ -31,6 +31,7 @@ from app.reports.render import (
 )
 from app.reports.schemas import CaseReportContent, ReportQuoteContext
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.bind import bound_references
 from app.trace.citations import CaseUnverifiedCitation
 from app.trace.claims import (
     CaseAnalysisClaim,
@@ -404,6 +405,34 @@ def test_the_stored_report_keeps_each_quote_as_the_trace_holds_it() -> None:
     ]
 
 
+def test_each_stored_quote_has_its_own_context_and_a_blank_quote_has_neither() -> None:
+    report_input = _input_quoting(QUOTED_SOURCE, "a transfer of 52,000 baht")
+    trace = report_input.analysis_trace
+    [in_sentence] = trace.claims[0].supporting_citations
+    source_id = in_sentence.source_id
+    claim = trace.claims[0].model_copy(
+        update={
+            "supporting_citations": [
+                in_sentence,
+                CaseSourceCitation(
+                    source_id=source_id, exact_quote="The victim called the bank.", start=0, end=27
+                ),
+                CaseSourceCitation(source_id=source_id, exact_quote=" "),
+            ]
+        }
+    )
+    report = _stored(
+        report_input.model_copy(
+            update={"analysis_trace": trace.model_copy(update={"claims": [claim]})}
+        )
+    )
+
+    [finding] = report.findings
+    assert finding.supporting_quotes == ["a transfer of 52,000 baht", "The victim called the bank."]
+    assert [context is None for context in finding.supporting_contexts] == [False, True]
+    assert "“The victim called the bank.”" in render_case_report_html(report, ISSUE)
+
+
 SUPPORT_LINES = (
     "ไม่พบข้อความที่อ้างในเอกสาร",
     "ข้อความที่อ้างบางส่วนไม่พบในเอกสาร",
@@ -451,29 +480,6 @@ def test_a_bound_item_is_printed_as_before() -> None:
 
     for line in SUPPORT_LINES:
         assert line not in html
-
-
-def test_a_report_stored_before_the_status_existed_validates_and_prints_no_status_line() -> None:
-    written = _stored(_input_with_support("unbound", "unbound", "unbound")).model_dump(mode="json")
-    for key in ("parties", "timeline", "impacts"):
-        for row in written[key]:
-            del row["support"]
-
-    stored = CaseReportContent.model_validate(written)
-    html = render_case_report_html(stored, ISSUE)
-
-    assert [party.support for party in stored.parties] == [None, None]
-    for line in SUPPORT_LINES:
-        assert line not in html
-    assert "บุคคลและหน่วยงานที่เกี่ยวข้อง" in html
-
-
-def test_an_analysis_stored_before_the_status_existed_makes_a_report_with_none() -> None:
-    report = build_case_report_content(_input())
-
-    assert [party.support for party in report.parties] == [None]
-    assert [event.support for event in report.timeline] == [None]
-    assert [impact.support for impact in report.impacts] == [None]
 
 
 CHECK_WARNING = "ตัวตรวจอัตโนมัติไม่พบว่า Source ที่อ้างรองรับข้อค้นพบนี้"
@@ -531,68 +537,6 @@ def test_a_report_stored_before_the_source_check_existed_validates_and_prints_no
 
     assert [finding.source_check for finding in stored.findings] == [None]
     assert CHECK_WARNING not in render_case_report_html(stored, ISSUE)
-
-
-RETIRED_LINES = (
-    "พบในเอกสารเมื่อไม่นับรูปแบบ",
-    "ตรวจ: ต้นฉบับ",
-    "ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ",
-    "ผลวิเคราะห์ยกมาว่า",
-    "หาจากความหมาย",
-    "เหตุผลเชิงวิเคราะห์",
-    "ข้อมูลนี้ไม่ได้รับการสนับสนุนจากข้อสังเกตที่เชื่อมไว้",
-)
-
-
-def test_a_report_stored_with_retired_quote_notes_validates_and_prints_none_of_them() -> None:
-    written = _stored(_input()).model_dump(mode="json")
-    [finding] = written["findings"]
-    finding["supporting_tolerated"] = [[{"written": "apple", "source": "Apple"}]]
-    finding["contradicting_tolerated"] = []
-    finding["supporting_marked"] = [[{"marks": "~", "place": "edge"}]]
-    finding["contradicting_marked"] = []
-    finding["reasoning_summary"] = "เหตุผลเดิม"
-    finding["unverified_quotes"] = [
-        {
-            "written_quote": "ข้อความที่ไม่มีในต้นฉบับ",
-            "evidence_unit_id": None,
-            "places": [{"written": "198.51.100.24", "source": "198.51.100.23"}],
-            "meaning_passage": "ข้อความที่หาจากความหมาย",
-        }
-    ]
-
-    stored = CaseReportContent.model_validate(written)
-    html = render_case_report_html(stored, ISSUE)
-
-    assert "ข้อความจากหลักฐาน:" in html
-    assert "ไม่สามารถระบุตำแหน่งหลักฐานที่อ้างอิงได้" in html
-    assert not any(line in html for line in RETIRED_LINES)
-    assert "ข้อความที่ไม่มีในต้นฉบับ" not in html
-
-
-def test_a_report_stored_with_projection_verdicts_validates_and_prints_none() -> None:
-    written = _stored(_input()).model_dump(mode="json")
-    for party in written["parties"]:
-        party["projection_grounding"] = {"verdict": "not_supported", "reason": "lr_not_supported"}
-
-    stored = CaseReportContent.model_validate(written)
-
-    assert stored.parties
-    assert not any(line in render_case_report_html(stored, ISSUE) for line in RETIRED_LINES)
-
-
-def test_a_report_stored_before_quote_contexts_still_prints() -> None:
-    written = _stored(_input_quoting(QUOTED_SOURCE, "a transfer of 52,000 baht")).model_dump(
-        mode="json"
-    )
-    for finding in written["findings"]:
-        del finding["supporting_contexts"], finding["contradicting_contexts"]
-        del finding["unverified_quotes"]
-
-    html = render_case_report_html(CaseReportContent.model_validate(written), ISSUE)
-
-    assert "“a transfer of 52,000 baht”" in html
-    assert "<strong>a transfer" not in html
 
 
 def _input_with_unverified(*items: CaseUnverifiedCitation) -> CaseReportInput:
@@ -978,18 +922,6 @@ def test_the_sentence_punctuation_the_model_wrote_after_a_bracket_comes_back_aft
     )
 
 
-def test_a_summary_that_no_longer_matches_its_units_prints_no_punctuation_but_still_prints() -> (
-    None
-):
-    report_input = _input_with_summary_units().model_copy(
-        update={"analysis_summary": "สรุป [A-01]."}
-    )
-    html = render_case_report_html(_stored(report_input), ISSUE)
-
-    assert "พบการใช้ PowerShell<sup>" in paragraph_of(html)
-    assert paragraph_of(html).count(".") == 0
-
-
 def test_a_long_thai_summary_is_one_paragraph_with_every_mark() -> None:
     units = [
         (f"ผู้เสียหายรายที่ {number} โอนเงินไปยังบัญชีของคนร้าย", [f"A-{number:02d}"], "bound")
@@ -1076,69 +1008,16 @@ def test_a_summary_unit_is_escaped_in_the_report() -> None:
     assert "&lt;script&gt;alert(1)&lt;/script&gt; bold" in html
 
 
-def test_a_report_stored_before_the_units_existed_prints_its_summary_as_before() -> None:
-    written = _stored(_input_with_summary_units()).model_dump(mode="json")
-    del written["summary_units"]
-
-    stored = CaseReportContent.model_validate(written)
-    html = render_case_report_html(stored, ISSUE)
-
-    assert stored.summary_units == []
-    assert 'class="body summary-paragraph"' not in html
-    assert "สรุป [A-01]" in html
-
-
-def test_an_analysis_stored_before_the_units_existed_makes_a_report_with_none() -> None:
-    assert build_case_report_content(_input()).summary_units == []
-
-
-def test_an_empty_list_of_units_prints_the_summary_as_before() -> None:
-    written = _stored(_input_with_summary_units()).model_dump(mode="json")
-    written["summary_units"] = []
-
-    html = render_case_report_html(CaseReportContent.model_validate(written), ISSUE)
-
-    assert 'class="body summary-paragraph"' not in html
-    assert "สรุป [A-01]" in html
-
-
-def test_an_analysis_stored_with_retired_fields_makes_a_report_without_them() -> None:
+def test_a_summary_written_as_brackets_alone_has_no_units_and_prints_as_written() -> None:
     report_input = _input()
-    written = report_input.analysis_trace.model_dump(mode="json")
-    [claim] = written["claims"]
-    claim["reasoning_summary"] = "เหตุผลเดิม"
-    claim["supporting_citations"][0]["tolerated_differences"] = [
-        {"written": "apple", "source": "Apple"}
-    ]
-    claim["supporting_citations"][0]["review_flags"] = [
-        {"kind": "meaning_mark", "verdict": "rule_warning", "detail": "~ edge"}
-    ]
-    claim["unverified_citations"] = [
-        {
-            "source_id": report_input.source_bundle.sources[0].source_id,
-            "role": "supporting",
-            "written_quote": "ข้อความที่ไม่มีในต้นฉบับ",
-            "near_passage": None,
-            "meaning_passage": {
-                "source_text": "ข้อความที่หาจากความหมาย",
-                "start": 0,
-                "end": 10,
-                "entailment": 0.97,
-                "model": "fake",
-            },
-        }
-    ]
-    written["grounding"] = {
-        "citations_pointed": 0,
-        "meaning_pointer_unavailable": 3,
-        "meaning_pointer_unavailable_reason": "weights_missing",
-    }
+    trace = bound_references(report_input.analysis_trace.model_copy(update={"summary": "[A-01]."}))
+    report = _stored(
+        report_input.model_copy(update={"analysis_trace": trace, "analysis_summary": trace.summary})
+    )
 
-    trace = CaseAnalysisTrace.model_validate(written)
-    report = build_case_report_content(report_input.model_copy(update={"analysis_trace": trace}))
     html = render_case_report_html(report, ISSUE)
 
-    assert "reasoning_summary" not in trace.claims[0].model_dump()
-    assert "tolerated_differences" not in trace.claims[0].supporting_citations[0].model_dump()
-    assert not any(line in html for line in RETIRED_LINES)
-    assert not any("จากความหมาย" in item for item in report.limitations)
+    assert trace.summary_units == []
+    assert report.summary_units == []
+    assert 'class="body summary-paragraph"' not in html
+    assert '<p class="body">[A-01].</p>' in html

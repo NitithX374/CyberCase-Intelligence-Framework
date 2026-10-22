@@ -7,24 +7,25 @@ import threading
 from fastapi import status
 
 from app.errors import CaseAnalysisFailure
-from app.trace.claim_validation import unverified_claims, usable_claims, validate_claims
+from app.trace.claim_validation import unverified_claims, validate_claims
+from app.trace.claims import CaseAnalysisClaim
 from app.trace.nli_model import NliUnavailable
 from app.trace.summary import summary_pieces
-from app.trace.trace import CaseProviderJudgement, CaseProviderReading
+from app.trace.trace import CaseProviderJudgement
 
 logger = logging.getLogger("app.case_analysis")
 
 
-async def checked_claim_support(reading: CaseProviderReading) -> CaseProviderReading:
+async def checked_claim_support(claims: list[CaseAnalysisClaim]) -> list[CaseAnalysisClaim]:
     stop = threading.Event()
     try:
-        claims, counts = await asyncio.to_thread(validate_claims, reading.claims, stop=stop)
+        checked, counts = await asyncio.to_thread(validate_claims, claims, stop=stop)
     except asyncio.CancelledError:
         stop.set()
         raise
     except NliUnavailable as error:
         logger.error("Claim support verifier unavailable, claims not assessed: %s", error.reason)
-        claims, counts = unverified_claims(reading.claims)
+        checked, counts = unverified_claims(claims)
     logger.info(
         "Claim support: %d supported, %d not supported, %d unassessed; %d calls in %.1f ms",
         counts.supported,
@@ -33,17 +34,13 @@ async def checked_claim_support(reading: CaseProviderReading) -> CaseProviderRea
         counts.calls,
         counts.duration_ms,
     )
-    return reading.model_copy(update={"claims": claims})
-
-
-def usable_reading(reading: CaseProviderReading) -> CaseProviderReading:
-    return reading.model_copy(update={"claims": usable_claims(reading.claims)})
+    return checked
 
 
 def check_judgement_references(
-    judgement: CaseProviderJudgement, reading: CaseProviderReading
+    judgement: CaseProviderJudgement, claims: list[CaseAnalysisClaim]
 ) -> None:
-    allowed = {claim.claim_id for claim in reading.claims}
+    allowed = {claim.claim_id for claim in claims}
     references = {
         claim_id for _, claim_ids in summary_pieces(judgement.summary) for claim_id in claim_ids
     }

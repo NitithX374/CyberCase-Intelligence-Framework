@@ -1,5 +1,4 @@
 import re
-from typing import get_args
 
 import httpx
 import pytest
@@ -12,29 +11,32 @@ from app.analysis.prompts import (
 )
 from app.errors import CaseAnalysisFailure
 from app.llm.request import decode_response
-from app.trace.claims import MAX_CLARIFICATION_QUESTION_CHARS, CaseAssessmentTrace
-from app.trace.trace import CaseProviderJudgement, CaseProviderReadingReply
+from app.trace.claims import MAX_CLARIFICATION_QUESTION_CHARS
 
 
 @pytest.mark.parametrize(
-    ("prompt", "schema"),
+    "prompt",
     [
-        (CASE_READING_SYSTEM_PROMPT, CaseProviderReadingReply),
-        (CASE_READING_JSON_PROMPT, CaseProviderReadingReply),
-        (CASE_JUDGEMENT_SYSTEM_PROMPT, CaseProviderJudgement),
-        (case_assessment_prompt(), CaseAssessmentTrace),
+        CASE_READING_SYSTEM_PROMPT,
+        CASE_READING_JSON_PROMPT,
+        CASE_JUDGEMENT_SYSTEM_PROMPT,
+        case_assessment_prompt(),
     ],
 )
-def test_a_prompt_names_only_the_version_its_schema_requires(prompt, schema) -> None:
-    [required] = get_args(schema.model_fields["version"].annotation)
-
-    assert set(re.findall(r"[a-z]+(?:_[a-z]+)*_v\d+", prompt)) == {required}
+def test_no_prompt_names_a_version(prompt) -> None:
+    assert re.findall(r"[a-z]+(?:_[a-z]+)*_v\d+", prompt) == []
 
 
-def test_the_judgement_is_asked_for_the_json_it_is_validated_against() -> None:
-    assert "Return the requested case_analysis_trace_v1 JSON." in " ".join(
-        CASE_JUDGEMENT_SYSTEM_PROMPT.split()
-    )
+@pytest.mark.parametrize(
+    ("prompt", "sentence"),
+    [
+        (CASE_READING_SYSTEM_PROMPT, "Return only the requested JSON."),
+        (CASE_JUDGEMENT_SYSTEM_PROMPT, "Return the requested JSON."),
+        (case_assessment_prompt(), "Return only the requested JSON."),
+    ],
+)
+def test_each_call_is_asked_for_the_json_it_is_validated_against(prompt, sentence) -> None:
+    assert sentence in " ".join(prompt.split())
 
 
 @pytest.mark.parametrize("prompt", [case_assessment_prompt, lambda: CASE_JUDGEMENT_SYSTEM_PROMPT])

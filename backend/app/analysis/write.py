@@ -8,11 +8,7 @@ from collections.abc import Sequence
 from fastapi import status
 from pydantic import ValidationError
 
-from app.analysis.claim_gate import (
-    check_judgement_references,
-    checked_claim_support,
-    usable_reading,
-)
+from app.analysis.claim_gate import check_judgement_references, checked_claim_support
 from app.analysis.prompts import CASE_JUDGEMENT_SYSTEM_PROMPT, CASE_READING_JSON_PROMPT
 from app.analysis.reading_sources import ReadingSources
 from app.analysis.stream import announce
@@ -22,19 +18,15 @@ from app.errors import CaseAnalysisFailure
 from app.llm.request import request_stage
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle
-from app.trace.bind import bound_claims, followup_registry_items
+from app.trace.bind import followup_registry_items
+from app.trace.claim_validation import usable_claims
 from app.trace.claims import (
     CLAIM_FIELDS_FOR_JUDGEMENT,
     CaseAnalysisClaim,
     CaseFollowupExchange,
     followup_payload,
 )
-from app.trace.trace import (
-    CaseAnalysisTrace,
-    CaseProviderJudgement,
-    CaseProviderReading,
-    CaseProviderReadingReply,
-)
+from app.trace.trace import CaseAnalysisTrace, CaseProviderJudgement, CaseProviderReadingReply
 
 logger = logging.getLogger("app.case_analysis")
 
@@ -59,32 +51,27 @@ async def write_trace(
         config=config.for_reading(),
         stage="case_reading",
         system=CASE_READING_JSON_PROMPT,
-        content=reading_request(
-            sources, language, followup_history, reading_sources=reading_sources
-        ),
+        content=reading_request(reading_sources, language, followup_history),
         schema=CaseProviderReadingReply,
     )
     announce("bind")
-    reading = await checked_reading(
-        reading_from(reply, reading_sources=reading_sources), sources, followup_history
-    )
-    judged = usable_reading(reading)
-    if not judged.claims:
+    claims = await checked_reading(reply, reading_sources)
+    judged = usable_claims(claims)
+    if not judged:
         announce("verify")
-        reading = await checked_claim_support(reading)
+        claims = await checked_claim_support(claims)
         judgement = CaseProviderJudgement(
-            version="case_analysis_trace_v1",
             summary=(
                 "ไม่มีข้อค้นพบที่ผ่านการตรวจการอ้างอิง Source จึงยังไม่สร้างบทสรุปคดี"
-                if language in ("thai", "th")
+                if language == "thai"
                 else "No finding passed the Source citation checks; no case summary was generated."
             ),
         )
-        return joined_trace(reading, judgement, technical_context)
+        return joined_trace(claims, judgement, technical_context)
     announce("verify")
-    verify_task = asyncio.create_task(checked_claim_support(reading))
+    verify_task = asyncio.create_task(checked_claim_support(claims))
     announce("views")
-    view_task = asyncio.create_task(derive_claim_views(judged.claims, config=config))
+    view_task = asyncio.create_task(derive_claim_views(judged, config=config))
     announce("judge")
     judge_task = asyncio.create_task(
         request_stage(
@@ -97,31 +84,29 @@ async def write_trace(
     )
     tasks = (judge_task, view_task, verify_task)
     try:
-        judgement, views, reading = await asyncio.gather(*tasks)
+        judgement, views, claims = await asyncio.gather(*tasks)
         check_judgement_references(judgement, judged)
     except BaseException:
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
         raise
-    judged_ids = {claim.claim_id for claim in judged.claims}
+    judged_ids = {claim.claim_id for claim in judged}
     views.extraction = views.extraction.model_copy(
         update={
             "excluded_claim_ids": [
-                claim.claim_id for claim in reading.claims if claim.claim_id not in judged_ids
+                claim.claim_id for claim in claims if claim.claim_id not in judged_ids
             ]
         }
     )
-    return joined_trace(reading, judgement, technical_context, views=views)
+    return joined_trace(claims, judgement, technical_context, views=views)
 
 
 async def checked_reading(
-    reading: CaseProviderReading,
-    sources: CaseSourceBundle,
-    followup_history: Sequence[CaseFollowupExchange],
-) -> CaseProviderReading:
+    reply: CaseProviderReadingReply, reading_sources: ReadingSources
+) -> list[CaseAnalysisClaim]:
     try:
-        return await asyncio.to_thread(bound_claims, reading, sources, followup_history)
+        return await asyncio.to_thread(reading_sources.bound_claims, reply)
     except ValidationError as error:
         logger.exception("Checking the reading against the case built an invalid trace")
         raise CaseAnalysisFailure(
@@ -131,46 +116,13 @@ async def checked_reading(
         ) from error
 
 
-def reading_from(
-    reply: CaseProviderReadingReply, *, reading_sources: ReadingSources | None = None
-) -> CaseProviderReading:
-    if reading_sources is not None:
-        reply = reading_sources.canonical_reply(reply)
-    return CaseProviderReading(
-        version=reply.version,
-        claims=[
-            CaseAnalysisClaim.model_validate(
-                {
-                    **claim.model_dump(),
-                    "supporting_source_ids": list(
-                        dict.fromkeys(citation.source_id for citation in claim.supporting_citations)
-                    ),
-                    "contradicting_source_ids": list(
-                        dict.fromkeys(
-                            citation.source_id for citation in claim.contradicting_citations
-                        )
-                    ),
-                }
-            )
-            for claim in reply.claims
-        ],
-    )
-
-
 def reading_request(
-    sources: CaseSourceBundle,
+    reading_sources: ReadingSources,
     language: str,
     followup_history: Sequence[CaseFollowupExchange],
-    *,
-    reading_sources: ReadingSources | None = None,
 ) -> dict[str, object]:
-    if reading_sources is None:
-        reading_sources = ReadingSources(
-            (*sources.sources, *followup_registry_items(followup_history))
-        )
     return {
         "response_language": language,
-        "source_revision": sources.revision,
         "case_sources": list(reading_sources.payloads),
         "followup_history": followup_payload(followup_history),
     }
@@ -184,33 +136,32 @@ def summary_sentence_limit(claim_count: int) -> int:
 
 
 def judgement_request(
-    reading: CaseProviderReading,
+    claims: list[CaseAnalysisClaim],
     language: str,
     followup_history: Sequence[CaseFollowupExchange],
 ) -> dict[str, object]:
     return {
         "response_language": language,
-        "summary_sentence_limit": summary_sentence_limit(len(reading.claims)),
+        "summary_sentence_limit": summary_sentence_limit(len(claims)),
         "followup_history": [
             {"qa_id": item.qa_id, "gap_key": item.gap_key, "answered": True}
             for item in followup_history
             if item.is_answered
         ],
-        "reading": reading_payload(reading),
+        "reading": reading_payload(claims),
     }
 
 
-def reading_payload(reading: CaseProviderReading) -> dict[str, object]:
+def reading_payload(claims: list[CaseAnalysisClaim]) -> dict[str, object]:
     return {
         "claims": [
-            claim.model_dump(mode="json", include=CLAIM_FIELDS_FOR_JUDGEMENT)
-            for claim in reading.claims
+            claim.model_dump(mode="json", include=CLAIM_FIELDS_FOR_JUDGEMENT) for claim in claims
         ],
     }
 
 
 def joined_trace(
-    reading: CaseProviderReading,
+    claims: list[CaseAnalysisClaim],
     judgement: CaseProviderJudgement,
     technical_context: CaseRagContextPayload | None = None,
     *,
@@ -219,7 +170,7 @@ def joined_trace(
     return CaseAnalysisTrace(
         analysis_mode="case_overview",
         summary=judgement.summary,
-        claims=reading.claims,
+        claims=claims,
         involved_parties=views.parties if views is not None else [],
         timeline=views.timeline if views is not None else [],
         impacts=views.impacts if views is not None else [],
@@ -235,7 +186,6 @@ __all__ = [
     "checked_reading",
     "joined_trace",
     "judgement_request",
-    "reading_from",
     "reading_payload",
     "reading_request",
     "summary_sentence_limit",

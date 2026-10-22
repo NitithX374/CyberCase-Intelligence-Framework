@@ -300,7 +300,7 @@ export interface components {
         };
         CaseAnalysisClaim: {
             claim_id: string;
-            claim_type: "reported" | "analytical_inference" | "unknown";
+            claim_type: "reported" | "unknown";
             text: string;
             epistemic_status: "reported" | "suspected" | "contradicted" | "not_established" | "unknown" | "not_confirmed";
             supporting_source_ids?: string[];
@@ -327,7 +327,6 @@ export interface components {
             id: string;
             case_id: string;
             source_revision: number;
-            schema_version: "case_analysis_trace_v1";
             status: "validated";
             summary: string;
             trace_json: components["schemas"]["CaseAnalysisTrace"] | null;
@@ -342,8 +341,6 @@ export interface components {
             readonly retrieval_context_id: string | null;
         };
         CaseAnalysisTrace: {
-            version: "case_analysis_trace_v1";
-            validation_status: "validated";
             analysis_mode: "case_overview" | "question_answer";
             summary: string;
             summary_units?: components["schemas"]["CaseSummaryUnit"][];
@@ -369,7 +366,7 @@ export interface components {
         };
         CaseClaimGrounding: {
             verdict: "supported" | "not_supported" | "unassessed";
-            reason: "entailed" | "neutral" | "contradiction" | "low_entailment" | "no_resolved_source" | "unresolved_source_reference" | "conflicting_source" | "claim_uncertain" | "input_too_long" | "lr_supported" | "lr_not_supported" | "verifier_unavailable";
+            reason: "no_resolved_source" | "unresolved_source_reference" | "conflicting_source" | "claim_uncertain" | "lr_supported" | "lr_not_supported" | "verifier_unavailable";
             method?: string | null;
             artifact_sha256?: string | null;
         };
@@ -428,12 +425,11 @@ export interface components {
             updated_at: string;
         };
         CaseReportContent: {
-            version: "case_report_content_v1";
             title: string;
             analysed?: string | null;
             summary: string;
             views_derived_from_claims: boolean;
-            summary_units?: components["schemas"]["ReportSummaryUnit"][];
+            summary_units: components["schemas"]["ReportSummaryUnit"][];
             parties?: components["schemas"]["ReportParty"][];
             timeline?: components["schemas"]["ReportEvent"][];
             impacts?: components["schemas"]["ReportImpact"][];
@@ -462,7 +458,7 @@ export interface components {
             source_id: string;
             exact_quote: string;
             evidence_unit_ids?: string[];
-            pointer_state?: "direct" | "recovered" | "unresolved";
+            pointer_state: "direct" | "recovered" | "unresolved";
             start?: number | null;
             end?: number | null;
             document_id?: string | null;
@@ -561,8 +557,6 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         MessageAnalysisTrace: {
-            version: "case_analysis_trace_v1";
-            validation_status: "validated";
             analysis_mode: "case_overview" | "question_answer";
             summary: string;
             claims: components["schemas"]["CaseAnalysisClaim"][];
@@ -585,20 +579,19 @@ export interface components {
             time: string | null;
             event: string;
             references?: string[];
-            support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
+            support: ("bound" | "mixed" | "unbound" | "no_claim") | null;
         };
         ReportFinding: {
             ordinal: number;
             text: string;
             status: string;
-            is_inference: boolean;
             source_labels?: string[];
             contradicting_source_labels?: string[];
             supporting_quotes?: string[];
             contradicting_quotes?: string[];
-            supporting_contexts?: (components["schemas"]["ReportQuoteContext"] | null)[];
-            contradicting_contexts?: (components["schemas"]["ReportQuoteContext"] | null)[];
-            unverified_quotes?: components["schemas"]["ReportUnverifiedQuote"][];
+            supporting_contexts: (components["schemas"]["ReportQuoteContext"] | null)[];
+            contradicting_contexts: (components["schemas"]["ReportQuoteContext"] | null)[];
+            unverified_quotes: components["schemas"]["ReportUnverifiedQuote"][];
             source_check?: "not_supported" | null;
         };
         ReportGap: {
@@ -611,14 +604,14 @@ export interface components {
         ReportImpact: {
             description: string;
             references?: string[];
-            support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
+            support: ("bound" | "mixed" | "unbound" | "no_claim") | null;
         };
         ReportParty: {
             name: string;
             role: string | null;
-            claim_context?: string[];
+            claim_context: string[];
             references?: string[];
-            support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
+            support: ("bound" | "mixed" | "unbound" | "no_claim") | null;
         };
         ReportQuoteContext: {
             before: string;
@@ -646,7 +639,7 @@ export interface components {
             references?: string[];
         };
         ReportUnverifiedQuote: {
-            evidence_unit_id?: string | null;
+            evidence_unit_id: string | null;
         };
         UserRead: {
             id: string;

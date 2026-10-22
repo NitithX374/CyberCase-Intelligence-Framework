@@ -83,18 +83,24 @@ summary may have (one for every three Claims, from 2 to 8, computed by
 enforced); the former writes presentation views only. Neither is shown the technical
 context: the ATT&CK associations are built afterwards by `bind_to_case`.
 
-`analysis/reading_sources.py` captures each source's revision before Reading and
-sends exact unit text with source-local IDs (`U001`, etc.), unchanged Source IDs
-and document quality headers. The same request-owned mapping expands selected
-aliases to canonical revision-bearing IDs before `reading_from` builds claims.
-Offsets and hashes stay backend-owned; stored citation IDs and stale checks are
-unchanged. The prompt-JSON user message is minified without altering its values.
+`analysis/reading_sources.py` cuts each source into exact-offset Evidence Units
+once per request (`sources/evidence.py`), records each source's revision before
+Reading, and sends exact unit text with source-local IDs (`U001`, etc.), unchanged
+Source IDs and document quality headers. Offsets and hashes stay backend-owned;
+stored citation IDs and stale checks are unchanged. The prompt-JSON user message is
+minified without altering its values.
 
-Between the two calls, `bound_claims` in `trace/bind.py` checks the reading
-against the sources:
-- `sources/evidence.py` partitions each source into exact-offset Evidence Units;
-- `trace/evidence_binding.py` resolves selected IDs to original text and document/page locators;
-  a citation that names no unit is recorded as an invalid reference, never looked up as text;
+Between the two calls, `ReadingSources.bound_claims` binds the reply in one pass,
+against the units the Reader was shown; no source is cut a second time:
+- `trace/evidence_binding.py` expands each selected alias with the revision recorded
+  before Reading and checks it in a fixed order (`unknown_source`, `malformed_id`,
+  `cross_source`, `stale_id`, `unknown_unit`, `empty_unit`; an ID the claim already
+  selected is `duplicate_id`), then resolves it to original text and document/page
+  locators; a failure is kept as an invalid pointer with the expanded ID, and a
+  citation that names no unit is recorded as an invalid reference, never looked up
+  as text;
+- a repeated claim ID is dropped, and each claim is built once, its source-ID lists
+  the sorted known sources it named;
 - a `reported` claim left with no resolved supporting evidence becomes `not_confirmed`.
 
 **The claim verifier.** `analysis/claim_gate.py` runs `trace/claim_validation.py`
@@ -135,8 +141,9 @@ with reason `verifier_unavailable`; the analysis still completes. Every Claim th
 passes the structural checks reaches the Views and Judgement whatever its verdict,
 and an analysis abstains without Views or Judgement only when no Claim passes them.
 Judgement receives each Claim's bound citation text (`exact_quote` only); the
-selection shapes the verification premise and nothing else. Historical .80 verdicts
-keep their original meaning.
+selection shapes the verification premise and nothing else. No stored verdict came
+from the earlier .80 rule, so its reasons (`entailed`, `neutral`, `contradiction`,
+`low_entailment`, `input_too_long`) are no longer accepted.
 
 The weights live in `backend/models/nli_mdeberta` and
 `backend/models/source_selector_mpnet` (`CLAIM_NLI_PATH`, `CLAIM_SELECTOR_PATH`),
@@ -160,7 +167,8 @@ On failure, a recorded warning/status and empty views allow Judgement to complet
 Its failure cancels outstanding extraction. UI/Report views trace through Claims
 to their Source units; no views enter Judgement/chat. Stored analysis snapshots
 cache the output for reads/reports, without a new table or revision mechanism.
-Historical local-extraction metadata and offsets remain readable. The former
+Migration `0003_strip_retired_fields` removed the historical local-extraction
+metadata and offsets from stored records. The former
 local loader/per-Claim runtime and Compose service are removed; the stopped research
 experiments remain separate.
 
@@ -181,8 +189,8 @@ questions/answers remain Reader Sources and stored provenance, preventing that
 route from bypassing the structural checks. Technical context remains external and
 is not sent to Judgement. Judgement references to withheld/unknown Claim IDs fail
 before joining the trace. Every
-summary sentence ends with the IDs of the claims it rests on. Older saved Claims
-without `semantic_grounding` remain unassessed; reads/reports do not run NLI.
+summary sentence ends with the IDs of the claims it rests on. Every stored Claim
+carries its `semantic_grounding`; reads/reports do not run NLI.
 
 `bind_to_case` then checks the judgement's references with `bound_references`:
 - the `affected_claim_ids` of a gap;
@@ -395,11 +403,11 @@ render from that stored copy only. It delegates Source labels and quotes to
 `reports/findings.py`, MITRE rows and notices to `reports/technical.py`, and
 caveats to `reports/limitations.py`. A row stored in an older shape is refused
 with `case_report_outdated` by the HTML, PDF and generate paths rather than rebuilt from current code,
-and the report list leaves it out so the valid versions still load. A field added
-later is optional, so an older row still validates: a report stored before
-quotations carried context has no `supporting_contexts`, and its quotes print
-alone. `supporting_quotes` stays a list of strings for that reason, with the
-contexts beside it.
+and the report list leaves it out so the valid versions still load. Every stored
+report carries the fields it prints from; `source_check` is the one optional field,
+because reports stored before it existed have none. `supporting_quotes` is a list
+of strings, and `supporting_contexts` beside it holds one context, or none, for
+each quote.
 
 **The validator belonged to the report-fidelity experiment, not to the app.**
 `StructuredReport`, `build_case_template_report` and
@@ -474,10 +482,16 @@ python -m ruff format . ; python -m ruff check .
 ```
 
 `requirements-dev.txt` is `requirements.txt` plus pytest, pytest-asyncio, ruff
-and reportlab. The schema comes from one migration,
-`alembic/versions/0001_initial_schema.py`, and
+and reportlab. The schema comes from `alembic/versions/0001_initial_schema.py`
+and `0002_source_deactivation.py`, and
 `tests/test_database_schema_parity_alembic.py` checks that it matches the
-models. The PostgreSQL tests skip unless `CYBERCASE_TEST_DATABASE_URL` is set.
+models. `0003_strip_retired_fields.py` changes no schema: it removes the keys of
+dropped fields from stored analyses, chat messages and reports, each only where
+its model held that field. `0004_strip_version_labels.py` changes no schema
+either: it removes the `version` and `validation_status` labels from the same
+records, again only where a model held them. `0005_strip_inference_flag.py` removes
+`is_inference`, false in every stored report, from each finding; its downgrade puts
+`false` back, because the code before it requires the key. The PostgreSQL tests skip unless `CYBERCASE_TEST_DATABASE_URL` is set.
 
 Two tests in `tests/test_case_report_presentation.py` render a real PDF and need
 WeasyPrint's native libraries (GTK on Windows). They pass inside the Docker

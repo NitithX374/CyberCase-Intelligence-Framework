@@ -2,12 +2,12 @@ import type { CitedSourcePassage, SourceMessageRef } from "./types";
 
 export function citedSourcePassages(source: SourceMessageRef): CitedSourcePassage[] {
   if (source.passages) return source.passages;
-  if (!source.exactQuote) return [];
+  if (!source.exactQuote || !source.pointerState) return [];
   return [
     {
       quote: source.exactQuote,
       context: source.quoteContext,
-      pointerState: source.pointerState ?? "legacy",
+      pointerState: source.pointerState,
       start: source.start ?? null,
       end: source.end ?? null,
     },

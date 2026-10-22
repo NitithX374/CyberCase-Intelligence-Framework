@@ -5,7 +5,6 @@ from uuid import uuid4
 import httpx
 import pytest
 
-from app.analysis.technical_context.contracts import MITRE_APPLICABILITY_GATE_VERSION
 from app.analysis.technical_context.gate_llm import (
     MITRE_APPLICABILITY_SOURCE_MAX_CHARS,
     MITRE_APPLICABILITY_SYSTEM_PROMPT,
@@ -84,7 +83,6 @@ def test_gate_uses_fixed_prompt_strict_schema_and_deterministic_options(
         "source_message_ids",
         "trigger_text",
     }
-    assert MITRE_APPLICABILITY_GATE_VERSION == "mitre_applicability_v1"
 
 
 def test_malformed_provider_output_fails_closed(monkeypatch, resolved_models) -> None:

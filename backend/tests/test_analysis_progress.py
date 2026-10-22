@@ -231,13 +231,11 @@ def test_the_preflight_announces_itself():
 
 
 def test_reading_source_binding_and_judgement_announce_in_turn():
-    from test_analysis_write import case_with_one_narrative, reading_of
+    from test_analysis_write import case_with_one_narrative, reading_of, reply_of
 
     bundle = case_with_one_narrative()
-    reading = reading_of(bundle)
-    judgement = CaseProviderJudgement(
-        version="case_analysis_trace_v1", summary="Nothing yet.", gaps=[]
-    )
+    reading = reply_of(reading_of(bundle))
+    judgement = CaseProviderJudgement(summary="Nothing yet.", gaps=[])
 
     async def request_stage(**kwargs):
         return reading if kwargs["stage"] == "case_reading" else judgement

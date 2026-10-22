@@ -23,7 +23,6 @@ function technicalProjection(): { result: CaseAnalysisResultRead; sources: CaseS
     retrieval_context_id: "retrieval-1",
     external_context_json: {
       technical_augmentation: {
-        version: "case_mitre_augmentation_v1",
         status: "retrieved_with_matches",
         retrieval_context_id: "retrieval-1",
         mitre_table: [
@@ -156,7 +155,6 @@ describe("TechnicalContextView", () => {
     };
     projection.result.external_context_json = {
       technical_augmentation: {
-        version: "case_mitre_augmentation_v1",
         status: "not_applicable",
         applicability: { decision: "SKIP", source_message_ids: [], trigger_text: [] },
         retrieval_context_id: null,

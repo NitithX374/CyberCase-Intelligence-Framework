@@ -37,9 +37,7 @@ BUNDLE = CaseSourceBundle(revision=1, sources=(NARRATIVE,))
 def trace_citing(source_id: str, unit_id: str) -> CaseAnalysisTrace:
     return CaseAnalysisTrace.model_validate(
         {
-            "version": "case_analysis_trace_v1",
             "analysis_mode": "case_overview",
-            "validation_status": "validated",
             "summary": "An incident was reported.",
             "claims": [
                 {

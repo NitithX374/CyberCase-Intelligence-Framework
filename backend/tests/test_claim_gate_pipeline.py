@@ -17,12 +17,7 @@ from app.sources.evidence import evidence_units
 from app.trace import claim_validation
 from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, CaseSourceCitation
 from app.trace.nli_model import NliUnavailable
-from app.trace.trace import (
-    CaseProviderJudgement,
-    CaseProviderReading,
-    CaseProviderReadingReply,
-    CaseViewExtraction,
-)
+from app.trace.trace import CaseProviderJudgement, CaseProviderReadingReply, CaseViewExtraction
 
 
 def fixtures():
@@ -98,14 +93,13 @@ async def run_pipeline(
         if kwargs["stage"] == "case_reading":
             return CaseProviderReadingReply.model_validate(
                 {
-                    "version": "case_analysis_trace_v1",
                     "claims": initial if claims is None else claims,
                 }
             )
         assert kwargs["stage"] == "case_judgement"
         if on_judgement is not None:
             await on_judgement()
-        return CaseProviderJudgement(version="case_analysis_trace_v1", summary=summary)
+        return CaseProviderJudgement(summary=summary)
 
     async def views(accepted, *, config):
         view_inputs.extend(accepted)
@@ -380,8 +374,7 @@ async def test_cancelling_the_checks_stops_the_scoring_of_the_remaining_claims(m
         )
         for number in (1, 2, 3)
     ]
-    reading = CaseProviderReading(version="case_analysis_trace_v1", claims=claims)
-    task = asyncio.create_task(checked_claim_support(reading))
+    task = asyncio.create_task(checked_claim_support(claims))
 
     try:
         assert await asyncio.to_thread(first.wait, 5)
@@ -457,20 +450,15 @@ def test_withheld_claim_ids_cannot_return_through_gaps():
             }
         ]
     }
-    given = CaseProviderReading(
-        version="case_analysis_trace_v1",
-        claims=[
-            CaseAnalysisClaim(
-                claim_id="A-01",
-                claim_type="reported",
-                text="John sent an email.",
-                epistemic_status="reported",
-            )
-        ],
-    )
-    judgement = CaseProviderJudgement(
-        version="case_analysis_trace_v1", summary="John sent an email [A-01].", **fields
-    )
+    given = [
+        CaseAnalysisClaim(
+            claim_id="A-01",
+            claim_type="reported",
+            text="John sent an email.",
+            epistemic_status="reported",
+        )
+    ]
+    judgement = CaseProviderJudgement(summary="John sent an email [A-01].", **fields)
     with pytest.raises(CaseAnalysisFailure) as raised:
         check_judgement_references(judgement, given)
     assert raised.value.code == "case_judgement_invalid_claim"

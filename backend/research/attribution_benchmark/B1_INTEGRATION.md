@@ -7,7 +7,9 @@ experiment; its production sections describe the code as it was then.
 
 Updated 2026-10-07. The working tree integrates the selected verifier; deployment
 into a newly built Docker image must be checked separately. Historical saved
-analyses retain their original methods and thresholds.
+analyses retain their original methods and thresholds. Updated 2026-10-23: no
+stored analysis holds a verdict of the earlier .80 rule, and the verdict model no
+longer accepts its reasons.
 
 Updated 2026-10-09 (owner decision): the verdict is a warning label, not a filter.
 The sections below describe the label; the matched downstream experiment measured
@@ -71,6 +73,8 @@ trace. Updated 2026-10-17: a verdict keeps only its reason and the verifier's
 method and artifact hash. The selected/considered citation indices,
 similarities, three NLI probabilities, LR score, raw token count, truncation and
 timing are no longer stored, and a verdict saved with them reads without them.
+Updated 2026-10-22: migration `0003_strip_retired_fields` removed them from the
+verdicts saved before, and the verdict model no longer drops them on read.
 
 Judgement receives the original bound citation text attached to each Claim,
 including units excluded by semantic selection; the selection controls the

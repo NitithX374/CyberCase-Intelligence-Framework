@@ -75,7 +75,6 @@ def report_findings(
                 ordinal=ordinal,
                 text=claim.text,
                 status=EPISTEMIC_STATUS_LABELS.get(claim.epistemic_status, "ไม่ระบุสถานะ"),
-                is_inference=claim.claim_type == "analytical_inference",
                 source_labels=labels_for_sources(
                     claim_source_ids(claim.supporting_citations, claim.supporting_source_ids),
                     labels,

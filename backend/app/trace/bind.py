@@ -9,6 +9,7 @@ from app.trace.associations import mapped_associations
 from app.trace.citations import CaseUnverifiedCitation
 from app.trace.claims import (
     CaseAnalysisClaim,
+    CaseClaimContent,
     CaseEpistemicStatus,
     CaseFollowupExchange,
     CaseSourceCitation,
@@ -19,13 +20,13 @@ from app.trace.trace import (
     CaseAnalysisTrace,
     CaseImpactItem,
     CaseInvolvedParty,
-    CaseProviderReading,
     CaseSummaryUnit,
     CaseTimelineItem,
     SupportStatus,
 )
 
 Projection = TypeVar("Projection", CaseInvolvedParty, CaseTimelineItem, CaseImpactItem)
+Claim = TypeVar("Claim", bound=CaseClaimContent)
 
 
 def item_support(
@@ -68,19 +69,17 @@ def resolve_case_trace(
     mitre_table: object = None,
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseAnalysisTrace:
-    return bound_references(bound_claims(trace, source_bundle, followup_history), mitre_table)
+    claims = bound_claims(trace.claims, source_bundle, followup_history)
+    return bound_references(trace.model_copy(update={"claims": claims}), mitre_table)
 
 
 def bound_claims(
-    written: CaseAnalysisTrace | CaseProviderReading,
+    claims: list[CaseAnalysisClaim],
     source_bundle: CaseSourceBundle,
     followup_history: Sequence[CaseFollowupExchange] = (),
-) -> CaseAnalysisTrace | CaseProviderReading:
+) -> list[CaseAnalysisClaim]:
     evidence = EvidenceIndex((*source_bundle.sources, *followup_registry_items(followup_history)))
-    claims = deduplicated_claims(written.claims)
-    return written.model_copy(
-        update={"claims": [resolve_claim(claim, evidence) for claim in claims]}
-    )
+    return [resolve_claim(claim, evidence) for claim in deduplicated_claims(claims)]
 
 
 def bound_references(trace: CaseAnalysisTrace, mitre_table: object = None) -> CaseAnalysisTrace:
@@ -112,9 +111,9 @@ def summary_units(
     return units
 
 
-def deduplicated_claims(claims: list[CaseAnalysisClaim]) -> list[CaseAnalysisClaim]:
+def deduplicated_claims(claims: Sequence[Claim]) -> list[Claim]:
     seen: set[str] = set()
-    kept: list[CaseAnalysisClaim] = []
+    kept: list[Claim] = []
     for claim in claims:
         if claim.claim_id in seen:
             continue
@@ -141,14 +140,9 @@ def resolve_claim(claim: CaseAnalysisClaim, evidence: EvidenceIndex) -> CaseAnal
     contradicting, contradicting_invalid, contradicting_unverified = bind_citations(
         claim.contradicting_citations, "contradicting", evidence, seen
     )
-    unverified: list[CaseUnverifiedCitation] = []
-    for item in [
-        *claim.unverified_citations,
-        *supporting_unverified,
-        *contradicting_unverified,
-    ]:
-        if item not in unverified:
-            unverified.append(item)
+    unverified = unique_unverified(
+        [*claim.unverified_citations, *supporting_unverified, *contradicting_unverified]
+    )
     return claim.model_copy(
         update={
             "epistemic_status": confirmed_status(claim.epistemic_status, supporting),
@@ -164,6 +158,14 @@ def resolve_claim(claim: CaseAnalysisClaim, evidence: EvidenceIndex) -> CaseAnal
             "invalid_evidence": [*supporting_invalid, *contradicting_invalid],
         }
     )
+
+
+def unique_unverified(items: Sequence[CaseUnverifiedCitation]) -> list[CaseUnverifiedCitation]:
+    unverified: list[CaseUnverifiedCitation] = []
+    for item in items:
+        if item not in unverified:
+            unverified.append(item)
+    return unverified
 
 
 def confirmed_status(
@@ -184,9 +186,13 @@ def role_source_ids(
 __all__ = [
     "bound_claims",
     "bound_references",
+    "confirmed_status",
+    "deduplicated_claims",
     "followup_registry_items",
     "item_support",
     "resolve_case_trace",
     "resolve_claim",
+    "role_source_ids",
+    "unique_unverified",
     "with_support",
 ]

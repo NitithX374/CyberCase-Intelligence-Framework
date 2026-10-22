@@ -98,7 +98,6 @@ def test_the_augmentation_record_keeps_the_fields_the_reader_reads():
 
     stored = external_context(artifacts)["technical_augmentation"]
 
-    assert stored["version"] == "case_mitre_augmentation_v1"
     assert stored["retrieval_context_id"] == context.retrieval_context_id
     assert stored["mitre_table"] == list(context.mitre_table)
     assert stored["association_ids"] == ["MA-01"]

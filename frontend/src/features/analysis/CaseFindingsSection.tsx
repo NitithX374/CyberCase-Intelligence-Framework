@@ -109,16 +109,8 @@ function FindingRow({
         </p>
         <div className="flex items-center gap-1.5 shrink-0">
           {showClaimType && finding.claimType !== "reported" && (
-            <span
-              className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
-                finding.claimType === "unknown"
-                  ? "bg-amber-500/10 text-amber-700"
-                  : "bg-surface-nested text-ink-secondary"
-              }`}
-            >
-              {finding.claimType === "analytical_inference"
-                ? "Inference"
-                : claimTypeLabels[finding.claimType]}
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700">
+              {claimTypeLabels[finding.claimType]}
             </span>
           )}
         </div>
@@ -213,7 +205,7 @@ export function CaseFindingsSection({
         const canCollapse = group.collapsible && group.findings.length > INITIAL_FINDINGS;
         const visible =
           canCollapse && !expanded ? group.findings.slice(0, INITIAL_FINDINGS) : group.findings;
-        const showClaimType = group.id !== "reported" && group.id !== "analytical_inference";
+        const showClaimType = group.id !== "reported";
         const isAlertGroup =
           group.id === "not_confirmed" ||
           group.id === "not_established" ||

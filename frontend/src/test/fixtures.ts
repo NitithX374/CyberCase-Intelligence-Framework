@@ -90,13 +90,12 @@ export function followupHistory(
   gapKey = "topic:incident-time",
 ) {
   return {
-    version: "followup_snapshot_v1",
     items: [{ qa_id: qaId, gap_key: gapKey, question, answer }],
   };
 }
 
 export function sourcesRead(...sourceIds: string[]) {
-  return { version: "sources_read_v1", source_ids: sourceIds };
+  return { source_ids: sourceIds };
 }
 
 export function claim(
@@ -111,7 +110,9 @@ export function claim(
     epistemic_status: "reported",
     supporting_source_ids: [citedSourceId],
     contradicting_source_ids: [],
-    supporting_citations: [{ source_id: citedSourceId, exact_quote: text }],
+    supporting_citations: [
+      { source_id: citedSourceId, exact_quote: text, pointer_state: "recovered" },
+    ],
     contradicting_citations: [],
     ...overrides,
   };
@@ -135,8 +136,6 @@ export function association(
 
 export function trace(overrides: Partial<CaseAnalysisTrace> = {}): CaseAnalysisTrace {
   return {
-    version: "case_analysis_trace_v1",
-    validation_status: "validated",
     analysis_mode: "case_overview",
     summary: "",
     claims: [],
@@ -153,7 +152,6 @@ export function analysisResult(
     id: analysisId,
     case_id: caseId,
     source_revision: 1,
-    schema_version: "case_analysis_trace_v1",
     status: "validated",
     summary: "",
     trace_json: null,

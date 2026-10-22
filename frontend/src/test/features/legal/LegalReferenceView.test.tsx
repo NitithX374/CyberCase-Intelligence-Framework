@@ -12,7 +12,6 @@ function analysis(externalContext: Record<string, unknown>): CaseAnalysisResultR
     id: "analysis-1",
     case_id: "case-1",
     source_revision: 1,
-    schema_version: "case_analysis_trace_v1",
     status: "validated",
     summary: "",
     trace_json: null,

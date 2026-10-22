@@ -25,7 +25,6 @@ import type {
 
 export const claimTypeLabels: Record<ClaimType, string> = {
   reported: "Reported information",
-  analytical_inference: "Analytical inference",
   unknown: "Unknown information",
 };
 
@@ -55,7 +54,6 @@ const groupDefinitions = [
   { id: "contradicted", title: "Contradicted", collapsible: false },
   { id: "suspected", title: "Suspected", collapsible: false },
   { id: "reported", title: "Reported information", collapsible: true },
-  { id: "analytical_inference", title: "Analytical inferences", collapsible: true },
   { id: "unknown_claim", title: "Unknown information", collapsible: false },
 ] as const;
 
@@ -85,11 +83,7 @@ export function buildCaseOverview(
   if (!result) return emptyCaseOverview();
   if (!rows) return unavailableCaseOverview("The case sources are not available yet.");
   const trace = result.trace_json;
-  if (
-    trace?.version !== "case_analysis_trace_v1" ||
-    trace.validation_status !== "validated" ||
-    trace.analysis_mode !== "case_overview"
-  ) {
+  if (!trace || trace.analysis_mode !== "case_overview") {
     return unavailableCaseOverview("The saved Case analysis trace is unavailable or unsupported.");
   }
   const sources = parseCaseSources(rows, analysisFollowups(result));
@@ -235,8 +229,6 @@ function claimBacking(byId: Map<string, CaseFinding>) {
     return {
       sources,
       linkedClaims: cited.map(({ id, text }) => ({ id, text })),
-      inferred:
-        cited.length > 0 && cited.every((finding) => finding.claimType === "analytical_inference"),
       unconfirmed: unconfirmedStatuses(cited.map((finding) => finding.epistemicStatus)),
     };
   };

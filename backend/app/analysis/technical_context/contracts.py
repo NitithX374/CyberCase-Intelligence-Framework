@@ -12,10 +12,6 @@ from pydantic import (
     model_validator,
 )
 
-from app.trace.retired import without_retired
-
-RETIRED_AUGMENTATION_FIELDS = frozenset({"shadow_applicability"})
-
 
 class QueryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -95,16 +91,12 @@ class QueryResponse(BaseModel):
         return None if value == "" else value
 
 
-MITRE_APPLICABILITY_GATE_VERSION = "mitre_applicability_v1"
-
-
 MitreApplicabilityDecision = Literal["SKIP", "RETRIEVE"]
 
 
 class MitreApplicabilityRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["mitre_applicability_v1"] = MITRE_APPLICABILITY_GATE_VERSION
     decision: MitreApplicabilityDecision
     source_message_ids: list[str] = Field(default_factory=list, max_length=64)
     trigger_text: list[str] = Field(default_factory=list, max_length=16)
@@ -133,9 +125,6 @@ def skipped_mitre_applicability(
     )
 
 
-CASE_MITRE_AUGMENTATION_VERSION = "case_mitre_augmentation_v1"
-
-
 CaseTechnicalAugmentationStatus = Literal[
     "not_applicable",
     "insufficient_context",
@@ -148,7 +137,6 @@ CaseTechnicalAugmentationStatus = Literal[
 class CaseTechnicalAugmentation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["case_mitre_augmentation_v1"] = CASE_MITRE_AUGMENTATION_VERSION
     status: CaseTechnicalAugmentationStatus
     applicability: MitreApplicabilityRecord
     retrieval_context_id: str | None = None
@@ -156,11 +144,6 @@ class CaseTechnicalAugmentation(BaseModel):
     mitre_table: list[dict[str, object]] = Field(default_factory=list)
     association_ids: list[str] = Field(default_factory=list)
     failure_code: str | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_AUGMENTATION_FIELDS)
 
 
 @dataclass(frozen=True)
@@ -172,13 +155,11 @@ class CaseRagContextPayload:
 
 
 __all__ = [
-    "CASE_MITRE_AUGMENTATION_VERSION",
     "CaseRagContextPayload",
     "CaseTechnicalAugmentation",
     "CaseTechnicalAugmentationStatus",
     "LegalProvision",
     "LegalReferenceResult",
-    "MITRE_APPLICABILITY_GATE_VERSION",
     "MitreApplicabilityDecision",
     "MitreApplicabilityRecord",
     "MitreTableRow",

@@ -32,7 +32,6 @@ def reading_fixture():
     history = (CaseFollowupExchange("QA-03", "who_affected", "Who was affected?", texts[2]),)
     output = CaseProviderReadingReply.model_validate(
         {
-            "version": "case_analysis_trace_v1",
             "claims": [
                 {
                     "claim_id": f"A-0{index}",
@@ -92,9 +91,7 @@ async def test_bound_whole_case_same_claim_set_concurrent_views_and_judgement(
         assert [item["supporting_citations"][0]["exact_quote"] for item in claims] == [
             source.text for source in bundle.sources
         ] + [history[0].answer]
-        return CaseProviderJudgement(
-            version=reading.version, summary="Jane reported a loss [A-01]."
-        )
+        return CaseProviderJudgement(summary="Jane reported a loss [A-01].")
 
     monkeypatch.setattr(views, "request_stage", view_stage)
     monkeypatch.setattr(write, "request_stage", judgement_stage)

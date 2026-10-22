@@ -13,15 +13,13 @@ from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 
 CASE_ID = uuid4()
 TRACE = {
-    "version": "case_analysis_trace_v1",
     "analysis_mode": "case_overview",
-    "validation_status": "validated",
     "summary": "Payroll files were encrypted.",
     "claims": [],
     "gaps": [],
     "mitre_associations": [],
 }
-NO_ANSWERS = {"version": "followup_snapshot_v1", "items": []}
+NO_ANSWERS = {"items": []}
 
 
 def narrative(created_at):
@@ -49,7 +47,7 @@ def message(ordinal: int, content: str, *, gap_key=None, replies_to=None):
 
 
 def sources_read(*sources) -> dict:
-    return {"version": "sources_read_v1", "source_ids": [source.id for source in sources]}
+    return {"source_ids": [source.id for source in sources]}
 
 
 def case_and_analysis(record, *, chat_messages=()):
@@ -84,7 +82,6 @@ def test_a_report_lists_only_the_answers_its_analysis_read():
         lambda read: {
             "sources_read": sources_read(read),
             "followup_history": {
-                "version": "followup_snapshot_v1",
                 "items": [
                     {
                         "qa_id": "QA-01",
@@ -139,7 +136,7 @@ def test_a_row_without_a_source_snapshot_is_refused_not_guessed_from_time():
 def test_a_recorded_source_that_is_gone_is_refused():
     case, result = case_and_analysis(
         lambda read: {
-            "sources_read": {"version": "sources_read_v1", "source_ids": [str(uuid4())]},
+            "sources_read": {"source_ids": [str(uuid4())]},
             "followup_history": NO_ANSWERS,
         }
     )

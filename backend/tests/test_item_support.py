@@ -18,7 +18,6 @@ from app.trace.trace import (
     CaseImpactItem,
     CaseInvolvedParty,
     CaseProviderJudgement,
-    CaseProviderReading,
     CaseProviderReadingReply,
     CaseTimelineItem,
 )
@@ -125,20 +124,6 @@ def test_binding_marks_what_rests_only_on_a_claim_whose_unit_was_not_found():
     assert bound.impacts[0].claim_ids == []
 
 
-def test_a_trace_stored_before_the_status_existed_still_validates_without_one():
-    _, trace = bundle_and_trace()
-    stored = json.loads(trace.model_dump_json())
-    for key in ("involved_parties", "timeline", "impacts"):
-        for item in stored[key]:
-            del item["support"]
-
-    reloaded = CaseAnalysisTrace.model_validate(stored)
-
-    assert [party.support for party in reloaded.involved_parties] == [None, None]
-    assert [item.support for item in reloaded.timeline] == [None, None]
-    assert [impact.support for impact in reloaded.impacts] == [None]
-
-
 def test_the_status_is_in_no_schema_the_model_fills():
     for schema in (
         CaseProviderReadingReply.model_json_schema(),
@@ -162,10 +147,6 @@ def test_a_reply_that_names_a_status_is_refused():
 def test_neither_model_is_shown_the_status():
     bundle, trace = bundle_and_trace()
     bound = resolve_case_trace(trace, bundle)
-    reading = CaseProviderReading(
-        version="case_analysis_trace_v1",
-        claims=bound.claims,
-    )
 
-    for payload in (reading_payload(reading), analysis_payload(bound, None)):
+    for payload in (reading_payload(bound.claims), analysis_payload(bound, None)):
         assert not {"involved_parties", "timeline", "impacts"} & payload.keys()
