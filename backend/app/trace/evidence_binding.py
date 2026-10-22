@@ -15,7 +15,9 @@ from app.trace.quotes import find_document_locator
 from app.trace.sentences import SentenceIndex, quote_context
 
 
-def direct_citation(unit: EvidenceUnit, source: CaseSourceItem) -> CaseSourceCitation:
+def direct_citation(
+    unit: EvidenceUnit, source: CaseSourceItem, sentences: SentenceIndex | None = None
+) -> CaseSourceCitation:
     locator = find_document_locator(
         {
             "document_id": source.document_id,
@@ -39,7 +41,7 @@ def direct_citation(unit: EvidenceUnit, source: CaseSourceItem) -> CaseSourceCit
         page_numbers=list(locator[2]) if locator else [],
         context=None
         if "<tr" in quote.lower()
-        else quote_context(SentenceIndex(source.text), quote),
+        else quote_context(sentences or SentenceIndex(source.text), quote),
     )
 
 
@@ -69,7 +71,10 @@ def bind_citations(
                 unit, reason = None, "duplicate_id"
             seen.add(unit_id)
             if unit is not None:
-                bound.append(direct_citation(unit, index.sources[citation.source_id]))
+                source_id = citation.source_id
+                bound.append(
+                    direct_citation(unit, index.sources[source_id], index.sentences[source_id])
+                )
             else:
                 invalid.append(
                     CaseInvalidEvidence(

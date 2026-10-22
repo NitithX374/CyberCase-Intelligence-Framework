@@ -67,7 +67,7 @@ def tokenize_sentences(segment_text: str) -> list[str]:
 
 
 def sentence_spans(text: str) -> list[tuple[int, int]]:
-    return [span for start, end in line_spans(text) for span in line_sentences(text, start, end)]
+    return SentenceIndex(text).spans(0, len(text))
 
 
 def line_spans(text: str) -> list[tuple[int, int]]:
@@ -109,7 +109,7 @@ def stripped(text: str, start: int, end: int) -> tuple[int, int]:
 class SentenceIndex:
     def __init__(self, text: str) -> None:
         self.text = text
-        self.split: dict[int, list[tuple[int, int]]] = {}
+        self.split: dict[str, list[tuple[int, int]]] = {}
 
     @cached_property
     def lines(self) -> list[tuple[int, int]]:
@@ -118,10 +118,21 @@ class SentenceIndex:
     def line_of(self, position: int) -> int:
         return bisect_right([start for start, _ in self.lines], position) - 1
 
-    def sentences(self, line: int) -> list[tuple[int, int]]:
+    def spans(self, start: int, end: int) -> list[tuple[int, int]]:
+        return [
+            span
+            for line_start, line_end in line_spans(self.text[start:end])
+            for span in self.sentences_in(start + line_start, start + line_end)
+        ]
+
+    def sentences_in(self, start: int, end: int) -> list[tuple[int, int]]:
+        line = self.text[start:end]
         if line not in self.split:
-            self.split[line] = line_sentences(self.text, *self.lines[line])
-        return self.split[line]
+            self.split[line] = line_sentences(line, 0, len(line))
+        return [(start + span_start, start + span_end) for span_start, span_end in self.split[line]]
+
+    def sentences(self, line: int) -> list[tuple[int, int]]:
+        return self.sentences_in(*self.lines[line])
 
     def previous(self, line: int, sentence: tuple[int, int]) -> tuple[int, int] | None:
         same_line = self.sentences(line)
