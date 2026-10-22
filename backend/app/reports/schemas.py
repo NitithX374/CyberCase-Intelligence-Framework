@@ -4,22 +4,9 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
-from app.trace.retired import without_retired
 from app.trace.trace import SupportStatus
-
-RETIRED_VIEW_ROW_FIELDS = frozenset({"projection_grounding"})
-RETIRED_UNVERIFIED_QUOTE_FIELDS = frozenset({"written_quote", "places", "meaning_passage"})
-RETIRED_FINDING_FIELDS = frozenset(
-    {
-        "supporting_tolerated",
-        "contradicting_tolerated",
-        "supporting_marked",
-        "contradicting_marked",
-        "reasoning_summary",
-    }
-)
 
 
 class ReportRow(BaseModel):
@@ -33,11 +20,6 @@ class ReportParty(ReportRow):
     references: list[str] = Field(default_factory=list)
     support: SupportStatus | None = None
 
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_VIEW_ROW_FIELDS)
-
 
 class ReportEvent(ReportRow):
     time: str | None
@@ -45,21 +27,11 @@ class ReportEvent(ReportRow):
     references: list[str] = Field(default_factory=list)
     support: SupportStatus | None = None
 
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_VIEW_ROW_FIELDS)
-
 
 class ReportImpact(ReportRow):
     description: str
     references: list[str] = Field(default_factory=list)
     support: SupportStatus | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_VIEW_ROW_FIELDS)
 
 
 class ReportSummaryUnit(ReportRow):
@@ -78,11 +50,6 @@ class ReportQuoteContext(ReportRow):
 class ReportUnverifiedQuote(ReportRow):
     evidence_unit_id: str | None = None
 
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_UNVERIFIED_QUOTE_FIELDS)
-
 
 class ReportFinding(ReportRow):
     ordinal: int
@@ -97,11 +64,6 @@ class ReportFinding(ReportRow):
     contradicting_contexts: list[ReportQuoteContext | None] = Field(default_factory=list)
     unverified_quotes: list[ReportUnverifiedQuote] = Field(default_factory=list)
     source_check: Literal["not_supported"] | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_FINDING_FIELDS)
 
 
 class ReportTechnique(ReportRow):

@@ -5,16 +5,12 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from app.trace.quotes import MAX_PAGE_SPANS_PER_QUOTE, MAX_QUOTE_CHARS, MAX_SUPPORTED_DOCUMENT_PAGES
-from app.trace.retired import without_retired
 
 MAX_CONTEXT_CHARS = 400
 MAX_EVIDENCE_ID_CHARS = 240
 
 EvidencePointerState = Literal["direct", "recovered", "unresolved"]
 EvidenceUnitId = Annotated[str, Field(max_length=MAX_EVIDENCE_ID_CHARS)]
-
-RETIRED_CITATION_FIELDS = frozenset({"tolerated_differences", "review_flags"})
-RETIRED_UNVERIFIED_FIELDS = frozenset({"written_quote", "near_passage", "meaning_passage"})
 
 
 def legacy_pointer_schema(schema: dict[str, object]) -> None:
@@ -78,11 +74,6 @@ class CaseSourceCitation(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_CITATION_FIELDS)
-
-    @model_validator(mode="before")
-    @classmethod
     def normalize_legacy_quote(cls, data: object) -> object:
         if isinstance(data, dict) and not data.get("evidence_unit_ids"):
             data = dict(data)
@@ -133,11 +124,6 @@ class CaseUnverifiedCitation(BaseModel):
     source_id: str = Field(min_length=1, max_length=160)
     role: Literal["supporting", "contradicting"]
     evidence_unit_id: str | None = Field(default=None, max_length=MAX_EVIDENCE_ID_CHARS)
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_UNVERIFIED_FIELDS)
 
 
 def normalized_citation(data: object) -> dict[str, object] | None:

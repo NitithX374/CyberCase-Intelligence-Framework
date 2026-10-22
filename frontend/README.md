@@ -62,9 +62,10 @@ Details preserves Parties, Timeline and Impacts and their
 links to Findings/full Claim context in a collapsed Related findings disclosure. Unknown role/time render as unspecified;
 new LLM rows have no fabricated offsets, confidence or semantic verdict. They are
 presentation views, not authoritative factual records and never Judgement inputs.
-Extractor failure is displayed independently of completed Judgement. Historical
-extractor metadata and earlier semantic caution notes remain readable without
-restoring model-specific UI or old projection-diagnostics components. `bound` describes
+Extractor failure is displayed independently of completed Judgement. Backend
+migration 0003 removed the historical extractor metadata and earlier semantic caution
+notes from stored records, and no model-specific UI or projection-diagnostics
+component remains. `bound` describes
 resolvable Claim citations only. User-facing labels use Source; API keys including
 `evidence_unit_ids` and `claim_ids` remain stable. `CaseTimelineItem.time` is now
 nullable; the report and generated API contract reflect that.

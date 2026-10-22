@@ -160,7 +160,8 @@ On failure, a recorded warning/status and empty views allow Judgement to complet
 Its failure cancels outstanding extraction. UI/Report views trace through Claims
 to their Source units; no views enter Judgement/chat. Stored analysis snapshots
 cache the output for reads/reports, without a new table or revision mechanism.
-Historical local-extraction metadata and offsets remain readable. The former
+Migration `0003_strip_retired_fields` removed the historical local-extraction
+metadata and offsets from stored records. The former
 local loader/per-Claim runtime and Compose service are removed; the stopped research
 experiments remain separate.
 
@@ -474,10 +475,12 @@ python -m ruff format . ; python -m ruff check .
 ```
 
 `requirements-dev.txt` is `requirements.txt` plus pytest, pytest-asyncio, ruff
-and reportlab. The schema comes from one migration,
-`alembic/versions/0001_initial_schema.py`, and
+and reportlab. The schema comes from `alembic/versions/0001_initial_schema.py`
+and `0002_source_deactivation.py`, and
 `tests/test_database_schema_parity_alembic.py` checks that it matches the
-models. The PostgreSQL tests skip unless `CYBERCASE_TEST_DATABASE_URL` is set.
+models. `0003_strip_retired_fields.py` changes no schema: it removes the keys of
+dropped fields from stored analyses, chat messages and reports, each only where
+its model held that field. The PostgreSQL tests skip unless `CYBERCASE_TEST_DATABASE_URL` is set.
 
 Two tests in `tests/test_case_report_presentation.py` render a real PDF and need
 WeasyPrint's native libraries (GTK on Windows). They pass inside the Docker

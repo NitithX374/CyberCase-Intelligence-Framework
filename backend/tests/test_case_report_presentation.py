@@ -533,54 +533,6 @@ def test_a_report_stored_before_the_source_check_existed_validates_and_prints_no
     assert CHECK_WARNING not in render_case_report_html(stored, ISSUE)
 
 
-RETIRED_LINES = (
-    "พบในเอกสารเมื่อไม่นับรูปแบบ",
-    "ตรวจ: ต้นฉบับ",
-    "ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ",
-    "ผลวิเคราะห์ยกมาว่า",
-    "หาจากความหมาย",
-    "เหตุผลเชิงวิเคราะห์",
-    "ข้อมูลนี้ไม่ได้รับการสนับสนุนจากข้อสังเกตที่เชื่อมไว้",
-)
-
-
-def test_a_report_stored_with_retired_quote_notes_validates_and_prints_none_of_them() -> None:
-    written = _stored(_input()).model_dump(mode="json")
-    [finding] = written["findings"]
-    finding["supporting_tolerated"] = [[{"written": "apple", "source": "Apple"}]]
-    finding["contradicting_tolerated"] = []
-    finding["supporting_marked"] = [[{"marks": "~", "place": "edge"}]]
-    finding["contradicting_marked"] = []
-    finding["reasoning_summary"] = "เหตุผลเดิม"
-    finding["unverified_quotes"] = [
-        {
-            "written_quote": "ข้อความที่ไม่มีในต้นฉบับ",
-            "evidence_unit_id": None,
-            "places": [{"written": "198.51.100.24", "source": "198.51.100.23"}],
-            "meaning_passage": "ข้อความที่หาจากความหมาย",
-        }
-    ]
-
-    stored = CaseReportContent.model_validate(written)
-    html = render_case_report_html(stored, ISSUE)
-
-    assert "ข้อความจากหลักฐาน:" in html
-    assert "ไม่สามารถระบุตำแหน่งหลักฐานที่อ้างอิงได้" in html
-    assert not any(line in html for line in RETIRED_LINES)
-    assert "ข้อความที่ไม่มีในต้นฉบับ" not in html
-
-
-def test_a_report_stored_with_projection_verdicts_validates_and_prints_none() -> None:
-    written = _stored(_input()).model_dump(mode="json")
-    for party in written["parties"]:
-        party["projection_grounding"] = {"verdict": "not_supported", "reason": "lr_not_supported"}
-
-    stored = CaseReportContent.model_validate(written)
-
-    assert stored.parties
-    assert not any(line in render_case_report_html(stored, ISSUE) for line in RETIRED_LINES)
-
-
 def test_a_report_stored_before_quote_contexts_still_prints() -> None:
     written = _stored(_input_quoting(QUOTED_SOURCE, "a transfer of 52,000 baht")).model_dump(
         mode="json"
@@ -1100,45 +1052,3 @@ def test_an_empty_list_of_units_prints_the_summary_as_before() -> None:
 
     assert 'class="body summary-paragraph"' not in html
     assert "สรุป [A-01]" in html
-
-
-def test_an_analysis_stored_with_retired_fields_makes_a_report_without_them() -> None:
-    report_input = _input()
-    written = report_input.analysis_trace.model_dump(mode="json")
-    [claim] = written["claims"]
-    claim["reasoning_summary"] = "เหตุผลเดิม"
-    claim["supporting_citations"][0]["tolerated_differences"] = [
-        {"written": "apple", "source": "Apple"}
-    ]
-    claim["supporting_citations"][0]["review_flags"] = [
-        {"kind": "meaning_mark", "verdict": "rule_warning", "detail": "~ edge"}
-    ]
-    claim["unverified_citations"] = [
-        {
-            "source_id": report_input.source_bundle.sources[0].source_id,
-            "role": "supporting",
-            "written_quote": "ข้อความที่ไม่มีในต้นฉบับ",
-            "near_passage": None,
-            "meaning_passage": {
-                "source_text": "ข้อความที่หาจากความหมาย",
-                "start": 0,
-                "end": 10,
-                "entailment": 0.97,
-                "model": "fake",
-            },
-        }
-    ]
-    written["grounding"] = {
-        "citations_pointed": 0,
-        "meaning_pointer_unavailable": 3,
-        "meaning_pointer_unavailable_reason": "weights_missing",
-    }
-
-    trace = CaseAnalysisTrace.model_validate(written)
-    report = build_case_report_content(report_input.model_copy(update={"analysis_trace": trace}))
-    html = render_case_report_html(report, ISSUE)
-
-    assert "reasoning_summary" not in trace.claims[0].model_dump()
-    assert "tolerated_differences" not in trace.claims[0].supporting_citations[0].model_dump()
-    assert not any(line in html for line in RETIRED_LINES)
-    assert not any("จากความหมาย" in item for item in report.limitations)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.trace.claims import (
     CaseAnalysisClaim,
@@ -13,25 +13,10 @@ from app.trace.claims import (
     clipped,
     normalize_identifier,
 )
-from app.trace.retired import without_retired
 
 MAX_SUMMARY_CHARS = 24_000
 
 SupportStatus = Literal["bound", "mixed", "unbound", "no_claim"]
-
-RETIRED_TRACE_FIELDS = frozenset({"grounding"})
-RETIRED_VIEW_FIELDS = frozenset({"projection_grounding", "field_spans"})
-RETIRED_EXTRACTION_FIELDS = frozenset(
-    {
-        "revision",
-        "library_version",
-        "device",
-        "threshold",
-        "quantization",
-        "runtime_revision",
-        "field_resolution_issues",
-    }
-)
 
 
 class ProviderParty(BaseModel):
@@ -53,11 +38,6 @@ class ProviderParty(BaseModel):
 class CaseInvolvedParty(ProviderParty):
     role: str | None = Field(default=None, min_length=1, max_length=500)
     support: SupportStatus | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_VIEW_FIELDS)
 
     @field_validator("name", "role")
     @classmethod
@@ -86,11 +66,6 @@ class CaseTimelineItem(ProviderTimelineItem):
     event: str = Field(min_length=1, max_length=4_000)
     support: SupportStatus | None = None
 
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_VIEW_FIELDS)
-
     @field_validator("time", "event")
     @classmethod
     def normalize_text(cls, value: str | None) -> str | None:
@@ -115,11 +90,6 @@ class ProviderImpactItem(BaseModel):
 class CaseImpactItem(ProviderImpactItem):
     description: str = Field(min_length=1, max_length=4_000)
     support: SupportStatus | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_VIEW_FIELDS)
 
 
 class CaseMitreAssociation(BaseModel):
@@ -164,11 +134,6 @@ class CaseViewExtraction(BaseModel):
     warning: str | None = Field(default=None, max_length=200)
     items_dropped: int = Field(default=0, ge=0)
 
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_EXTRACTION_FIELDS)
-
 
 class CaseAnalysisTrace(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -187,11 +152,6 @@ class CaseAnalysisTrace(BaseModel):
     retrieval_context_id: str | None = Field(default=None, min_length=1, max_length=160)
     view_extraction: CaseViewExtraction | None = None
     stop_reason: str | None = Field(default=None, max_length=40)
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_TRACE_FIELDS)
 
 
 class CaseProviderReading(BaseModel):

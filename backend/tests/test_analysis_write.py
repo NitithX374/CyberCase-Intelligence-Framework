@@ -164,7 +164,6 @@ def test_a_stored_legacy_reading_still_reads_with_its_quote():
                     "epistemic_status": "reported",
                     "supporting_source_ids": [source_id],
                     "contradicting_source_ids": [],
-                    "reasoning_summary": None,
                     "supporting_citations": [{"source_id": source_id, "exact_quote": SOURCE_TEXT}],
                     "contradicting_citations": [],
                 }

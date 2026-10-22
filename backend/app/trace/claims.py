@@ -23,31 +23,9 @@ from app.trace.citations import (
 from app.trace.citations import (
     CaseSourceCitation as CaseSourceCitation,
 )
-from app.trace.retired import without_retired
 
 MAX_CLARIFICATION_QUESTION_CHARS = 300
 MAX_RESOLVED_EVIDENCE_REFERENCES = 64 * 64
-RETIRED_CLAIM_FIELDS = frozenset({"reasoning_summary"})
-RETIRED_VERIFIER_FIELDS = frozenset(
-    {
-        "model",
-        "label",
-        "entailment",
-        "threshold",
-        "neutral",
-        "contradiction",
-        "p_supported",
-        "selected_citation_indices",
-        "considered_citation_indices",
-        "selected_evidence_unit_ids",
-        "source_similarities",
-        "selector_threshold",
-        "selection_ms",
-        "raw_tokens",
-        "truncated",
-        "duration_ms",
-    }
-)
 
 
 CaseClaimType = Literal["reported", "analytical_inference", "unknown"]
@@ -168,11 +146,6 @@ class CaseClaimGrounding(BaseModel):
     method: str | None = None
     artifact_sha256: str | None = None
 
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_VERIFIER_FIELDS)
-
 
 class CaseAnalysisClaim(CaseClaimFields):
     supporting_citations: list[CaseSourceCitation] = Field(
@@ -186,11 +159,6 @@ class CaseAnalysisClaim(CaseClaimFields):
     )
     invalid_evidence: list[CaseInvalidEvidence] = Field(default_factory=list)
     semantic_grounding: CaseClaimGrounding | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def without_retired_fields(cls, data: object) -> object:
-        return without_retired(data, RETIRED_CLAIM_FIELDS)
 
     @model_validator(mode="before")
     @classmethod
