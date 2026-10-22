@@ -103,7 +103,7 @@ function sourceRef(source: CaseSourceRef, citation: CaseSourceCitation | null): 
     question: source.question,
     ...(quote && citation
       ? {
-          pointerState: citation.pointer_state ?? "legacy",
+          pointerState: citation.pointer_state,
           start: citation.start ?? null,
           end: citation.end ?? null,
         }

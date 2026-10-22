@@ -110,7 +110,9 @@ export function claim(
     epistemic_status: "reported",
     supporting_source_ids: [citedSourceId],
     contradicting_source_ids: [],
-    supporting_citations: [{ source_id: citedSourceId, exact_quote: text }],
+    supporting_citations: [
+      { source_id: citedSourceId, exact_quote: text, pointer_state: "recovered" },
+    ],
     contradicting_citations: [],
     ...overrides,
   };

@@ -185,16 +185,6 @@ def test_binding_a_bound_trace_again_gives_the_same_units():
     assert again.summary_units == first.summary_units
 
 
-def test_a_trace_stored_before_the_units_existed_validates_with_none():
-    stored = json.loads(bound_trace(SUMMARY).model_dump_json())
-    del stored["summary_units"]
-
-    reloaded = CaseAnalysisTrace.model_validate(stored)
-
-    assert reloaded.summary_units == []
-    assert reloaded.summary == SUMMARY
-
-
 def test_the_units_survive_the_stored_trace_being_read_back():
     bound = bound_trace(SUMMARY)
 

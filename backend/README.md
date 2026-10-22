@@ -37,7 +37,7 @@ A manual analysis request is refused with 409 `analysis_waiting_followup` while 
 
 An analysis reads one `CaseSourceBundle(revision, sources)` plus the separate follow-up history. The bundle is passed through assessment, optional technical augmentation, structured analysis, and source binding without database access inside the analysis steps. The workflow stores the result only after model work finishes and refuses to store it if the Case source revision changed meanwhile. The stored result records what it read in `external_context_json`: `sources_read`, the IDs of the sources it read, and `followup_history`, each answered follow-up's QA id, question and answer. The report takes the list of sources from `sources_read` and reads those source rows (`recorded_source_bundle` in `app/reports/generate.py`); a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is not re-read from chat.
 
-Reading receives every source's exact unit text with local IDs such as `U001`, the unchanged `source_id`, and document/quality metadata. `app/analysis/reading_sources.py` captures revisions before the call and expands selected aliases to canonical IDs before binding; offsets and hashes stay backend-owned. `app/sources/evidence.py` and `app/trace/evidence_binding.py` retain deterministic exact spans, revision checks and document page locators. Stored traces keep full canonical IDs. Units are computed at analysis time and need no table or migration. Historical quote/pointer fields remain readable; new binding uses source-unit IDs without quote recovery.
+Reading receives every source's exact unit text with local IDs such as `U001`, the unchanged `source_id`, and document/quality metadata. `app/analysis/reading_sources.py` captures revisions before the call and expands selected aliases to canonical IDs before binding; offsets and hashes stay backend-owned. `app/sources/evidence.py` and `app/trace/evidence_binding.py` retain deterministic exact spans, revision checks and document page locators. Stored traces keep full canonical IDs. Units are computed at analysis time and need no table or migration. Binding uses source-unit IDs without quote recovery, and every stored analysis citation is a `direct` one.
 
 The Reader returns only canonical `claims`. The backend resolves
 Source-unit IDs to original text/provenance. One prompt-structured LLM call batches
@@ -47,8 +47,8 @@ Judgement/chat and are not authoritative factual records. The extractor input is
 only Claim IDs/text. Schema and nonempty known Claim links are checked; any row
 with an unknown ID is dropped and logged. Roles and combined date/time may be
 null. Views receive no independent semantic verifier or fabricated offsets/citations. Existing
-`bound`/`mixed`/`unbound`/`no_claim` meanings remain structural. Historical extractor
-and projection metadata remain readable through generic records. B1-LR
+`bound`/`mixed`/`unbound`/`no_claim` meanings remain structural. Migration 0003 removed
+the historical extractor and projection metadata from stored records. B1-LR
 checks Claims against selected Source units beside both calls and only labels them;
 its LR boundary is0.50 with longest-first NLI truncation512. If a pinned model is
 unavailable the Claims are marked not assessed and the analysis completes; it

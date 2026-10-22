@@ -240,7 +240,9 @@ describe("an association the page cannot tie to a case source", () => {
       ...claims[0],
       claim_id: "A-02",
       supporting_source_ids: ["QA-01"],
-      supporting_citations: [{ source_id: "QA-01", exact_quote: "I downloaded a tool." }],
+      supporting_citations: [
+        { source_id: "QA-01", exact_quote: "I downloaded a tool.", pointer_state: "recovered" },
+      ],
     });
 
     const context = buildTechnicalContext(result, sources);

@@ -54,6 +54,16 @@ def case_sources() -> CaseSourceBundle:
     return CaseSourceBundle(revision=1, sources=(narrative, statement))
 
 
+STORED_CITATION = CaseSourceCitation(
+    source_id=NARRATIVE_ID,
+    evidence_unit_ids=[f"{NARRATIVE_ID}:U001-0000000000000000"],
+    pointer_state="direct",
+    start=0,
+    end=len(NARRATIVE),
+    exact_quote=NARRATIVE,
+)
+
+
 def stored_analysis():
     claim = CaseAnalysisClaim(
         claim_id="A-01",
@@ -61,11 +71,7 @@ def stored_analysis():
         text="The victim was called by someone posing as police.",
         epistemic_status="reported",
         supporting_source_ids=[NARRATIVE_ID],
-        supporting_citations=[
-            CaseSourceCitation(
-                source_id=NARRATIVE_ID, exact_quote="someone claiming to be a police officer"
-            )
-        ],
+        supporting_citations=[STORED_CITATION],
     )
     gap = CaseAnalysisGap(
         gap_id="G-01",
@@ -251,25 +257,11 @@ def test_after_an_analysis_a_claim_is_cited_with_the_sources_behind_it(monkeypat
     assert [claim.claim_id for claim in output.trace.claims] == ["A-01"]
 
 
-STORED_CITATION = CaseSourceCitation(
-    source_id=NARRATIVE_ID,
-    evidence_unit_ids=[f"{NARRATIVE_ID}:U001-0000000000000000"],
-    pointer_state="direct",
-    start=0,
-    end=len(NARRATIVE),
-    exact_quote=NARRATIVE,
-)
-
-
 def ask_about_the_stored_citation(monkeypatch, sources: CaseSourceBundle):
-    result = stored_analysis()
-    trace = CaseAnalysisTrace.model_validate(result.trace_json)
-    claim = trace.claims[0].model_copy(update={"supporting_citations": [STORED_CITATION]})
-    result.trace_json = trace.model_copy(update={"claims": [claim]}).model_dump(mode="json")
     output, _ = ask(
         monkeypatch,
         reply(unit("A caller posed as police.", claim_ids=["A-01"])),
-        result=result,
+        analysed=True,
         sources=sources,
     )
     [answered] = output.units

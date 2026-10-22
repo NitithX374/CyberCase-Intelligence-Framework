@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
 import { AnalysisLayout } from "@/features/analysis/AnalysisLayout";
-import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
+import type { CaseAnalysisResultRead, CaseSourceCitation, CaseSourceRead } from "@/lib/api/types";
 import { useAnalysisAvailability, useCaseAnalysis } from "@/features/analysis/queries";
 import { useCaseSources } from "@/features/sources/queries";
 import { useIsFollowupPending } from "@/features/chat/useCaseChat";
@@ -54,15 +54,16 @@ function caseProjection(options: { page?: boolean; stale?: boolean } = {}): {
   const source = options.page
     ? pagedDocumentSource("Page 4: received 52,000 baht.", 4)
     : narrativeSource("The reporting party named Account A.");
-  const citation = options.page
+  const citation: CaseSourceCitation = options.page
     ? {
         source_id: source.id,
         exact_quote: "received 52,000 baht",
+        pointer_state: "recovered",
         document_id: "DOC-1",
         filename: "statement.pdf",
         page_numbers: [4],
       }
-    : { source_id: source.id, exact_quote: source.exact_text };
+    : { source_id: source.id, exact_quote: source.exact_text, pointer_state: "recovered" };
   const summary = "The submitted material establishes a reported transaction.";
   const result = analysisResult({
     summary,

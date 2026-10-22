@@ -35,13 +35,12 @@ describe("Saved Finding Source linkage", () => {
     },
   );
 
-  it("does not imply semantic support from direct, recovered and legacy pointers", () => {
+  it("does not imply semantic support from direct and recovered pointers", () => {
     const state = findingTraceabilityData(
       claim("John sent an email.", "S1", {
         supporting_citations: [
           direct,
           { source_id: "S2", exact_quote: "An email was sent.", pointer_state: "recovered" },
-          { source_id: "S3", exact_quote: "An email." },
         ],
       }),
     );

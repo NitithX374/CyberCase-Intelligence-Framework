@@ -180,16 +180,19 @@ def test_the_migration_strips_a_report_back_to_what_a_report_stores_now():
     current = CaseReportContent(
         title="An incident",
         summary="John sent an email.",
-        parties=[ReportParty(name="John", role=None)],
-        timeline=[ReportEvent(time=None, event="An email was sent.")],
-        impacts=[ReportImpact(description="The mailbox was exposed.")],
+        views_derived_from_claims=True,
+        summary_units=[],
+        parties=[ReportParty(name="John", role=None, claim_context=[QUOTE], support="bound")],
+        timeline=[ReportEvent(time=None, event="An email was sent.", support="bound")],
+        impacts=[ReportImpact(description="The mailbox was exposed.", support="bound")],
         findings=[
             ReportFinding(
                 ordinal=1,
                 text=QUOTE,
                 status="reported",
-                is_inference=False,
-                unverified_quotes=[ReportUnverifiedQuote()],
+                supporting_contexts=[],
+                contradicting_contexts=[],
+                unverified_quotes=[ReportUnverifiedQuote(evidence_unit_id=None)],
             )
         ],
         sources=[ReportSource(label="S1", kind="narrative", detail="Statement")],

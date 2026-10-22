@@ -13,10 +13,6 @@ EvidencePointerState = Literal["direct", "recovered", "unresolved"]
 EvidenceUnitId = Annotated[str, Field(max_length=MAX_EVIDENCE_ID_CHARS)]
 
 
-def legacy_pointer_schema(schema: dict[str, object]) -> None:
-    schema.pop("default", None)
-
-
 class CaseEvidenceReference(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -62,24 +58,13 @@ class CaseSourceCitation(BaseModel):
     source_id: str = Field(min_length=1, max_length=160)
     exact_quote: str = Field(default="", max_length=MAX_QUOTE_CHARS)
     evidence_unit_ids: list[EvidenceUnitId] = Field(default_factory=list, max_length=64)
-    pointer_state: EvidencePointerState = Field(
-        default="recovered", json_schema_extra=legacy_pointer_schema
-    )
+    pointer_state: EvidencePointerState = "recovered"
     start: int | None = Field(default=None, ge=0)
     end: int | None = Field(default=None, gt=0)
     document_id: str | None = Field(default=None, min_length=1, max_length=160)
     filename: str | None = Field(default=None, min_length=1, max_length=255)
     page_numbers: list[int] = Field(default_factory=list, max_length=MAX_PAGE_SPANS_PER_QUOTE)
     context: CaseQuoteContext | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def normalize_legacy_quote(cls, data: object) -> object:
-        if isinstance(data, dict) and not data.get("evidence_unit_ids"):
-            data = dict(data)
-            if isinstance(data.get("exact_quote"), str):
-                data["exact_quote"] = data["exact_quote"].strip()
-        return data
 
     @field_validator("source_id", "document_id", "filename")
     @classmethod
@@ -148,7 +133,7 @@ def normalized_citation(data: object) -> dict[str, object] | None:
         "source_id": source_id,
         "exact_quote": quote,
         "evidence_unit_ids": unit_ids,
-        "pointer_state": data.get("pointer_state", "unresolved" if unit_ids else "recovered"),
+        "pointer_state": data.get("pointer_state", "unresolved"),
         "start": data.get("start"),
         "end": data.get("end"),
         "document_id": bounded_locator(data.get("document_id"), 160),

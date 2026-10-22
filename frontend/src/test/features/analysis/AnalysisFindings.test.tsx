@@ -26,6 +26,7 @@ const analysis = analysisResult({
           {
             source_id: source.id,
             exact_quote: "received 52,000 baht",
+            pointer_state: "recovered",
             document_id: "DOC-1",
             filename: "statement.pdf",
             page_numbers: [4],

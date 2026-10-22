@@ -155,7 +155,18 @@ def test_the_migration_strips_a_report_back_to_what_a_report_stores_now():
     current = CaseReportContent(
         title="An incident",
         summary="John sent an email.",
-        findings=[ReportFinding(ordinal=1, text=QUOTE, status="reported", is_inference=False)],
+        views_derived_from_claims=False,
+        summary_units=[],
+        findings=[
+            ReportFinding(
+                ordinal=1,
+                text=QUOTE,
+                status="reported",
+                supporting_contexts=[],
+                contradicting_contexts=[],
+                unverified_quotes=[],
+            )
+        ],
         sources=[ReportSource(label="S1", kind="narrative", detail="Statement")],
     ).model_dump(mode="json")
     stored = {"version": "case_report_content_v1", **current}

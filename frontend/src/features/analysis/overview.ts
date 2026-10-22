@@ -25,7 +25,6 @@ import type {
 
 export const claimTypeLabels: Record<ClaimType, string> = {
   reported: "Reported information",
-  analytical_inference: "Analytical inference",
   unknown: "Unknown information",
 };
 
@@ -55,7 +54,6 @@ const groupDefinitions = [
   { id: "contradicted", title: "Contradicted", collapsible: false },
   { id: "suspected", title: "Suspected", collapsible: false },
   { id: "reported", title: "Reported information", collapsible: true },
-  { id: "analytical_inference", title: "Analytical inferences", collapsible: true },
   { id: "unknown_claim", title: "Unknown information", collapsible: false },
 ] as const;
 
@@ -231,8 +229,6 @@ function claimBacking(byId: Map<string, CaseFinding>) {
     return {
       sources,
       linkedClaims: cited.map(({ id, text }) => ({ id, text })),
-      inferred:
-        cited.length > 0 && cited.every((finding) => finding.claimType === "analytical_inference"),
       unconfirmed: unconfirmedStatuses(cited.map((finding) => finding.epistemicStatus)),
     };
   };

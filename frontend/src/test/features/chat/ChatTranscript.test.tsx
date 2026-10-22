@@ -140,7 +140,13 @@ describe("ChatTranscript source references", () => {
       {
         supporting_source_ids: [narrative.id],
         contradicting_source_ids: [],
-        supporting_citations: [{ source_id: narrative.id, exact_quote: "seeing a blue vehicle" }],
+        supporting_citations: [
+          {
+            source_id: narrative.id,
+            exact_quote: "seeing a blue vehicle",
+            pointer_state: "recovered",
+          },
+        ],
         contradicting_citations: [],
       },
     ]);
@@ -168,13 +174,18 @@ describe("ChatTranscript source references", () => {
           {
             source_id: statement.id,
             exact_quote: "records the transfer",
+            pointer_state: "recovered",
             document_id: "DOC-1",
             filename: "statement.pdf",
             page_numbers: [4],
           },
         ],
         contradicting_citations: [
-          { source_id: "QA-03", exact_quote: "No transfer was ever made." },
+          {
+            source_id: "QA-03",
+            exact_quote: "No transfer was ever made.",
+            pointer_state: "recovered",
+          },
         ],
       },
     ]);
@@ -206,7 +217,13 @@ describe("ChatTranscript claims that are not settled", () => {
     epistemic_status: "reported",
     supporting_source_ids: [sources[0].id],
     contradicting_source_ids: [],
-    supporting_citations: [{ source_id: sources[0].id, exact_quote: "seeing a blue vehicle" }],
+    supporting_citations: [
+      {
+        source_id: sources[0].id,
+        exact_quote: "seeing a blue vehicle",
+        pointer_state: "recovered",
+      },
+    ],
     contradicting_citations: [],
   };
   const notConfirmed = {
@@ -222,7 +239,9 @@ describe("ChatTranscript claims that are not settled", () => {
     epistemic_status: "suspected",
     supporting_source_ids: [otherId],
     contradicting_source_ids: [],
-    supporting_citations: [{ source_id: otherId, exact_quote: "the driver left at noon" }],
+    supporting_citations: [
+      { source_id: otherId, exact_quote: "the driver left at noon", pointer_state: "recovered" },
+    ],
     contradicting_citations: [],
   };
 
@@ -276,7 +295,13 @@ describe("ChatTranscript claims that are not settled", () => {
       basis: "case_fact",
       claim_ids: ["A-02"],
       supporting_source_ids: [otherId, sources[0].id],
-      supporting_citations: [{ source_id: sources[0].id, exact_quote: "seeing a blue vehicle" }],
+      supporting_citations: [
+        {
+          source_id: sources[0].id,
+          exact_quote: "seeing a blue vehicle",
+          pointer_state: "recovered",
+        },
+      ],
     };
     render(
       <ChatTranscript
@@ -339,6 +364,7 @@ describe("ChatTranscript answer units", () => {
                 {
                   source_id: statement.id,
                   exact_quote: "transfer to 123-4-56789",
+                  pointer_state: "recovered",
                   document_id: "DOC-1",
                   filename: "statement.pdf",
                   page_numbers: [20],

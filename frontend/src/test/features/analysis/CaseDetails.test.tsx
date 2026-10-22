@@ -21,7 +21,6 @@ const events = (count: number) =>
     time: `09:0${index}`,
     event: `Event ${index + 1}`,
     sources: [],
-    inferred: false,
     unconfirmed: [],
   }));
 
@@ -34,7 +33,6 @@ describe("CaseDetails", () => {
             time: "Monday",
             event: "The account was frozen",
             sources: [],
-            inferred: false,
             unconfirmed: ["not_confirmed"],
             supportNote: "No cited quotation was found in the sources.",
           },
@@ -58,7 +56,6 @@ describe("CaseDetails", () => {
             time: "Monday",
             event: "The account was frozen",
             sources: [],
-            inferred: false,
             unconfirmed: [],
             supportNote: "No cited quotation was found in the sources.",
           },
@@ -68,7 +65,6 @@ describe("CaseDetails", () => {
             name: "Somchai",
             role: "Account holder",
             sources: [statement],
-            inferred: false,
             unconfirmed: [],
             supportNote: "Some cited quotations were not found in the sources.",
           },
@@ -77,14 +73,12 @@ describe("CaseDetails", () => {
           {
             description: "A transfer was made",
             sources: [],
-            inferred: false,
             unconfirmed: [],
             supportNote: "Not linked to any claim.",
           },
           {
             description: "A bound impact",
             sources: [statement],
-            inferred: false,
             unconfirmed: [],
           },
         ]}
@@ -110,18 +104,14 @@ describe("CaseDetails", () => {
             time: "12 Sep, morning",
             event: "The attachment was opened",
             sources: [statement],
-            inferred: false,
             unconfirmed: [],
           },
         ]}
-        parties={[
-          { name: "Somchai", role: "Account holder", sources: [], inferred: true, unconfirmed: [] },
-        ]}
+        parties={[{ name: "Somchai", role: "Account holder", sources: [], unconfirmed: [] }]}
         impacts={[
           {
             description: "52,000 baht left the account",
             sources: [],
-            inferred: false,
             unconfirmed: [],
           },
         ]}
@@ -136,7 +126,6 @@ describe("CaseDetails", () => {
 
     const parties = screen.getByRole("region", { name: "Parties 1" });
     expect(within(parties).getByText("Account holder")).toBeInTheDocument();
-    expect(within(parties).getByText("Inference")).toBeInTheDocument();
 
     expect(screen.getByRole("region", { name: "Impact 1" })).toHaveTextContent(
       "52,000 baht left the account",
@@ -159,7 +148,6 @@ describe("CaseDetails", () => {
             time: "09:00",
             event: "A transfer left the account",
             sources: [],
-            inferred: false,
             unconfirmed: ["not_confirmed"],
           },
         ]}
@@ -168,7 +156,6 @@ describe("CaseDetails", () => {
             name: "Somchai",
             role: "Account holder",
             sources: [statement],
-            inferred: false,
             unconfirmed: ["not_confirmed", "suspected"],
           },
         ]}
@@ -176,7 +163,6 @@ describe("CaseDetails", () => {
           {
             description: "52,000 baht left the account",
             sources: [],
-            inferred: true,
             unconfirmed: ["suspected"],
           },
         ]}
@@ -196,7 +182,6 @@ describe("CaseDetails", () => {
 
     const impacts = within(screen.getByRole("region", { name: "Impact 1" }));
     expect(impacts.getByText("อยู่ระหว่างตรวจสอบ")).toBeInTheDocument();
-    expect(impacts.getByText("Inference")).toBeInTheDocument();
   });
 
   it("adds no note to a row whose claims are all settled", () => {
@@ -252,7 +237,6 @@ describe("extracted claim view context", () => {
             name: "Jane",
             role: null,
             sources: [],
-            inferred: false,
             unconfirmed: [],
             linkedClaims: [{ id: "A-01", text: "Jane is the complainant." }],
           },
@@ -271,7 +255,6 @@ describe("extracted claim view context", () => {
   it("keeps original attribution visible without implying a semantic check or Judgement admission", () => {
     const row: ClaimBacked = {
       sources: [],
-      inferred: false,
       unconfirmed: [],
       linkedClaims: [{ id: "A-01", text: "The complainant alleged that John sent an email." }],
     };
@@ -290,7 +273,6 @@ describe("extracted claim view context", () => {
   it("links LLM views to Claims without invented offsets or historical admission labels", () => {
     const row: ClaimBacked = {
       sources: [],
-      inferred: false,
       unconfirmed: [],
       linkedClaims: [{ id: "A-01", text: "Company A suspended the account." }],
     };

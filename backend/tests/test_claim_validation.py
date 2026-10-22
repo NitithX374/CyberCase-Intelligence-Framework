@@ -229,7 +229,7 @@ def test_a_verdict_names_the_verifier_that_gave_it():
     assert (grounding.method, grounding.artifact_sha256) == (METHOD, ARTIFACT_SHA256)
 
 
-def test_saved_legacy_claims_have_no_invented_verdict():
+def test_a_claim_that_was_never_checked_has_no_invented_verdict():
     original = claim()
     assert original.semantic_grounding is None
 

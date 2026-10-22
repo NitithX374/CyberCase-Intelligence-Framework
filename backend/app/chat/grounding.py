@@ -116,10 +116,8 @@ def still_held(
 
 def holds(citation: CaseSourceCitation, registry: Mapping[str, CaseSourceItem]) -> bool:
     source = registry.get(citation.source_id)
-    if source is None or not citation.exact_quote:
+    if source is None or not citation.exact_quote or citation.start is None or citation.end is None:
         return False
-    if citation.start is None or citation.end is None:
-        return citation.exact_quote in source.text
     return source.text[citation.start : citation.end] == citation.exact_quote
 
 

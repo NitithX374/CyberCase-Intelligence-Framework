@@ -28,7 +28,7 @@ MAX_CLARIFICATION_QUESTION_CHARS = 300
 MAX_RESOLVED_EVIDENCE_REFERENCES = 64 * 64
 
 
-CaseClaimType = Literal["reported", "analytical_inference", "unknown"]
+CaseClaimType = Literal["reported", "unknown"]
 
 
 CaseEpistemicStatus = Literal[

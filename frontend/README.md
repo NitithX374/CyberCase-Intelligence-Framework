@@ -41,13 +41,14 @@ Tests live only in `src/test/`, at the path of the file they test: `src/features
 The Sources and Analysis views may project answered follow-up messages alongside native sources for reader navigation: Sources reads them from the chat (`features/sources/useCaseSourceRows.ts`), and Analysis reads the ones the analysis recorded (`features/analysis/analysisRecord.ts`). That display projection does not make a follow-up answer a persisted `CaseSource`.
 
 New claim citations carry source-unit IDs, backend-resolved offsets and a
-`direct` pointer state. The drawer navigates those offsets; legacy citations keep
-quote navigation. Invalid IDs remain unresolved pointers. The compact analysis
+`direct` pointer state. The drawer navigates those offsets; a quote that chat
+found itself is `recovered` and keeps quote navigation. Invalid IDs remain
+unresolved pointers. The compact analysis
 preparation panel shows finding/source coverage and useful failure notices.
 Internal Claim/unit IDs, model names, verifier diagnostics and timing counters
 are not displayed; internal IDs still drive navigation and Source addressing.
 Each Finding shows saved supporting Source linkage separately from semantic
-support: direct, recovered, legacy and unresolved references. Duplicate references
+support: direct, recovered and unresolved references. Duplicate references
 do not inflate these counts. Saved Claim-level NLI verdicts distinguish supported,
 not_supported and unassessed; no calibrated factual-confidence score is shown.
 Supported Findings have a teal accent and checked support label. The Supported filter uses only the saved semantic verdict; All retains every Finding and the Not confirmed filter remains available.
@@ -57,7 +58,7 @@ New LLM extraction and Judgement run independently in parallel over the
 same Claims. All original Findings remain available for review with
 their saved `semantic_grounding` verdict; a `not_supported` Finding shows a plain
 warning and is still sent to Judgement and the Views, while a Finding that fails the
-structural checks is withheld from both. Older saved results remain unassessed until reanalysis.
+structural checks is withheld from both.
 Details preserves Parties, Timeline and Impacts and their
 links to Findings/full Claim context in a collapsed Related findings disclosure. Unknown role/time render as unspecified;
 new LLM rows have no fabricated offsets, confidence or semantic verdict. They are
@@ -70,7 +71,7 @@ resolvable Claim citations only. User-facing labels use Source; API keys includi
 `evidence_unit_ids` and `claim_ids` remain stable. `CaseTimelineItem.time` is now
 nullable; the report and generated API contract reflect that.
 
-The Summary shows the analysis's summary as one paragraph (`features/analysis/SummaryUnits`), from the units the backend derives: each sentence is followed by the numbers of its findings as raised digits (the numbering of the report's findings table, `findingNumbers` in `overview.ts`), each a link to `AnalysisFindings?finding=A-nn`, and a sentence whose linked claims lack fully bound evidence has a raised letter whose note prints under the paragraph (`supportNote`). The punctuation the model wrote after each bracket comes back after the marks (`summaryClosings`, the same rule as `summary_closings` in the backend). The link is a query, not a `#` fragment: after a fragment link, the Findings link in the nav opened with that fragment still on its URL (seen in the e2e). An analysis stored before the units existed has none, and the Summary reads its text as Markdown, as before.
+The Summary shows the analysis's summary as one paragraph (`features/analysis/SummaryUnits`), from the units the backend derives: each sentence is followed by the numbers of its findings as raised digits (the numbering of the report's findings table, `findingNumbers` in `overview.ts`), each a link to `AnalysisFindings?finding=A-nn`, and a sentence whose linked claims lack fully bound evidence has a raised letter whose note prints under the paragraph (`supportNote`). The punctuation the model wrote after each bracket comes back after the marks (`summaryClosings`, the same rule as `summary_closings` in the backend). The link is a query, not a `#` fragment: after a fragment link, the Findings link in the nav opened with that fragment still on its URL (seen in the e2e). A summary written only as claim brackets has no units, and the Summary reads its text as Markdown.
 
 ## Commands
 

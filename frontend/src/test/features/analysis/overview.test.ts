@@ -31,6 +31,7 @@ function pagedCitation(exactQuote: string, pageNumbers: number[]): CaseSourceCit
   return {
     source_id: sourceId,
     exact_quote: exactQuote,
+    pointer_state: "recovered",
     document_id: "DOC-1",
     filename: "statement.pdf",
     page_numbers: pageNumbers,
@@ -197,19 +198,25 @@ describe("Case overview projection", () => {
     ]);
   });
 
-  it("has no summary units for an analysis stored before they existed", () => {
-    const overview = buildCaseOverview(supported("A share was encrypted."), [
-      narrativeSource(quote),
-    ]);
+  it("has no summary units for a summary written as claim brackets alone", () => {
+    const summary = "[A-01].";
+    const overview = buildCaseOverview(
+      analysisResult({
+        summary,
+        trace_json: trace({ summary, claims: [claim("A")], summary_units: [] }),
+      }),
+      [narrativeSource(quote)],
+    );
 
     expect(overview.summaryUnits).toEqual([]);
-    expect(overview.incidentSummary).toBe("A share was encrypted.");
+    expect(overview.incidentSummary).toBe(summary);
   });
 
   it("renders claims from current case sources", () => {
-    const overview = buildCaseOverview(result(quote, { source_id: sourceId, exact_quote: quote }), [
-      narrativeSource(quote),
-    ]);
+    const overview = buildCaseOverview(
+      result(quote, { source_id: sourceId, exact_quote: quote, pointer_state: "recovered" }),
+      [narrativeSource(quote)],
+    );
     const source = overview.findings[0].supportingSources[0];
     expect(overview.incidentSummary).toContain("blue vehicle");
     expect(source).toMatchObject({ id: sourceId, label: "Case narrative #1", exactQuote: quote });
@@ -263,7 +270,11 @@ describe("Case overview projection", () => {
 
   it("keeps a citation the stored sources do not hold out of the finding", () => {
     const overview = buildCaseOverview(
-      result(quote, { source_id: "missing", exact_quote: quote }, "missing"),
+      result(
+        quote,
+        { source_id: "missing", exact_quote: quote, pointer_state: "recovered" },
+        "missing",
+      ),
       [narrativeSource(quote)],
     );
     expect(overview.hasAnalysis).toBe(true);
@@ -273,7 +284,11 @@ describe("Case overview projection", () => {
   it("cites a follow-up answer from the exchange the analysis recorded", () => {
     const answer = "The incident occurred at 02:00.";
     const followupResult = {
-      ...result(answer, { source_id: "QA-02", exact_quote: answer }, "QA-02"),
+      ...result(
+        answer,
+        { source_id: "QA-02", exact_quote: answer, pointer_state: "recovered" },
+        "QA-02",
+      ),
       external_context_json: {
         followup_history: followupHistory("When did the incident occur?", answer, "QA-02"),
       },
@@ -292,7 +307,11 @@ describe("Case overview projection", () => {
   it("does not cite a follow-up answer the analysis did not record", () => {
     const answer = "The incident occurred at 02:00.";
     const overview = buildCaseOverview(
-      result(answer, { source_id: "QA-01", exact_quote: answer }, "QA-01"),
+      result(
+        answer,
+        { source_id: "QA-01", exact_quote: answer, pointer_state: "recovered" },
+        "QA-01",
+      ),
       [],
     );
 
@@ -301,18 +320,21 @@ describe("Case overview projection", () => {
   });
 
   it("lists parties, timeline and impacts with the sources of the claims they cite", () => {
-    const base = result(quote, { source_id: sourceId, exact_quote: quote });
-    const inference = {
+    const base = result(quote, {
+      source_id: sourceId,
+      exact_quote: quote,
+      pointer_state: "recovered",
+    });
+    const suspected = {
       ...base.trace_json!.claims[0],
       claim_id: "A-02",
-      claim_type: "analytical_inference" as const,
       epistemic_status: "suspected" as const,
     };
     const analysis: CaseAnalysisResultRead = {
       ...base,
       trace_json: {
         ...base.trace_json!,
-        claims: [...base.trace_json!.claims, inference],
+        claims: [...base.trace_json!.claims, suspected],
         involved_parties: [{ name: "Witness", role: "Saw the vehicle", claim_ids: ["A-01"] }],
         timeline: [
           { time: "09:00", event: "A blue vehicle arrived", claim_ids: ["A-01", "A-02"] },
@@ -325,18 +347,21 @@ describe("Case overview projection", () => {
     const overview = buildCaseOverview(analysis, [narrativeSource(quote)]);
 
     expect(overview.parties).toEqual([
-      expect.objectContaining({ name: "Witness", role: "Saw the vehicle", inferred: false }),
+      expect.objectContaining({ name: "Witness", role: "Saw the vehicle" }),
     ]);
     expect(overview.parties[0].sources.map((source) => source.id)).toEqual([sourceId]);
     expect(overview.timeline[0].sources).toHaveLength(1);
-    expect(overview.timeline[0].inferred).toBe(false);
-    expect(overview.timeline[1]).toMatchObject({ sources: [], inferred: false });
-    expect(overview.impacts[0].inferred).toBe(true);
+    expect(overview.timeline[1]).toMatchObject({ sources: [], unconfirmed: [] });
+    expect(overview.impacts[0].unconfirmed).toEqual(["suspected"]);
   });
 
   it("carries each unverified quote with the unit reference it could not resolve", () => {
     const text = "The transfer happened on 17 March 2026 at noon.";
-    const base = result(text, { source_id: sourceId, exact_quote: text });
+    const base = result(text, {
+      source_id: sourceId,
+      exact_quote: text,
+      pointer_state: "recovered",
+    });
     const analysis: CaseAnalysisResultRead = {
       ...base,
       trace_json: {
@@ -366,7 +391,11 @@ describe("Case overview projection", () => {
   });
 
   it("links each finding to the ATT&CK techniques associated with it", () => {
-    const base = result(quote, { source_id: sourceId, exact_quote: quote });
+    const base = result(quote, {
+      source_id: sourceId,
+      exact_quote: quote,
+      pointer_state: "recovered",
+    });
     const analysis: CaseAnalysisResultRead = {
       ...base,
       trace_json: {
@@ -391,7 +420,11 @@ describe("Case overview projection", () => {
   });
 
   it("names the findings each gap affects, in the gap's order, leaving out ids no finding has", () => {
-    const base = result(quote, { source_id: sourceId, exact_quote: quote });
+    const base = result(quote, {
+      source_id: sourceId,
+      exact_quote: quote,
+      pointer_state: "recovered",
+    });
     const later = { ...base.trace_json!.claims[0], claim_id: "A-02", text: "It left at noon." };
     const gap = {
       gap_id: "G-01",
@@ -445,12 +478,10 @@ describe("Case overview rows backed by claims that are not settled", () => {
         }),
         claim(first, sourceId, {
           claim_id: "A-03",
-          claim_type: "analytical_inference",
           epistemic_status: "suspected",
         }),
         claim(second, otherSourceId, {
           claim_id: "A-04",
-          claim_type: "analytical_inference",
           epistemic_status: "suspected",
           supporting_citations: [],
         }),

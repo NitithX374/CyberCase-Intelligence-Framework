@@ -204,12 +204,12 @@ def test_reader_invalid_reference_shapes_fail_instead_of_disappearing(citation):
         )
 
 
-def test_pointer_state_remains_optional_for_stored_legacy_api_citations():
-    schema = CaseSourceCitation.model_json_schema()
-    assert "pointer_state" not in schema.get("required", [])
-    assert "default" not in schema["properties"]["pointer_state"]
-    assert (
-        CaseSourceCitation(source_id="S1", exact_quote="Legacy text").pointer_state == "recovered"
+def test_a_quote_chat_finds_without_a_unit_is_recovered_with_its_offsets():
+    citation = CaseSourceCitation(source_id="S1", exact_quote="John reported", start=0, end=13)
+
+    assert citation.pointer_state == "recovered"
+    assert CaseSourceCitation.model_json_schema()["properties"]["pointer_state"]["default"] == (
+        "recovered"
     )
 
 

@@ -41,7 +41,7 @@ describe("Grouped case findings", () => {
   });
 
   it("preserves all combinations of claim type and status without inventing certainty", () => {
-    const types: ClaimType[] = ["reported", "analytical_inference", "unknown"];
+    const types: ClaimType[] = ["reported", "unknown"];
     const statuses: EpistemicStatus[] = [
       "reported",
       "suspected",
@@ -58,8 +58,8 @@ describe("Grouped case findings", () => {
     expect(
       groups.flatMap((group) => group.findings).sort((a, b) => a.id.localeCompare(b.id)),
     ).toEqual([...findings].sort((a, b) => a.id.localeCompare(b.id)));
-    expect(new Set(groups.flatMap((group) => group.findings.map((item) => item.id))).size).toBe(18);
-    expect(groups.find((group) => group.id === "not_established")?.findings).toHaveLength(3);
+    expect(new Set(groups.flatMap((group) => group.findings.map((item) => item.id))).size).toBe(12);
+    expect(groups.find((group) => group.id === "not_established")?.findings).toHaveLength(2);
     expect(groups.find((group) => group.id === "reported")?.findings).toEqual([findings[0]]);
     expect(findings).toEqual(snapshot);
   });
@@ -67,7 +67,7 @@ describe("Grouped case findings", () => {
   it("keeps uncertainty visible before long reported groups and exposes every remaining finding", () => {
     const reported = Array.from({ length: 12 }, (_, index) => finding(`reported-${index}`));
     const uncertain = Array.from({ length: 7 }, (_, index) =>
-      finding(`uncertain-${index}`, "analytical_inference", "not_established"),
+      finding(`uncertain-${index}`, "reported", "not_established"),
     );
     const { container } = render(
       <CaseFindingsSection
@@ -88,19 +88,19 @@ describe("Grouped case findings", () => {
     expect(screen.getAllByRole("article")).toHaveLength(12);
   });
 
-  it("shows both axes for an inference without established support", () => {
+  it("shows both axes for unknown information without established support", () => {
     render(
       <CaseFindingsSection
         caseId={caseId}
         findings={[
-          finding("inference", "analytical_inference", "not_established"),
+          finding("unsettled", "unknown", "not_established"),
           finding("missing", "unknown", "unknown"),
         ]}
         onSelectSource={vi.fn()}
       />,
     );
-    const inference = screen.getByRole("region", { name: "Not established 1" });
-    expect(within(inference).getByRole("article")).toHaveTextContent("Inference");
+    const unsettled = screen.getByRole("region", { name: "Not established 1" });
+    expect(within(unsettled).getByRole("article")).toHaveTextContent("Unknown information");
     expect(screen.getByRole("region", { name: "Unknown 1" })).toHaveTextContent(
       "Original finding missing",
     );

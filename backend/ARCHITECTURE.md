@@ -183,8 +183,8 @@ questions/answers remain Reader Sources and stored provenance, preventing that
 route from bypassing the structural checks. Technical context remains external and
 is not sent to Judgement. Judgement references to withheld/unknown Claim IDs fail
 before joining the trace. Every
-summary sentence ends with the IDs of the claims it rests on. Older saved Claims
-without `semantic_grounding` remain unassessed; reads/reports do not run NLI.
+summary sentence ends with the IDs of the claims it rests on. Every stored Claim
+carries its `semantic_grounding`; reads/reports do not run NLI.
 
 `bind_to_case` then checks the judgement's references with `bound_references`:
 - the `affected_claim_ids` of a gap;
@@ -397,11 +397,11 @@ render from that stored copy only. It delegates Source labels and quotes to
 `reports/findings.py`, MITRE rows and notices to `reports/technical.py`, and
 caveats to `reports/limitations.py`. A row stored in an older shape is refused
 with `case_report_outdated` by the HTML, PDF and generate paths rather than rebuilt from current code,
-and the report list leaves it out so the valid versions still load. A field added
-later is optional, so an older row still validates: a report stored before
-quotations carried context has no `supporting_contexts`, and its quotes print
-alone. `supporting_quotes` stays a list of strings for that reason, with the
-contexts beside it.
+and the report list leaves it out so the valid versions still load. Every stored
+report carries the fields it prints from; `source_check` is the one optional field,
+because reports stored before it existed have none. `supporting_quotes` is a list
+of strings, and `supporting_contexts` beside it holds one context, or none, for
+each quote.
 
 **The validator belonged to the report-fidelity experiment, not to the app.**
 `StructuredReport`, `build_case_template_report` and
@@ -483,7 +483,9 @@ models. `0003_strip_retired_fields.py` changes no schema: it removes the keys of
 dropped fields from stored analyses, chat messages and reports, each only where
 its model held that field. `0004_strip_version_labels.py` changes no schema
 either: it removes the `version` and `validation_status` labels from the same
-records, again only where a model held them. The PostgreSQL tests skip unless `CYBERCASE_TEST_DATABASE_URL` is set.
+records, again only where a model held them. `0005_strip_inference_flag.py` removes
+`is_inference`, false in every stored report, from each finding; its downgrade puts
+`false` back, because the code before it requires the key. The PostgreSQL tests skip unless `CYBERCASE_TEST_DATABASE_URL` is set.
 
 Two tests in `tests/test_case_report_presentation.py` render a real PDF and need
 WeasyPrint's native libraries (GTK on Windows). They pass inside the Docker

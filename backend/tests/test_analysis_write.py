@@ -146,27 +146,6 @@ def test_the_reading_prompt_selects_units_and_states_the_json():
     )
 
 
-def test_a_stored_legacy_claim_still_reads_with_its_quote():
-    source_id = str(uuid4())
-    claim = CaseAnalysisClaim.model_validate(
-        {
-            "claim_id": "A-01",
-            "claim_type": "reported",
-            "text": "The finance share was encrypted.",
-            "epistemic_status": "reported",
-            "supporting_source_ids": [source_id],
-            "contradicting_source_ids": [],
-            "supporting_citations": [{"source_id": source_id, "exact_quote": SOURCE_TEXT}],
-            "contradicting_citations": [],
-        }
-    )
-
-    [citation] = claim.supporting_citations
-    assert citation.exact_quote == SOURCE_TEXT
-    assert citation.pointer_state == "recovered"
-    assert citation.page_numbers == []
-
-
 def test_neither_call_is_shown_the_technical_context():
     _, _, bundle, _, context = _fixtures()
     trace, (reading_call, judgement_call) = written(

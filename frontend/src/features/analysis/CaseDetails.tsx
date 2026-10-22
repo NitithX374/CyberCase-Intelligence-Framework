@@ -210,19 +210,12 @@ function Backing({
   activeSourceKey: string | null;
 }) {
   const hasReview = Boolean(row.linkedClaims?.length);
-  if (
-    !row.inferred &&
-    !row.sources.length &&
-    !row.unconfirmed.length &&
-    !row.supportNote &&
-    !hasReview
-  ) {
+  if (!row.sources.length && !row.unconfirmed.length && !row.supportNote && !hasReview) {
     return null;
   }
   return (
     <div className="mt-2">
       <div className="flex flex-wrap items-center gap-1.5">
-        {row.inferred && <span className="text-xs text-ink-muted">Inference</span>}
         {row.unconfirmed.map((status) => (
           <span key={status} className="text-xs text-ink-muted">
             {UNCONFIRMED_NOTES[status]}

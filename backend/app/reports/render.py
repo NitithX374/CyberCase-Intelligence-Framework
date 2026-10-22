@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from itertools import chain, repeat
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -39,8 +38,7 @@ def readable(text: str) -> str:
 
 def quoted(quotes: list[str], contexts: list[ReportQuoteContext | None]) -> list[Markup]:
     return [
-        quote_in_context(quote, context)
-        for quote, context in zip(quotes, chain(contexts, repeat(None)), strict=False)
+        quote_in_context(quote, context) for quote, context in zip(quotes, contexts, strict=True)
     ]
 
 
@@ -68,13 +66,6 @@ def note_letter(index: int) -> str:
     return letters
 
 
-def closings_of(report: CaseReportContent) -> list[str]:
-    closings = summary_closings(report.summary)
-    return (
-        closings if len(closings) == len(report.summary_units) else [""] * len(report.summary_units)
-    )
-
-
 def render_case_report_html(report: CaseReportContent, issue: ReportIssue | None = None) -> str:
     environment = Environment(
         loader=FileSystemLoader(str(TEMPLATE_DIRECTORY)),
@@ -89,7 +80,7 @@ def render_case_report_html(report: CaseReportContent, issue: ReportIssue | None
     template = environment.get_template(REPORT_TEMPLATE_NAME)
     return template.render(
         report=report,
-        summary_closings=closings_of(report),
+        summary_closings=summary_closings(report.summary),
         issue=issue,
         issued=thai_date(issue.created_at, with_time=True) if issue else None,
     )

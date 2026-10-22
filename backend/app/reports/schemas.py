@@ -16,22 +16,22 @@ class ReportRow(BaseModel):
 class ReportParty(ReportRow):
     name: str
     role: str | None
-    claim_context: list[str] = Field(default_factory=list)
+    claim_context: list[str]
     references: list[str] = Field(default_factory=list)
-    support: SupportStatus | None = None
+    support: SupportStatus | None
 
 
 class ReportEvent(ReportRow):
     time: str | None
     event: str
     references: list[str] = Field(default_factory=list)
-    support: SupportStatus | None = None
+    support: SupportStatus | None
 
 
 class ReportImpact(ReportRow):
     description: str
     references: list[str] = Field(default_factory=list)
-    support: SupportStatus | None = None
+    support: SupportStatus | None
 
 
 class ReportSummaryUnit(ReportRow):
@@ -48,21 +48,20 @@ class ReportQuoteContext(ReportRow):
 
 
 class ReportUnverifiedQuote(ReportRow):
-    evidence_unit_id: str | None = None
+    evidence_unit_id: str | None
 
 
 class ReportFinding(ReportRow):
     ordinal: int
     text: str
     status: str
-    is_inference: bool
     source_labels: list[str] = Field(default_factory=list)
     contradicting_source_labels: list[str] = Field(default_factory=list)
     supporting_quotes: list[str] = Field(default_factory=list)
     contradicting_quotes: list[str] = Field(default_factory=list)
-    supporting_contexts: list[ReportQuoteContext | None] = Field(default_factory=list)
-    contradicting_contexts: list[ReportQuoteContext | None] = Field(default_factory=list)
-    unverified_quotes: list[ReportUnverifiedQuote] = Field(default_factory=list)
+    supporting_contexts: list[ReportQuoteContext | None]
+    contradicting_contexts: list[ReportQuoteContext | None]
+    unverified_quotes: list[ReportUnverifiedQuote]
     source_check: Literal["not_supported"] | None = None
 
 
@@ -96,8 +95,8 @@ class CaseReportContent(BaseModel):
     title: str
     analysed: str | None = None
     summary: str
-    views_derived_from_claims: bool = False
-    summary_units: list[ReportSummaryUnit] = Field(default_factory=list)
+    views_derived_from_claims: bool
+    summary_units: list[ReportSummaryUnit]
     parties: list[ReportParty] = Field(default_factory=list)
     timeline: list[ReportEvent] = Field(default_factory=list)
     impacts: list[ReportImpact] = Field(default_factory=list)
