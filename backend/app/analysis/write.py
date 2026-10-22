@@ -18,7 +18,7 @@ from app.errors import CaseAnalysisFailure
 from app.llm.request import request_stage
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle
-from app.trace.bind import bound_claims, followup_registry_items
+from app.trace.bind import followup_registry_items
 from app.trace.claim_validation import usable_claims
 from app.trace.claims import (
     CLAIM_FIELDS_FOR_JUDGEMENT,
@@ -56,7 +56,7 @@ async def write_trace(
     )
     announce("bind")
     claims = await checked_reading(
-        reading_from(reply, reading_sources=reading_sources), sources, followup_history
+        reading_from(reply, reading_sources=reading_sources), reading_sources
     )
     judged = usable_claims(claims)
     if not judged:
@@ -105,12 +105,10 @@ async def write_trace(
 
 
 async def checked_reading(
-    claims: list[CaseAnalysisClaim],
-    sources: CaseSourceBundle,
-    followup_history: Sequence[CaseFollowupExchange],
+    claims: list[CaseAnalysisClaim], reading_sources: ReadingSources
 ) -> list[CaseAnalysisClaim]:
     try:
-        return await asyncio.to_thread(bound_claims, claims, sources, followup_history)
+        return await asyncio.to_thread(reading_sources.bound_claims, claims)
     except ValidationError as error:
         logger.exception("Checking the reading against the case built an invalid trace")
         raise CaseAnalysisFailure(

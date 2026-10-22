@@ -259,7 +259,9 @@ async def test_a_trace_the_binder_cannot_store_is_a_coded_server_error(monkeypat
         def failing_bound_claims(*args, **kwargs):
             raise ValidationError.from_exception_data("CaseAnalysisTrace", [])
 
-        monkeypatch.setattr("app.analysis.write.bound_claims", failing_bound_claims)
+        monkeypatch.setattr(
+            "app.analysis.reading_sources.ReadingSources.bound_claims", failing_bound_claims
+        )
         quote = " ".join(MARKED_WORDS)
         model(
             assess=[NO_GAPS], read=[legacy_citing(MARKED_TEXT, quote, monkeypatch)], judge=[JUDGED]

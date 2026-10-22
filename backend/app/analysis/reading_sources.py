@@ -6,7 +6,9 @@ from types import MappingProxyType
 
 from app.sources.bundle import CaseSourceItem
 from app.sources.evidence import EvidenceIndex
+from app.trace.bind import deduplicated_claims, resolve_claim
 from app.trace.citations import MAX_EVIDENCE_ID_CHARS, CaseEvidenceReference
+from app.trace.claims import CaseAnalysisClaim
 from app.trace.trace import CaseProviderReadingReply
 
 LOCAL_UNIT_PATTERN = re.compile(r"U(?P<number>[0-9]{3,})")
@@ -91,3 +93,6 @@ class ReadingSources:
                 ]
             }
         )
+
+    def bound_claims(self, claims: list[CaseAnalysisClaim]) -> list[CaseAnalysisClaim]:
+        return [resolve_claim(claim, self.evidence) for claim in deduplicated_claims(claims)]
