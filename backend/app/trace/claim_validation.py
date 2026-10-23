@@ -123,13 +123,11 @@ def validate_claims(
         if stop is not None and stop.is_set():
             raise VerificationStopped
         reason = claim_blocker(claim)
-        verdict = CaseClaimGrounding(
-            verdict="unassessed",
-            reason=reason or "no_resolved_source",
-            method=METHOD,
-            artifact_sha256=ARTIFACT_SHA256,
-        )
-        if reason is None:
+        if reason is not None:
+            verdict = CaseClaimGrounding(
+                verdict="unassessed", reason=reason, method=METHOD, artifact_sha256=ARTIFACT_SHA256
+            )
+        else:
             if scorer is None:
                 scorer = (provider or load_scorer)()
             units = [citation.exact_quote for _, citation in resolved_support(claim)]
