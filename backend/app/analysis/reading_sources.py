@@ -8,7 +8,7 @@ from app.sources.bundle import CaseSourceItem
 from app.sources.evidence import EvidenceIndex
 from app.trace.bind import confirmed_status, deduplicated_claims, role_source_ids, unique_unverified
 from app.trace.citations import MAX_EVIDENCE_ID_CHARS
-from app.trace.claims import CaseAnalysisClaim, CaseReadingClaim
+from app.trace.claims import CaseAnalysisClaim
 from app.trace.evidence_binding import bind_citations
 from app.trace.trace import CaseProviderReadingReply
 
@@ -62,35 +62,41 @@ class ReadingSources:
         return canonical_id if len(canonical_id) <= MAX_EVIDENCE_ID_CHARS else selected_id
 
     def bound_claims(self, reply: CaseProviderReadingReply) -> list[CaseAnalysisClaim]:
-        return [self.bound_claim(claim) for claim in deduplicated_claims(reply.claims)]
-
-    def bound_claim(self, claim: CaseReadingClaim) -> CaseAnalysisClaim:
-        seen: set[str] = set()
-        supporting, supporting_invalid, supporting_unverified = bind_citations(
-            claim.supporting_citations, "supporting", self.evidence, seen, self.canonical_id
-        )
-        contradicting, contradicting_invalid, contradicting_unverified = bind_citations(
-            claim.contradicting_citations, "contradicting", self.evidence, seen, self.canonical_id
-        )
-        return CaseAnalysisClaim(
-            claim_id=claim.claim_id,
-            claim_type=claim.claim_type,
-            text=claim.text,
-            epistemic_status=confirmed_status(claim.epistemic_status, supporting),
-            supporting_source_ids=role_source_ids(
-                [citation.source_id for citation in claim.supporting_citations],
-                supporting,
-                self.evidence.sources,
-            ),
-            contradicting_source_ids=role_source_ids(
-                [citation.source_id for citation in claim.contradicting_citations],
-                contradicting,
-                self.evidence.sources,
-            ),
-            supporting_citations=supporting,
-            contradicting_citations=contradicting,
-            unverified_citations=unique_unverified(
-                [*supporting_unverified, *contradicting_unverified]
-            ),
-            invalid_evidence=[*supporting_invalid, *contradicting_invalid],
-        )
+        claims: list[CaseAnalysisClaim] = []
+        for claim in deduplicated_claims(reply.claims):
+            seen: set[str] = set()
+            supporting, supporting_invalid, supporting_unverified = bind_citations(
+                claim.supporting_citations, "supporting", self.evidence, seen, self.canonical_id
+            )
+            contradicting, contradicting_invalid, contradicting_unverified = bind_citations(
+                claim.contradicting_citations,
+                "contradicting",
+                self.evidence,
+                seen,
+                self.canonical_id,
+            )
+            claims.append(
+                CaseAnalysisClaim(
+                    claim_id=claim.claim_id,
+                    claim_type=claim.claim_type,
+                    text=claim.text,
+                    epistemic_status=confirmed_status(claim.epistemic_status, supporting),
+                    supporting_source_ids=role_source_ids(
+                        [citation.source_id for citation in claim.supporting_citations],
+                        supporting,
+                        self.evidence.sources,
+                    ),
+                    contradicting_source_ids=role_source_ids(
+                        [citation.source_id for citation in claim.contradicting_citations],
+                        contradicting,
+                        self.evidence.sources,
+                    ),
+                    supporting_citations=supporting,
+                    contradicting_citations=contradicting,
+                    unverified_citations=unique_unverified(
+                        [*supporting_unverified, *contradicting_unverified]
+                    ),
+                    invalid_evidence=[*supporting_invalid, *contradicting_invalid],
+                )
+            )
+        return claims
