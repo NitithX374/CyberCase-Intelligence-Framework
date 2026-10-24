@@ -13,7 +13,6 @@ from app.trace.trace import CaseAnalysisTrace
 BASES = ("case_fact", "interpretation", "technical", "general")
 SUGGESTIONS = ("none", "add_source", "run_analysis")
 MAX_SOURCE_ID_CHARS = 160
-MAX_CITED_UNITS = 64
 
 
 def records(value: object) -> list[object]:
@@ -52,7 +51,7 @@ class ChatReplyCitation(BaseModel):
     @field_validator("evidence_unit_ids", mode="before")
     @classmethod
     def unit_id_strings(cls, value: object) -> list[str]:
-        return [item[:MAX_EVIDENCE_ID_CHARS] for item in strings(value)][:MAX_CITED_UNITS]
+        return [item[:MAX_EVIDENCE_ID_CHARS] for item in strings(value)]
 
 
 class ChatReplyUnit(BaseModel):

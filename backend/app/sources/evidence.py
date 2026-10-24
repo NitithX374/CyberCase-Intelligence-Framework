@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import logging
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -12,8 +11,6 @@ from app.sources.bundle import CaseSourceItem
 from app.sources.markup import source_tables
 from app.trace.quotes import MAX_QUOTE_CHARS
 from app.trace.sentences import SentenceIndex, segmenter_identity
-
-logger = logging.getLogger(__name__)
 
 EVIDENCE_VERSION = "evidence_units_v4"
 UNIT_PATTERN = re.compile(
@@ -81,13 +78,7 @@ def cut_ahead(text: str) -> None:
     source = CaseSourceItem(source_id="cut-ahead", source_kind="narrative", text=text)
     task = asyncio.create_task(asyncio.to_thread(evidence_units, source))
     cutting.add(task)
-    task.add_done_callback(cut_finished)
-
-
-def cut_finished(task: asyncio.Task) -> None:
-    cutting.discard(task)
-    if not task.cancelled() and task.exception() is not None:
-        logger.warning("Cutting a new source ahead of use failed: %r", task.exception())
+    task.add_done_callback(cutting.discard)
 
 
 class EvidenceIndex:
