@@ -86,7 +86,7 @@ async def run_pipeline(
     calls = []
     view_inputs = []
     if scorer is not None:
-        monkeypatch.setattr(claim_validation, "load_scorer", lambda: scorer)
+        monkeypatch.setattr(claim_validation, "load_verifier", lambda: scorer)
 
     async def request(**kwargs):
         calls.append(kwargs)
@@ -284,7 +284,7 @@ async def test_an_unavailable_verifier_leaves_claims_unassessed_and_the_analysis
     def unavailable():
         raise NliUnavailable("weights_missing")
 
-    monkeypatch.setattr(claim_validation, "load_scorer", unavailable)
+    monkeypatch.setattr(claim_validation, "load_verifier", unavailable)
     _, claims = fixtures()
     with_stale_unit(claims, 1)
     with caplog.at_level("ERROR", logger="app.case_analysis"):
@@ -354,7 +354,7 @@ async def test_cancelling_the_checks_stops_the_scoring_of_the_remaining_claims(m
         return Judgement("entailment", 0.99)
 
     scorer = FakeNli(judge=judge)
-    monkeypatch.setattr(claim_validation, "load_scorer", lambda: scorer)
+    monkeypatch.setattr(claim_validation, "load_verifier", lambda: scorer)
     claims = [
         CaseAnalysisClaim(
             claim_id=f"A-0{number}",

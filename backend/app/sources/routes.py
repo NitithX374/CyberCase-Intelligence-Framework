@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.guard import get_current_user
 from app.database import get_db
 from app.models.user import User
+from app.sources.evidence import cut_ahead
 from app.sources.ingestion.service import build_document_ingestion_service, read_limited
 from app.sources.schemas import (
     CaseDocumentRead,
@@ -39,7 +40,7 @@ async def add_case_source(
     user: User = Depends(get_current_user),
 ):
     async with db.begin():
-        return await SourceService(db).add_text_source(
+        source = await SourceService(db).add_text_source(
             case_id=case_id,
             user_id=user.id,
             source_kind=request.source_kind,
@@ -47,6 +48,8 @@ async def add_case_source(
             provenance_json=request.provenance_json,
             source_metadata_json=request.source_metadata_json,
         )
+    cut_ahead(source.exact_text)
+    return source
 
 
 @router.patch("/sources/{source_id}", response_model=CaseSourceRead)
@@ -100,9 +103,11 @@ async def add_case_document(
     finally:
         await service.aclose()
     async with db.begin():
-        return await SourceService(db).add_document(
+        document = await SourceService(db).add_document(
             case_id=case_id, user_id=user.id, ingested=ingested, content=content
         )
+    cut_ahead(ingested.full_text)
+    return document
 
 
 @document_router.post("/documents/{document_id}/reingest", response_model=CaseSourceRead)
@@ -120,12 +125,14 @@ async def reingest_case_document(
     finally:
         await service.aclose()
     async with db.begin():
-        return await SourceService(db).read_document_again(
+        reading = await SourceService(db).read_document_again(
             case_id=case_id,
             user_id=user.id,
             document_id=document_id,
             ingested=ingested,
         )
+    cut_ahead(reading.exact_text)
+    return reading
 
 
 __all__ = ["document_router", "router"]

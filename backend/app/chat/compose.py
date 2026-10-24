@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Sequence
 from typing import Literal
 
 from app.analysis.language import ResponseLanguage
-from app.analysis.reading_sources import provider_source_payload
+from app.analysis.reading_sources import ReadingSources
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.chat.answer_contract import CaseAnalysisOutput, ChatReply
 from app.chat.grounding import answer_from
@@ -14,21 +15,28 @@ from app.llm.settings import configured_pipeline
 from app.models.analysis_result import CaseAnalysisResult
 from app.models.chat_message import ChatMessage
 from app.sources.bundle import CaseSourceBundle
-from app.trace.claims import (
-    CLAIM_FIELDS_HIDDEN_FROM_MODELS,
-    CaseFollowupExchange,
-    followup_payload,
-)
+from app.trace.bind import followup_registry_items
+from app.trace.claims import CaseFollowupExchange, followup_payload
 from app.trace.trace import CaseAnalysisTrace
 
 AnalysisStatus = Literal["none", "current", "stale"]
 CHAT_OUTPUT_TOKENS = 4_096
 
+CLAIM_FIELDS_HIDDEN_FROM_CHAT = {
+    "semantic_grounding": True,
+    "supporting_source_ids": True,
+    "contradicting_source_ids": True,
+    "invalid_evidence": True,
+    "unverified_citations": True,
+}
+
 
 CHAT_PROMPT = """You answer one question in the chat of an investigative case.
 
 You are given:
-- case_sources: the texts the case is analysed from, each with a source_id.
+- case_sources: the sources the case is analysed from, each with a source_id and its text cut
+  into evidence_units, each unit with a unit_id such as U001. Answered follow-ups appear here too,
+  with their qa_id as the source_id.
 - followup_history: the reader's answers to earlier clarification questions, each with a qa_id.
 - analysis: the stored analysis of the case (summary, canonical claims with claim_ids,
   ATT&CK associations, gaps), or null when the case is not analysed yet.
@@ -68,13 +76,15 @@ Write numbers with Arabic digits (0-9), as the sources do, also when answering i
 write two units that say the same thing.
 
 Cite what a case_fact rests on. When a claim of the analysis covers it, put that claim_id in
-claim_ids. Otherwise quote the text it comes from: its source_id, or the qa_id of a follow-up
-answer, and an exact_quote copied verbatim from that text in the language it is written in. Never
-translate, reword or correct a quote. Never invent a citation: if you cannot cite, give none. An
-interpretation may cite the facts it rests on. Never write citation brackets or tags (such as [A-01],
-[A-02] or [QA-01]) inside the statement text itself; record all citations only in claim_ids or quotes.
-Every unit must always include both fields: if there are no citations, provide empty arrays
-"claim_ids": [] and "quotes": []. Never omit claim_ids or quotes from any unit.
+claim_ids. Otherwise cite the evidence units that state it: a citation with the source_id (the
+qa_id for a follow-up answer) and the evidence_unit_ids of those units, copied exactly as
+case_sources lists them for that source. Select the fewest units that support the statement.
+Never write out source text yourself and never invent a unit ID: if you cannot cite, give none.
+An interpretation may cite the facts it rests on. Never write citation brackets or tags (such as
+[A-01], [QA-01] or [U003]) inside the statement text itself; record all citations only in
+claim_ids or citations. Every unit must always include both fields: if there are no citations,
+provide empty arrays "claim_ids": [] and "citations": []. Never omit claim_ids or citations from
+any unit.
 
 When analysis_status is "stale" and the answer relies on the analysis, say that the sources have
 changed since the analysis. The reader's chat messages are not sources: if the reader states a new
@@ -97,6 +107,9 @@ async def generate_case_answer(
     analysis_status: AnalysisStatus = "none",
 ) -> CaseAnalysisOutput:
     trace = CaseAnalysisTrace.model_validate(result.trace_json) if result is not None else None
+    reading_sources = await asyncio.to_thread(
+        ReadingSources, (*sources.sources, *followup_registry_items(followups))
+    )
     reply = await request_stage(
         config=configured_pipeline().model_copy(
             update={"output_tokens": CHAT_OUTPUT_TOKENS, "thinking_tokens": 0}
@@ -106,7 +119,7 @@ async def generate_case_answer(
         content=chat_request(
             question=question,
             history=history,
-            sources=sources,
+            reading_sources=reading_sources,
             language=language,
             followups=followups,
             technical_context=technical_context,
@@ -117,14 +130,14 @@ async def generate_case_answer(
         schema=ChatReply,
         attempts=settings.chat_stage_attempts,
     )
-    return answer_from(reply, trace, sources, followups, language)
+    return await asyncio.to_thread(answer_from, reply, trace, reading_sources, language)
 
 
 def chat_request(
     *,
     question: str,
     history: list[ChatMessage],
-    sources: CaseSourceBundle,
+    reading_sources: ReadingSources,
     language: ResponseLanguage,
     followups: Sequence[CaseFollowupExchange],
     technical_context: CaseRagContextPayload | None,
@@ -139,7 +152,7 @@ def chat_request(
         "analysis": analysis_payload(trace, summary) if trace is not None else None,
         "followup_history": followup_payload(followups),
         "technical_context": technical_context_payload(technical_context),
-        "case_sources": [provider_source_payload(source) for source in sources.sources],
+        "case_sources": list(reading_sources.payloads),
         "conversation_history": [
             {"id": str(message.id), "role": message.role, "content": message.content}
             for message in history
@@ -163,14 +176,20 @@ def analysis_payload(trace: CaseAnalysisTrace, summary: str | None) -> dict[str,
     return {
         "summary": summary or trace.summary,
         "claims": [
-            claim.model_dump(mode="json", exclude=CLAIM_FIELDS_HIDDEN_FROM_MODELS)
+            claim.model_dump(mode="json", exclude=CLAIM_FIELDS_HIDDEN_FROM_CHAT)
             for claim in trace.claims
         ],
         "mitre_associations": [
             association.model_dump(mode="json") for association in trace.mitre_associations
         ],
         "gaps": [
-            {"topic": gap.topic, "status": gap.status, "description": gap.description}
+            {
+                "topic": gap.topic,
+                "status": gap.status,
+                "description": gap.description,
+                "reason": gap.reason,
+                "affected_claim_ids": list(gap.affected_claim_ids),
+            }
             for gap in trace.gaps
         ],
     }

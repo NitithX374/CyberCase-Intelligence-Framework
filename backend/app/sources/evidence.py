@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from app.config import settings
 from app.sources.bundle import CaseSourceItem
 from app.sources.markup import source_tables
 from app.trace.quotes import MAX_QUOTE_CHARS
@@ -67,6 +69,18 @@ def segmentation_starts(sentences: SentenceIndex) -> list[int]:
     return [0, *starts[1:]]
 
 
+cutting: set[asyncio.Task] = set()
+
+
+def cut_ahead(text: str) -> None:
+    if not settings.warmup_models or not text:
+        return
+    source = CaseSourceItem(source_id="cut-ahead", source_kind="narrative", text=text)
+    task = asyncio.create_task(asyncio.to_thread(evidence_units, source))
+    cutting.add(task)
+    task.add_done_callback(cutting.discard)
+
+
 class EvidenceIndex:
     def __init__(self, sources: Sequence[CaseSourceItem]) -> None:
         self.sources = {source.source_id: source for source in sources}
@@ -108,6 +122,7 @@ __all__ = [
     "EVIDENCE_VERSION",
     "EvidenceIndex",
     "EvidenceUnit",
+    "cut_ahead",
     "evidence_revision",
     "evidence_units",
 ]

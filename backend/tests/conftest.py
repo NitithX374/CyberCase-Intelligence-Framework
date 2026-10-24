@@ -19,7 +19,7 @@ def no_model_warmup(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def no_real_claim_verifier(monkeypatch):
-    monkeypatch.setattr(claim_validation, "load_scorer", lambda: entailing("", probability=0.99))
+    monkeypatch.setattr(claim_validation, "load_verifier", lambda: entailing("", probability=0.99))
 
 
 @pytest.fixture(autouse=True)

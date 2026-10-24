@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 from typing_extensions import TypedDict
 
+from app.trace.citations import CaseInvalidEvidence
 from app.trace.claims import CaseAnalysisClaim, CaseAnalysisMode, CaseSourceCitation
 from app.trace.trace import CaseAnalysisTrace
 
@@ -24,6 +25,7 @@ class ChatAnswerUnit(BaseModel):
     supporting_citations: list[CaseSourceCitation] = Field(default_factory=list)
     contradicting_source_ids: list[str] = Field(default_factory=list)
     contradicting_citations: list[CaseSourceCitation] = Field(default_factory=list)
+    invalid_evidence: list[CaseInvalidEvidence] = Field(default_factory=list)
 
     @property
     def cited(self) -> bool:

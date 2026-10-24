@@ -127,7 +127,7 @@ async def test_real_en_th_cross_document_and_qa_gate_completes_native_pipeline(
             ),
         )
 
-    monkeypatch.setattr(claim_validation, "load_scorer", lambda: verifier)
+    monkeypatch.setattr(claim_validation, "load_verifier", lambda: verifier)
     monkeypatch.setattr(write, "request_stage", request)
     monkeypatch.setattr(write, "derive_claim_views", views)
     trace = await write.write_trace(

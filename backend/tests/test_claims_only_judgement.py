@@ -9,6 +9,7 @@ import pytest
 from case_mitre_test_support import _fixtures
 
 from app.analysis.prompts import CASE_JUDGEMENT_SYSTEM_PROMPT
+from app.analysis.reading_sources import ReadingSources
 from app.analysis.write import (
     judgement_request,
     summary_sentence_limit,
@@ -167,14 +168,14 @@ def test_a_source_no_claim_cites_changes_nothing_in_the_judgement_request():
     assert first["content"] == second["content"]
 
 
-def test_the_chat_still_receives_the_sources_and_the_sentence_around_each_quote():
+def test_the_chat_receives_the_sources_as_units_and_the_sentence_around_each_quote():
     bundle, reading = bundle_and_reading()
     trace = CaseAnalysisTrace(analysis_mode="case_overview", summary="A summary.", claims=reading)
 
     material = chat_request(
         question="What happened?",
         history=[],
-        sources=bundle,
+        reading_sources=ReadingSources(bundle.sources),
         language="english",
         followups=(),
         technical_context=None,
@@ -184,7 +185,11 @@ def test_the_chat_still_receives_the_sources_and_the_sentence_around_each_quote(
     )
 
     assert AROUND in json.dumps(material["analysis"]["claims"])
-    assert [source["text"] for source in material["case_sources"]] == [SOURCE_TEXT]
+    assert [
+        "".join(unit["text"] for unit in source["evidence_units"])
+        for source in material["case_sources"]
+    ] == [SOURCE_TEXT]
+    assert all("text" not in source for source in material["case_sources"])
     assert material["followup_history"] == []
     assert material["technical_context"] is None
 

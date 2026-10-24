@@ -36,7 +36,7 @@ def _warmup_models() -> None:
         logger.warning("SaT sentence segmenter warmup skipped: %s", exc)
 
     try:
-        from app.trace.source_selector import load_selector
+        from app.trace.b1_verifier import load_selector
 
         load_selector()
     except Exception as exc:

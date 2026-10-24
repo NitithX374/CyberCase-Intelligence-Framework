@@ -176,24 +176,6 @@ class CaseAnalysisClaim(CaseClaimFields):
         return data
 
 
-CLAIM_FIELDS_HIDDEN_FROM_MODELS = {
-    "semantic_grounding": True,
-    "supporting_source_ids": True,
-    "contradicting_source_ids": True,
-    "invalid_evidence": True,
-    "unverified_citations": True,
-}
-
-CLAIM_FIELDS_FOR_JUDGEMENT = {
-    "claim_id": True,
-    "claim_type": True,
-    "text": True,
-    "epistemic_status": True,
-    "supporting_citations": {"__all__": {"exact_quote"}},
-    "contradicting_citations": {"__all__": {"exact_quote"}},
-}
-
-
 class CaseAnalysisGap(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

@@ -115,7 +115,7 @@ markup included. The frozen method, `b1-lr-wice-train-v1`:
 
 1. `sentence-transformers/paraphrase-multilingual-mpnet-base-v2` at revision
    `4328cf26390c98c5e3c738b4460a05b95f4911f5`, normalized embeddings, a 128-token
-   limit (`trace/source_selector.py`). Units with cosine similarity >= 0.20 are
+   limit (`trace/b1_verifier.py`). Units with cosine similarity >= 0.20 are
    kept; when none passes, the first unit with the highest similarity is kept.
 2. The kept units are joined with one newline.
 3. `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` at revision
@@ -329,20 +329,22 @@ A caller's `calls` list receives model, estimated input tokens, output mode,
 request max_tokens, generation attempts, usage, status and elapsed time. Production
 logs output mode and the request cap without prompt or source text.
 
-A chat answer reads what the analysis reads — the case sources, the answered
-follow-ups and the technical context the latest analysis retrieved — and that
-analysis too when there is one. The model returns units, each with a basis
-(`case_fact`, `interpretation`, `technical` or `general`), the `claim_ids` it
-rests on and exact quotes. `chat/compose.py` builds the request and invokes the
-model; `chat/answer_contract.py` defines its reply. `chat/grounding.py` keeps only
-claim ids of that analysis, cites each claim with the citations the analysis
-stored without binding them again, leaves out a stored citation whose source is
-gone from the case or no longer holds the quote at its offsets, verifies the
-model's own quotes against the original Source text, and derives their
-locations. `chat/answer.py` stores the units on the message;
-a unit whose citation fails keeps its text
-without the citation. The log line `Chat answer grounding` counts cited and
-uncited case facts per answer.
+A chat answer reads what the analysis reads — the case sources cut into the
+same evidence units Reading sees, the answered follow-ups and the technical
+context the latest analysis retrieved — and that analysis too when there is one.
+The model returns units, each with a basis (`case_fact`, `interpretation`,
+`technical` or `general`), the `claim_ids` it rests on and the evidence units it
+cites; it never writes source text. `chat/compose.py` builds the request and
+invokes the model; `chat/answer_contract.py` defines its reply.
+`chat/grounding.py` keeps only claim ids of that analysis, cites each claim with
+the citations the analysis stored without binding them again, leaves out a
+stored citation whose source is gone from the case or no longer holds the quote
+at its offsets, and binds the selected units with `bind_citations`, as Reading
+does. `chat/answer.py` stores the units on the message; a unit keeps its text
+when a selected ID fails, and the ID is stored as its `invalid_evidence`, which
+the Ask panel shows as one plain line. Only `case_fact` and `interpretation` statements
+keep citations; a `technical` or `general` statement has no source to cite. The log line `Chat answer grounding`
+counts cited and uncited case facts and the units offered and bound per answer.
 
 Retrieval is separate again: **one** call site, `analysis/technical_context/retrieve.py`,
 over HTTP to the RAG service. The frontend never calls the RAG service.
