@@ -8,21 +8,19 @@ from dataclasses import dataclass
 from fastapi import status
 
 from app.analysis.language import ResponseLanguage
+from app.analysis.reading_sources import ReadingSources
 from app.chat.answer_contract import CaseAnalysisOutput, ChatReply, ChatReplyUnit
 from app.errors import CaseAnalysisFailure
-from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace.bind import followup_registry_items
-from app.trace.claims import (
-    CaseAnalysisClaim,
-    CaseFollowupExchange,
-    CaseSourceCitation,
-    normalize_identifier,
-)
+from app.sources.bundle import CaseSourceItem
+from app.trace.citations import CaseInvalidEvidence
+from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation, normalize_identifier
+from app.trace.evidence_binding import bind_citations
 from app.trace.messages import ChatAnswerUnit
-from app.trace.quotes import find_document_locator
 from app.trace.trace import MAX_SUMMARY_CHARS, CaseAnalysisTrace
 
 logger = logging.getLogger("app.chat.compose")
+
+CITING_BASES = ("case_fact", "interpretation")
 
 
 UNANSWERED = {
@@ -51,20 +49,18 @@ class DraftUnit:
     text: str
     basis: str
     claim_ids: tuple[str, ...]
-    quotes: tuple[CaseSourceCitation, ...]
-    offered_quotes: int
-    verified_quotes: int
+    citations: tuple[CaseSourceCitation, ...]
+    invalid: tuple[CaseInvalidEvidence, ...]
+    offered_units: int
 
 
 def answer_from(
     reply: ChatReply,
     trace: CaseAnalysisTrace | None,
-    sources: CaseSourceBundle,
-    followups: Sequence[CaseFollowupExchange],
+    reading_sources: ReadingSources,
     language: ResponseLanguage,
 ) -> CaseAnalysisOutput:
-    registry: dict[str, CaseSourceItem] = {source.source_id: source for source in sources.sources}
-    registry.update({item.source_id: item for item in followup_registry_items(followups)})
+    registry = reading_sources.evidence.sources
     claims = (
         {claim.claim_id: still_held(claim, registry) for claim in trace.claims}
         if trace is not None
@@ -72,7 +68,7 @@ def answer_from(
     )
     drafts = []
     for item in reply.units:
-        draft = drafted_unit(item, claims, registry)
+        draft = drafted_unit(item, claims, reading_sources)
         if draft is not None:
             drafts.append(draft)
     answer = "\n\n".join(draft.text for draft in drafts) or UNANSWERED[language]
@@ -124,7 +120,7 @@ def holds(citation: CaseSourceCitation, registry: Mapping[str, CaseSourceItem]) 
 def drafted_unit(
     item: ChatReplyUnit,
     claims: Mapping[str, CaseAnalysisClaim],
-    registry: dict[str, CaseSourceItem],
+    reading_sources: ReadingSources,
 ) -> DraftUnit | None:
     text = strip_inline_citations(item.text)
     if not text:
@@ -138,60 +134,28 @@ def drafted_unit(
             if claim_id in claims
         )
     )
-    quotes: list[CaseSourceCitation] = []
-    verified_count = 0
-    for quote in item.quotes:
-        source = registry.get(quote.source_id)
-        if source is None or not quote.exact_quote.strip():
-            continue
-        exact = quote.exact_quote.strip()
-        pieces = (
-            [p.strip() for p in re.split(r"(?:\.{3,}|…+)", exact) if p.strip()]
-            if ("..." in exact or "…" in exact)
-            else [exact]
-        )
-        matched = False
-        for piece in pieces:
-            start = source.text.find(piece)
-            if start >= 0:
-                matched = True
-                locator = find_document_locator(
-                    {
-                        "document_id": source.document_id,
-                        "filename": source.filename,
-                        "page_spans": source.provenance.get("pages"),
-                    },
-                    source.text,
-                    [start],
-                    len(piece),
-                )
-                quotes.append(
-                    CaseSourceCitation(
-                        source_id=source.source_id,
-                        exact_quote=piece,
-                        start=start,
-                        end=start + len(piece),
-                        document_id=source.document_id,
-                        filename=source.filename,
-                        page_numbers=list(locator[2]) if locator else [],
-                    )
-                )
-        if matched:
-            verified_count += 1
+    cites = item.basis in CITING_BASES
+    cited = [citation for citation in item.citations if cites and citation.source_id]
+    bound, invalid, _ = bind_citations(
+        cited, "supporting", reading_sources.evidence, set(), reading_sources.canonical_id
+    )
     return DraftUnit(
         text=text,
         basis=item.basis,
         claim_ids=claim_ids,
-        quotes=tuple(quotes),
-        offered_quotes=len(item.quotes),
-        verified_quotes=verified_count,
+        citations=tuple(bound),
+        invalid=tuple(entry for entry in invalid if entry.reason != "duplicate_id"),
+        offered_units=sum(max(len(citation.evidence_unit_ids), 1) for citation in cited),
     )
 
 
 def finished_unit(draft: DraftUnit, bound: Mapping[str, CaseAnalysisClaim]) -> ChatAnswerUnit:
     cited = [bound[claim_id] for claim_id in draft.claim_ids if claim_id in bound]
     supporting = unique_citations(
-        [*draft.quotes, *(citation for claim in cited for citation in claim.supporting_citations)]
+        [
+            *draft.citations,
+            *(citation for claim in cited for citation in claim.supporting_citations),
+        ]
     )
     contradicting = unique_citations(
         [citation for claim in cited for citation in claim.contradicting_citations]
@@ -214,6 +178,7 @@ def finished_unit(draft: DraftUnit, bound: Mapping[str, CaseAnalysisClaim]) -> C
             ]
         ),
         contradicting_citations=contradicting,
+        invalid_evidence=list(draft.invalid),
     )
 
 
@@ -233,7 +198,7 @@ def log_grounding(drafts: Sequence[DraftUnit], units: Sequence[ChatAnswerUnit]) 
     cited = [unit for unit in facts if unit.claim_ids or unit.cited]
     logger.info(
         "Chat answer grounding: %d units, %d case facts (%d cited, %d uncited), "
-        "%d interpretation, %d technical, %d general, quotes %d offered %d verified",
+        "%d interpretation, %d technical, %d general, units %d offered %d bound",
         len(units),
         len(facts),
         len(cited),
@@ -241,6 +206,6 @@ def log_grounding(drafts: Sequence[DraftUnit], units: Sequence[ChatAnswerUnit]) 
         sum(unit.basis == "interpretation" for unit in units),
         sum(unit.basis == "technical" for unit in units),
         sum(unit.basis == "general" for unit in units),
-        sum(draft.offered_quotes for draft in drafts),
-        sum(draft.verified_quotes for draft in drafts),
+        sum(draft.offered_units for draft in drafts),
+        sum(len(draft.citations) for draft in drafts),
     )

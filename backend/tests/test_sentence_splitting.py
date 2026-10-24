@@ -99,3 +99,41 @@ def test_a_long_thai_paragraph_is_cut_into_sentences_rather_than_kept_whole():
 
     assert len(pieces) >= 3
     assert "".join(pieces).replace(" ", "") == LONG_THAI_PARAGRAPH.replace(" ", "")
+
+
+def test_a_line_already_split_is_not_sent_to_the_segmenter_again(monkeypatch):
+    asked = []
+
+    class Segmenter:
+        def split(self, text, **options):
+            asked.append(text)
+            return [text]
+
+    segmenter = Segmenter()
+    monkeypatch.setattr(sentences, "get_sat_segmenter", lambda: segmenter)
+    line = "ผู้เสียหายโอนเงินให้คนร้ายสองครั้งในคืนเดียวกัน"
+
+    first = sentences.SentenceIndex(line).spans(0, len(line))
+    second = sentences.SentenceIndex(line).spans(0, len(line))
+
+    assert first == second
+    assert asked == [line]
+
+
+def test_a_line_split_by_one_segmenter_is_split_again_by_another(monkeypatch):
+    asked = []
+
+    class Segmenter:
+        def __init__(self, name):
+            self.name = name
+
+        def split(self, text, **options):
+            asked.append(self.name)
+            return [text]
+
+    line = "ผู้เสียหายแจ้งความที่สถานีตำรวจในวันรุ่งขึ้นหลังเกิดเหตุ"
+    for segmenter in (Segmenter("first"), Segmenter("second")):
+        monkeypatch.setattr(sentences, "get_sat_segmenter", lambda segmenter=segmenter: segmenter)
+        sentences.SentenceIndex(line).spans(0, len(line))
+
+    assert asked == ["first", "second"]

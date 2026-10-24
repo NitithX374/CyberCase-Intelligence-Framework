@@ -158,7 +158,7 @@ function responseFor(body) {
           text: "The deterministic test provider answered from the persisted case analysis.",
           basis: "case_fact",
           claim_ids: ["A-01"],
-          quotes: [],
+          citations: [],
         },
       ],
       suggestion: "none",

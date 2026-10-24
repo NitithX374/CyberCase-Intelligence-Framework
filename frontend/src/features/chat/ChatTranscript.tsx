@@ -160,6 +160,7 @@ function stripInlineCitations(text: string): string {
 }
 
 const PRELIMINARY_NOTE = "เป็นการตีความเบื้องต้น ยังไม่ได้ผ่านการวิเคราะห์";
+const UNBOUND_UNITS_NOTE = "หลักฐานบางส่วนที่อ้างไว้หาไม่พบใน Source";
 
 const SUGGESTION_LINES: Record<string, string> = {
   add_source: "ถ้าต้องการให้ข้อมูลนี้ถูกนำไปวิเคราะห์ ให้เพิ่มเป็น source ที่หน้า Sources",
@@ -183,6 +184,9 @@ function AnswerUnits({
           <Markdown content={stripInlineCitations(unit.text)} />
           {unit.basis === "interpretation" && (
             <p className="mt-1 text-xs text-ink-muted">{PRELIMINARY_NOTE}</p>
+          )}
+          {(unit.invalid_evidence?.length ?? 0) > 0 && (
+            <p className="mt-1 text-xs text-ink-muted">{UNBOUND_UNITS_NOTE}</p>
           )}
           <AnswerReferences {...sourceReferences([unitItem(unit, statuses)], sources)} />
         </div>

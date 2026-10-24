@@ -534,6 +534,7 @@ export interface components {
             supporting_citations?: components["schemas"]["CaseSourceCitation"][];
             contradicting_source_ids?: string[];
             contradicting_citations?: components["schemas"]["CaseSourceCitation"][];
+            invalid_evidence?: components["schemas"]["CaseInvalidEvidence"][];
         };
         ChatMessageCreate: {
             content: string;

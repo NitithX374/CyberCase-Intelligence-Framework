@@ -20,12 +20,7 @@ from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle
 from app.trace.bind import followup_registry_items
 from app.trace.claim_validation import usable_claims
-from app.trace.claims import (
-    CLAIM_FIELDS_FOR_JUDGEMENT,
-    CaseAnalysisClaim,
-    CaseFollowupExchange,
-    followup_payload,
-)
+from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, followup_payload
 from app.trace.trace import CaseAnalysisTrace, CaseProviderJudgement, CaseProviderReadingReply
 
 logger = logging.getLogger("app.case_analysis")
@@ -33,6 +28,15 @@ logger = logging.getLogger("app.case_analysis")
 SUMMARY_CLAIMS_PER_SENTENCE = 3
 SUMMARY_MIN_SENTENCES = 2
 SUMMARY_MAX_SENTENCES = 8
+
+CLAIM_FIELDS_FOR_JUDGEMENT = {
+    "claim_id": True,
+    "claim_type": True,
+    "text": True,
+    "epistemic_status": True,
+    "supporting_citations": {"__all__": {"exact_quote"}},
+    "contradicting_citations": {"__all__": {"exact_quote"}},
+}
 
 
 async def write_trace(

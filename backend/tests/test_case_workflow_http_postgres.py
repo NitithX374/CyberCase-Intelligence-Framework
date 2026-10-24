@@ -58,7 +58,7 @@ def claim(claim_id: str, source_id: str, unit_ids: list[str]) -> dict:
 
 def general(text: str) -> dict:
     return {
-        "units": [{"text": text, "basis": "general", "claim_ids": [], "quotes": []}],
+        "units": [{"text": text, "basis": "general", "claim_ids": [], "citations": []}],
         "suggestion": "none",
     }
 
@@ -426,7 +426,7 @@ async def test_a_chat_answer_keeps_the_follow_up_answer_its_claim_rests_on(monke
                             "text": "It began around two.",
                             "basis": "case_fact",
                             "claim_ids": ["A-01"],
-                            "quotes": [],
+                            "citations": [],
                         }
                     ],
                     "suggestion": "none",
@@ -556,31 +556,34 @@ async def test_nul_in_a_case_title_is_dropped(monkeypatch):
         assert kept.json()["title"] == "Drive lock"
 
 
-async def test_before_an_analysis_the_chat_quotes_the_source_it_answers_from(monkeypatch, model):
+async def test_before_an_analysis_the_chat_cites_the_units_it_answers_from(monkeypatch, model):
     async with isolated_database() as factory:
         case_id, user_id, _ = await seeded_case(factory, trace=None)
 
-        def quote_the_narrative(content: dict) -> dict:
+        def cite_the_narrative(content: dict) -> dict:
             [source] = content["case_sources"]
+            unit_ids = [unit["unit_id"] for unit in source["evidence_units"]]
             return {
                 "units": [
                     {
                         "text": "The narrative records it.",
                         "basis": "case_fact",
                         "claim_ids": [],
-                        "quotes": [{"source_id": source["source_id"], "exact_quote": NARRATIVE}],
+                        "citations": [
+                            {"source_id": source["source_id"], "evidence_unit_ids": unit_ids}
+                        ],
                     },
                     {
                         "text": "It may be ransomware.",
                         "basis": "interpretation",
                         "claim_ids": [],
-                        "quotes": [],
+                        "citations": [],
                     },
                 ],
                 "suggestion": "run_analysis",
             }
 
-        scripted = model(answer=[quote_the_narrative])
+        scripted = model(answer=[cite_the_narrative])
         async with signed_in(monkeypatch, factory, user_id) as client:
             asked = await client.post(
                 f"/cases/{case_id}/chat/messages", json={"content": "What happened?"}
@@ -592,6 +595,7 @@ async def test_before_an_analysis_the_chat_quotes_the_source_it_answers_from(mon
         assert read["analysis_status"] == "none"
         metadata = asked.json()["messages"][1]["metadata_json"]
         fact, reading = metadata["answer_units"]
-        assert [c["exact_quote"] for c in fact["supporting_citations"]] == [NARRATIVE]
+        assert "".join(c["exact_quote"] for c in fact["supporting_citations"]) == NARRATIVE
+        assert fact["invalid_evidence"] == []
         assert reading["basis"] == "interpretation"
         assert metadata["suggestion"] == "run_analysis"

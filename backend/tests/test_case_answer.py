@@ -9,6 +9,7 @@ from uuid import uuid4
 import pytest
 
 import app.chat.compose as module
+from app.analysis.reading_sources import ReadingSources
 from app.analysis.technical_context.contracts import CaseRagContextPayload, LegalReferenceResult
 from app.chat.answer import answer_metadata
 from app.chat.compose import CHAT_OUTPUT_TOKENS, generate_case_answer
@@ -18,6 +19,7 @@ from app.errors import CaseAnalysisFailure
 from app.llm.payload import thinking_option
 from app.llm.settings import configured_pipeline
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.bind import followup_registry_items
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
@@ -107,13 +109,22 @@ def message(role: str, content: str):
     return SimpleNamespace(id=uuid4(), role=role, content=content)
 
 
-def unit(text: str, basis: str = "case_fact", claim_ids=(), quotes=()) -> dict:
+def unit(text: str, basis: str = "case_fact", claim_ids=(), citations=()) -> dict:
     return {
         "text": text,
         "basis": basis,
         "claim_ids": list(claim_ids),
-        "quotes": [{"source_id": source_id, "exact_quote": quote} for source_id, quote in quotes],
+        "citations": [
+            {"source_id": source_id, "evidence_unit_ids": list(unit_ids)}
+            for source_id, unit_ids in citations
+        ],
     }
+
+
+def unit_id(source_id: str, fragment: str, followups=()) -> str:
+    reading = ReadingSources((*case_sources().sources, *followup_registry_items(followups)))
+    [payload] = [p for p in reading.payloads if p["source_id"] == source_id]
+    return next(u["unit_id"] for u in payload["evidence_units"] if fragment in u["text"])
 
 
 def reply(*units: dict, suggestion: str = "none") -> dict:
@@ -139,25 +150,25 @@ def ask(monkeypatch, raw: dict, *, analysed: bool = False, **overrides):
     return asyncio.run(generate_case_answer(**arguments)), seen
 
 
-def test_before_an_analysis_the_model_reads_every_source_in_full(monkeypatch):
+def test_before_an_analysis_the_model_reads_every_source_in_full_as_units(monkeypatch):
     _, seen = ask(monkeypatch, reply(unit("Two sources.", "general")))
 
     content = seen["content"]
     assert content["analysis"] is None
     assert content["analysis_status"] == "none"
     statement = next(s for s in content["case_sources"] if s["source_id"] == DOCUMENT_ID)
-    assert ACCOUNT_LINE in statement["text"] and len(statement["text"]) > 6_000
+    text = "".join(u["text"] for u in statement["evidence_units"])
+    assert text == case_sources().sources[1].text and len(text) > 6_000
+    assert statement["evidence_units"][0]["unit_id"] == "U001"
     assert statement["document"]["filename"] == "statement.pdf"
 
 
-def test_a_fact_quoted_from_deep_in_a_document_is_cited_with_its_page(monkeypatch):
+def test_a_fact_from_deep_in_a_document_is_cited_with_the_unit_text_and_its_page(monkeypatch):
+    selected = unit_id(DOCUMENT_ID, ACCOUNT_LINE)
     output, _ = ask(
         monkeypatch,
         reply(
-            unit(
-                "The money went to account 123-4-56789.",
-                quotes=[(DOCUMENT_ID, "transferred money to account 123-4-56789")],
-            )
+            unit("The money went to account 123-4-56789.", citations=[(DOCUMENT_ID, [selected])])
         ),
     )
 
@@ -168,34 +179,37 @@ def test_a_fact_quoted_from_deep_in_a_document_is_cited_with_its_page(monkeypatc
         "statement.pdf",
         [20],
     )
+    statement = case_sources().sources[1].text
+    assert citation.pointer_state == "direct"
+    assert citation.exact_quote == statement[citation.start : citation.end]
+    assert ACCOUNT_LINE in citation.exact_quote
     assert answered.supporting_source_ids == [DOCUMENT_ID]
+    assert answered.invalid_evidence == []
 
 
-def test_the_grounding_log_counts_a_gapped_quote_once(monkeypatch, caplog):
+def test_the_grounding_log_counts_the_units_offered_and_bound(monkeypatch, caplog):
     caplog.set_level(logging.INFO, logger=module.__name__)
     output, _ = ask(
         monkeypatch,
         reply(
             unit(
                 "A caller posed as police on 3 March.",
-                quotes=[
-                    (NARRATIVE_ID, "On 3 March the victim ... claiming to be a police officer.")
-                ],
+                citations=[(NARRATIVE_ID, ["U001", "U999"])],
             )
         ),
     )
 
-    assert len(output.units[0].supporting_citations) == 2
-    assert "quotes 1 offered 1 verified" in caplog.text
+    assert len(output.units[0].supporting_citations) == 1
+    assert "units 2 offered 1 bound" in caplog.text
 
 
-def test_a_quote_that_is_not_in_the_source_loses_its_citation_but_not_its_text(monkeypatch):
+def test_a_unit_the_source_does_not_have_is_kept_as_an_invalid_pointer(monkeypatch):
     output, _ = ask(
         monkeypatch,
         reply(
             unit(
                 "The victim transferred money three times.",
-                quotes=[(DOCUMENT_ID, "transferred money three times")],
+                citations=[(DOCUMENT_ID, ["U999"])],
             )
         ),
     )
@@ -204,14 +218,46 @@ def test_a_quote_that_is_not_in_the_source_loses_its_citation_but_not_its_text(m
     assert answered.text == "The victim transferred money three times."
     assert answered.basis == "case_fact"
     assert answered.supporting_citations == []
+    [invalid] = answered.invalid_evidence
+    assert (invalid.source_id, invalid.reason, invalid.role) == (
+        DOCUMENT_ID,
+        "unknown_unit",
+        "supporting",
+    )
+    assert invalid.evidence_unit_id.startswith(f"{DOCUMENT_ID}:U999-")
+
+
+def test_a_unit_cited_twice_in_one_statement_is_not_a_failure(monkeypatch):
+    output, _ = ask(
+        monkeypatch,
+        reply(unit("A caller posed as police.", citations=[(NARRATIVE_ID, ["U001", "U001"])])),
+    )
+
+    [answered] = output.units
+    assert len(answered.supporting_citations) == 1
+    assert answered.invalid_evidence == []
+
+
+def test_a_citation_that_names_no_source_is_ignored(monkeypatch):
+    output, _ = ask(
+        monkeypatch,
+        reply(unit("A caller posed as police.", citations=[("", ["U001"])])),
+    )
+
+    [answered] = output.units
+    assert answered.supporting_citations == []
+    assert answered.invalid_evidence == []
 
 
 def test_a_summary_cites_each_source_it_draws_on(monkeypatch):
     output, _ = ask(
         monkeypatch,
         reply(
-            unit("A caller posed as police.", quotes=[(NARRATIVE_ID, "claiming to be a police")]),
-            unit("Money went to 123-4-56789.", quotes=[(DOCUMENT_ID, "account 123-4-56789")]),
+            unit("A caller posed as police.", citations=[(NARRATIVE_ID, ["U001"])]),
+            unit(
+                "Money went to 123-4-56789.",
+                citations=[(DOCUMENT_ID, [unit_id(DOCUMENT_ID, ACCOUNT_LINE)])],
+            ),
         ),
     )
 
@@ -226,6 +272,40 @@ def test_an_interpretation_stays_marked_as_one(monkeypatch):
     )
 
     assert [u.basis for u in output.units] == ["interpretation"]
+
+
+def test_an_interpretation_keeps_the_units_it_rests_on(monkeypatch):
+    output, _ = ask(
+        monkeypatch,
+        reply(
+            unit(
+                "This looks like an impersonation scam.",
+                "interpretation",
+                citations=[(NARRATIVE_ID, ["U001"])],
+            )
+        ),
+    )
+
+    [answered] = output.units
+    assert [c.source_id for c in answered.supporting_citations] == [NARRATIVE_ID]
+
+
+@pytest.mark.parametrize("basis", ["technical", "general"])
+def test_citations_on_a_statement_that_is_not_about_the_case_are_ignored(monkeypatch, basis):
+    output, _ = ask(
+        monkeypatch,
+        reply(
+            unit(
+                "T1566 is phishing.",
+                basis,
+                citations=[("technical_context", ["U001"]), (NARRATIVE_ID, ["U001"])],
+            )
+        ),
+    )
+
+    [answered] = output.units
+    assert answered.supporting_citations == []
+    assert answered.invalid_evidence == []
 
 
 def test_a_technique_is_explained_only_from_the_retrieved_context(monkeypatch):
@@ -311,7 +391,15 @@ def test_after_an_analysis_the_model_still_reads_the_sources_and_the_gaps(monkey
     content = seen["content"]
     assert {s["source_id"] for s in content["case_sources"]} == {NARRATIVE_ID, DOCUMENT_ID}
     assert [c["claim_id"] for c in content["analysis"]["claims"]] == ["A-01"]
-    assert [g["topic"] for g in content["analysis"]["gaps"]] == ["Identity of the caller"]
+    assert content["analysis"]["gaps"] == [
+        {
+            "topic": "Identity of the caller",
+            "status": "NOT_PROVIDED",
+            "description": "Nothing names the caller.",
+            "reason": "No source identifies the caller.",
+            "affected_claim_ids": [],
+        }
+    ]
 
 
 def test_a_claim_outside_the_analysis_is_dropped_instead_of_failing(monkeypatch):
@@ -355,13 +443,15 @@ def test_a_follow_up_answer_is_visible_and_can_be_quoted(monkeypatch):
     )
     output, seen = ask(
         monkeypatch,
-        reply(unit("It began around two.", quotes=[("QA-01", "around two in the morning")])),
+        reply(unit("It began around two.", citations=[("QA-01", ["U001"])])),
         followups=followups,
     )
 
     assert [item["qa_id"] for item in seen["content"]["followup_history"]] == ["QA-01"]
+    assert "QA-01" in {s["source_id"] for s in seen["content"]["case_sources"]}
     [answered] = output.units
     assert [c.source_id for c in answered.supporting_citations] == ["QA-01"]
+    assert answered.supporting_citations[0].exact_quote == REPLY
 
 
 def test_an_unknown_basis_is_checked_like_a_case_fact(monkeypatch):
@@ -376,7 +466,7 @@ def test_malformed_units_do_not_cost_the_answer(monkeypatch):
         {
             "units": [
                 "not a unit",
-                {"text": "A caller posed as police.", "claim_ids": "A-01", "quotes": "none"},
+                {"text": "A caller posed as police.", "claim_ids": "A-01", "citations": "none"},
                 {"text": "   "},
             ]
         },

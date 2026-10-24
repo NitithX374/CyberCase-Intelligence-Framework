@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
+from app.config import settings
+from app.sources import evidence
 from app.sources.bundle import CaseSourceItem
-from app.sources.evidence import EvidenceIndex, evidence_revision, evidence_units
+from app.sources.evidence import EvidenceIndex, cut_ahead, evidence_revision, evidence_units
 from app.trace.quotes import MAX_QUOTE_CHARS
 
 
@@ -124,3 +128,25 @@ def test_a_segmenter_change_makes_issued_unit_ids_stale(monkeypatch):
     assert [index.resolve("S1", unit.unit_id) for unit in issued] == [(None, "stale_id")] * len(
         issued
     )
+
+
+def cut_in_the_background(monkeypatch, text: str, *, warm: bool) -> list[str]:
+    cut = []
+    monkeypatch.setattr(settings, "warmup_models", warm)
+    monkeypatch.setattr(evidence, "evidence_units", lambda source: cut.append(source.text))
+
+    async def add_a_source():
+        cut_ahead(text)
+        await asyncio.gather(*evidence.cutting)
+
+    asyncio.run(add_a_source())
+    return cut
+
+
+def test_a_new_source_is_cut_into_units_in_the_background(monkeypatch):
+    assert cut_in_the_background(monkeypatch, "ผู้เสียหายโอนเงิน", warm=True) == ["ผู้เสียหายโอนเงิน"]
+    assert evidence.cutting == set()
+
+
+def test_nothing_is_cut_ahead_when_model_warmup_is_off(monkeypatch):
+    assert cut_in_the_background(monkeypatch, "ผู้เสียหายโอนเงิน", warm=False) == []

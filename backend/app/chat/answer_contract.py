@@ -6,17 +6,28 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
 
+from app.trace.citations import MAX_EVIDENCE_ID_CHARS
 from app.trace.messages import ChatAnswerUnit, ChatSuggestion
 from app.trace.trace import CaseAnalysisTrace
 
 BASES = ("case_fact", "interpretation", "technical", "general")
 SUGGESTIONS = ("none", "add_source", "run_analysis")
+MAX_SOURCE_ID_CHARS = 160
+MAX_CITED_UNITS = 64
 
 
 def records(value: object) -> list[object]:
     if not isinstance(value, (list, tuple)):
         return []
     return [item for item in value if isinstance(item, Mapping)]
+
+
+def strings(value: object) -> list[str]:
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, (list, tuple)):
+        return []
+    return [item.strip() for item in value if isinstance(item, str) and item.strip()]
 
 
 @dataclass(frozen=True)
@@ -27,11 +38,21 @@ class CaseAnalysisOutput:
     suggestion: ChatSuggestion = "none"
 
 
-class ChatReplyQuote(BaseModel):
+class ChatReplyCitation(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     source_id: str = ""
-    exact_quote: str = ""
+    evidence_unit_ids: list[str] = Field(default_factory=list)
+
+    @field_validator("source_id", mode="before")
+    @classmethod
+    def source_id_text(cls, value: object) -> str:
+        return value.strip()[:MAX_SOURCE_ID_CHARS] if isinstance(value, str) else ""
+
+    @field_validator("evidence_unit_ids", mode="before")
+    @classmethod
+    def unit_id_strings(cls, value: object) -> list[str]:
+        return [item[:MAX_EVIDENCE_ID_CHARS] for item in strings(value)][:MAX_CITED_UNITS]
 
 
 class ChatReplyUnit(BaseModel):
@@ -40,7 +61,9 @@ class ChatReplyUnit(BaseModel):
     text: str = ""
     basis: Literal["case_fact", "interpretation", "technical", "general"] = "case_fact"
     claim_ids: list[str] = Field(default_factory=list)
-    quotes: Annotated[list[ChatReplyQuote], BeforeValidator(records)] = Field(default_factory=list)
+    citations: Annotated[list[ChatReplyCitation], BeforeValidator(records)] = Field(
+        default_factory=list
+    )
 
     @field_validator("text", mode="before")
     @classmethod
@@ -56,11 +79,7 @@ class ChatReplyUnit(BaseModel):
     @field_validator("claim_ids", mode="before")
     @classmethod
     def claim_id_strings(cls, value: object) -> list[str]:
-        if isinstance(value, str):
-            value = [value]
-        if not isinstance(value, (list, tuple)):
-            return []
-        return [item for item in value if isinstance(item, str) and item.strip()]
+        return strings(value)
 
 
 class ChatReply(BaseModel):

@@ -400,6 +400,34 @@ describe("ChatTranscript answer units", () => {
     expect(screen.getAllByText("เป็นการตีความเบื้องต้น ยังไม่ได้ผ่านการวิเคราะห์")).toHaveLength(1);
   });
 
+  it("says plainly when a statement cited evidence that could not be found", () => {
+    render(
+      <ChatTranscript
+        messages={[
+          answer([
+            {
+              text: "The victim paid three times.",
+              basis: "case_fact",
+              invalid_evidence: [
+                {
+                  source_id: "statement-1",
+                  evidence_unit_id: "statement-1:U999-0000000000000000",
+                  role: "supporting",
+                  pointer_state: "unresolved",
+                  reason: "unknown_unit",
+                },
+              ],
+            },
+            { text: "The caller posed as police.", basis: "case_fact" },
+          ]),
+        ]}
+        isProcessing={false}
+      />,
+    );
+
+    expect(screen.getAllByText("หลักฐานบางส่วนที่อ้างไว้หาไม่พบใน Source")).toHaveLength(1);
+  });
+
   it.each([
     ["add_source", "ถ้าต้องการให้ข้อมูลนี้ถูกนำไปวิเคราะห์ ให้เพิ่มเป็น source ที่หน้า Sources"],
     ["run_analysis", "กด Analyze เพื่อวิเคราะห์เคสอีกครั้ง"],

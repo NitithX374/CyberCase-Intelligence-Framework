@@ -27,10 +27,6 @@ class Scorer(Protocol):
     def verify(self, claim: str, units: Sequence[str]) -> ClaimVerification: ...
 
 
-def load_scorer() -> Scorer:
-    return load_verifier()
-
-
 def resolved_support(claim: CaseAnalysisClaim):
     seen = set()
     sources = {}
@@ -129,7 +125,7 @@ def validate_claims(
             )
         else:
             if scorer is None:
-                scorer = (provider or load_scorer)()
+                scorer = (provider or load_verifier)()
             units = [citation.exact_quote for _, citation in resolved_support(claim)]
             result = scorer.verify(claim.text, units)
             calls += 1

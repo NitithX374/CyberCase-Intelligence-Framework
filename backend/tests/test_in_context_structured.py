@@ -94,13 +94,14 @@ def test_missing_defaulted_fields_do_not_pass_the_wire_contract(stage, model, re
     [
         {"basis": "unknown"},
         {"claim_ids": "A-01"},
-        {"quotes": [{"source_id": "S1"}]},
+        {"citations": [{"source_id": "S1"}]},
+        {"citations": [{"source_id": "S1", "evidence_unit_ids": "U001"}]},
         {"text": 42},
         {"extra": "unexpected"},
     ],
 )
 def test_chat_coercion_cannot_hide_a_broken_nested_wire_contract(change):
-    unit = {"text": "A finding.", "basis": "case_fact", "claim_ids": [], "quotes": []}
+    unit = {"text": "A finding.", "basis": "case_fact", "claim_ids": [], "citations": []}
     unit.update(change)
     with pytest.raises(ValidationError):
         contracts.validate_structured_json(

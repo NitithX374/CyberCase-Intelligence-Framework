@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import threading
 from bisect import bisect_right
-from functools import cache, cached_property
+from functools import cache, cached_property, lru_cache
 from importlib.metadata import version
 from typing import Any
 
@@ -106,10 +106,14 @@ def stripped(text: str, start: int, end: int) -> tuple[int, int]:
     return start + len(piece) - len(piece.lstrip()), end - len(piece) + len(piece.rstrip())
 
 
+@lru_cache(maxsize=65_536)
+def split_line(segmenter: Any, line: str) -> tuple[tuple[int, int], ...]:
+    return tuple(line_sentences(line, 0, len(line)))
+
+
 class SentenceIndex:
     def __init__(self, text: str) -> None:
         self.text = text
-        self.split: dict[str, list[tuple[int, int]]] = {}
 
     @cached_property
     def lines(self) -> list[tuple[int, int]]:
@@ -126,10 +130,8 @@ class SentenceIndex:
         ]
 
     def sentences_in(self, start: int, end: int) -> list[tuple[int, int]]:
-        line = self.text[start:end]
-        if line not in self.split:
-            self.split[line] = line_sentences(line, 0, len(line))
-        return [(start + span_start, start + span_end) for span_start, span_end in self.split[line]]
+        spans = split_line(get_sat_segmenter(), self.text[start:end])
+        return [(start + span_start, start + span_end) for span_start, span_end in spans]
 
     def sentences(self, line: int) -> list[tuple[int, int]]:
         return self.sentences_in(*self.lines[line])
