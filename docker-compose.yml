@@ -32,6 +32,13 @@ services:
       context: ./backend
     container_name: cybercase-backend
     restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
     # Secrets, the database login it shares with `db`, the model switch, and where the
     # local models and their caches live (backend/models). Everything else is the default
     # in backend/app/config.py.
