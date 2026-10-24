@@ -249,7 +249,8 @@ trace/                  what the analysis, chat and reports share
                         quotation use it, and segmenter_identity names the one
                         in use; each line's split is kept in memory per
                         segmenter (split_line), so a source is cut once
-                        per process
+                        per process; SaT runs on the GPU when CUDA is
+                        available and on the CPU otherwise
   bind.py               the claim rules binding applies (a repeated claim ID
                         is dropped, a reported claim left without support
                         becomes not_confirmed, source-ID lists are sorted);

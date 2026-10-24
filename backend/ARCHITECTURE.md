@@ -150,7 +150,9 @@ The weights live in `backend/models/nli_mdeberta` and
 put there by `scripts/copy_nli_weights.py` and `scripts/copy_source_selector.py`;
 `requirements-encoder.txt` installs torch, transformers and sentence-transformers.
 Both models run on the CPU, the NLI model in its stored float16 and the selector in
-float32. How the method was chosen and measured is in
+float32. The SaT segmenter runs on the GPU when CUDA is available (Compose gives the
+backend one) and on the CPU otherwise; both cut the same units, which was measured on
+the 60 stored sources (7,192 units, none different). How the method was chosen and measured is in
 [research/attribution_benchmark](research/attribution_benchmark/B1_INTEGRATION.md).
 
 `analysis/views.py` batches the Claims supplied to Judgement from the same reading into one

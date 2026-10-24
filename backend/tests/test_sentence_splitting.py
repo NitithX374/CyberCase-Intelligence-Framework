@@ -92,6 +92,40 @@ def test_the_segmenter_identity_names_what_splits_the_text(monkeypatch):
     assert fallback == "crfcut:pythainlp=pythainlp-version"
 
 
+class Model:
+    def __init__(self, fails: bool = False) -> None:
+        self.fails = fails
+        self.moves: list[str] = []
+
+    def to(self, device: str) -> None:
+        self.moves.append(device)
+        if self.fails and device == "cuda":
+            raise RuntimeError("CUDA out of memory")
+
+
+def test_sat_moves_to_the_gpu_only_when_cuda_is_available(monkeypatch):
+    import torch
+
+    model = Model()
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+    sentences.move_to_gpu(model)
+    assert model.moves == []
+
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    sentences.move_to_gpu(model)
+    assert model.moves == ["cuda"]
+
+
+def test_sat_stays_on_the_cpu_when_the_gpu_refuses_it(monkeypatch):
+    import torch
+
+    model = Model(fails=True)
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    sentences.move_to_gpu(model)
+
+    assert model.moves == ["cuda", "cpu"]
+
+
 def test_a_long_thai_paragraph_is_cut_into_sentences_rather_than_kept_whole():
     if get_sat_segmenter() is None:
         pytest.skip("the SaT segmenter is not available")

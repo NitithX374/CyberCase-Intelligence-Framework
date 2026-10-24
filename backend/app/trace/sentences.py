@@ -34,6 +34,7 @@ def get_sat_segmenter() -> Any:
                     from wtpsplit import SaT
 
                     _sat_model = SaT(SAT_MODEL, from_pretrained_kwargs={"revision": SAT_REVISION})
+                    move_to_gpu(_sat_model)
                 except Exception:
                     logger.warning(
                         "SaT %s@%s could not be loaded; sentences are split with PyThaiNLP crfcut",
@@ -43,6 +44,20 @@ def get_sat_segmenter() -> Any:
                     )
                     _sat_model = False
     return _sat_model if _sat_model is not False else None
+
+
+def move_to_gpu(model: Any) -> None:
+    import torch
+
+    if not torch.cuda.is_available():
+        return
+    try:
+        model.to("cuda")
+    except RuntimeError:
+        logger.warning("SaT could not be moved to the GPU; it runs on the CPU", exc_info=True)
+        model.to("cpu")
+        return
+    logger.info("SaT runs on the GPU")
 
 
 @cache
