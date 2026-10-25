@@ -1,0 +1,92 @@
+{
+ "source": "raw/b1-mt-th (English) and raw/b1-mt-th-normalized (Thai, NLI input normalized with NFKC)",
+ "method": "Paired 2000 question/response cluster bootstrap resamples within source subsets; seed 20261007",
+ "test": {
+  "en": {
+   "n": 1610,
+   "tp": 503,
+   "fp": 279,
+   "tn": 526,
+   "fn": 302,
+   "false_acceptance_rate": 0.34658385093167704,
+   "false_rejection_rate": 0.37515527950310557,
+   "supported_f1": 0.6339004410838059
+  },
+  "th": {
+   "n": 1610,
+   "tp": 570,
+   "fp": 396,
+   "tn": 409,
+   "fn": 235,
+   "false_acceptance_rate": 0.4919254658385093,
+   "false_rejection_rate": 0.2919254658385093,
+   "supported_f1": 0.6437041219649915
+  },
+  "th_minus_en95": {
+   "accuracy": [
+    -0.053966189856957,
+    -0.006036869738656011
+   ],
+   "supported_f1": [
+    -0.013431524284682616,
+    0.03513055937874936
+   ],
+   "macro_f1": [
+    -0.057479697998452345,
+    -0.01083025970979006
+   ],
+   "false_acceptance_rate": [
+    0.11052998323354875,
+    0.18007274698292416
+   ],
+   "supported_retention": [
+    0.05147823991153249,
+    0.1175177429560318
+   ]
+  }
+ },
+ "test_ood": {
+  "en": {
+   "n": 1686,
+   "tp": 688,
+   "fp": 298,
+   "tn": 545,
+   "fn": 155,
+   "false_acceptance_rate": 0.3534994068801898,
+   "false_rejection_rate": 0.18386714116251482,
+   "supported_f1": 0.7523236741388737
+  },
+  "th": {
+   "n": 1686,
+   "tp": 653,
+   "fp": 324,
+   "tn": 519,
+   "fn": 190,
+   "false_acceptance_rate": 0.38434163701067614,
+   "false_rejection_rate": 0.22538552787663108,
+   "supported_f1": 0.7175824175824176
+  },
+  "th_minus_en95": {
+   "accuracy": [
+    -0.05923952214700003,
+    -0.012848160650003975
+   ],
+   "supported_f1": [
+    -0.05653319041297799,
+    -0.01182233754174416
+   ],
+   "macro_f1": [
+    -0.059411623065389045,
+    -0.01266244894352797
+   ],
+   "false_acceptance_rate": [
+    -0.002389557716382884,
+    0.06330925791459953
+   ],
+   "supported_retention": [
+    -0.0728941444459332,
+    -0.009344978403490264
+   ]
+  }
+ }
+}

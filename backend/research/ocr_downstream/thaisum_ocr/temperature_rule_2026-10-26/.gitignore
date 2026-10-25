@@ -1,0 +1,5 @@
+# Article text (ThaiSum belongs to the news outlets): raw traces and run records stay on disk only.
+results/raw_*/
+results/run_*.jsonl
+results/*.log
+__pycache__/

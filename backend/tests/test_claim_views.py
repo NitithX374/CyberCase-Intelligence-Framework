@@ -33,7 +33,7 @@ async def test_batch_extracts_three_views_from_claims_only(monkeypatch):
     call = calls[0]
     assert call["schema"] is DerivedCaseViewsReply
     assert call["stage"] == "case_views"
-    assert call["temperature"] == 0
+    assert call["config"].thinking_tokens == 0
     assert "grammar" not in call
     assert call["content"] == {
         "claims": [{"claim_id": item.claim_id, "text": item.text} for item in supplied]

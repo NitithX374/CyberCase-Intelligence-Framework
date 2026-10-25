@@ -1,0 +1,250 @@
+{
+ "code": {
+  "commit": "unknown",
+  "app_dirty": null,
+  "messages_url": "https://openrouter.ai/api/v1/messages",
+  "segmenter": "sat:sat-3l-sm@137da054051ad9f1eac42025f758db4ac9f22535:threshold=0.025:wtpsplit=2.2.2",
+  "sat_device": "cuda:0",
+  "python": "3.11.17",
+  "claim_nli_path": "/tmp/ocr_rerun/no_verifier/nli_mdeberta",
+  "claim_selector_path": "/tmp/ocr_rerun/no_verifier/source_selector_mpnet",
+  "recorded_commit": "f0fcf37b59244539a388c3a6255b658ad5e54abf",
+  "image_id": "sha256:e7ea0110390bac0a6e328f7773d5816173d33b06e435024c8f6f6e37cfa8f90f"
+ },
+ "model": "google/gemma-4-26b-a4b-it",
+ "providers": [
+  "nextbit/bf16",
+  "coreweave/bf16"
+ ],
+ "articles": 50,
+ "article_ids": [
+  "r284702",
+  "r337255",
+  "r5339",
+  "r192322",
+  "r25648",
+  "r232094",
+  "r200387",
+  "r4509",
+  "r17505",
+  "r154884",
+  "r233272",
+  "r73582",
+  "r127876",
+  "r203824",
+  "r331726",
+  "r21039",
+  "r248347",
+  "r337910",
+  "r123380",
+  "r35213",
+  "r146696",
+  "r221439",
+  "r107909",
+  "r246412",
+  "r100711",
+  "r96200",
+  "r303443",
+  "r133555",
+  "r103688",
+  "r214389",
+  "r344406",
+  "r185156",
+  "r218132",
+  "r30761",
+  "r34103",
+  "r339715",
+  "r47931",
+  "r26634",
+  "r237233",
+  "r230876",
+  "r302355",
+  "r216145",
+  "r121222",
+  "r293066",
+  "r81696",
+  "r37611",
+  "r316652",
+  "r241479",
+  "r349226",
+  "r55608"
+ ],
+ "arms": {
+  "t0_think": {
+   "runs": 50,
+   "stage_errors": {
+    "write: CaseAnalysisFailure: case_judgement_incomplete": 1
+   },
+   "write_completed": 49,
+   "assess_completed": 50,
+   "views_failed": 3,
+   "stages": {
+    "assess": {
+     "calls": 50,
+     "temperatures": {
+      "0.0": 50
+     },
+     "status_codes": {
+      "200": 50
+     },
+     "stop_reasons": {
+      "end_turn": 50
+     },
+     "thinking_tokens_median": 0.0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 5.2
+    },
+    "case_judgement": {
+     "calls": 60,
+     "temperatures": {
+      "0.0": 60
+     },
+     "status_codes": {
+      "200": 60
+     },
+     "stop_reasons": {
+      "end_turn": 49,
+      "max_tokens": 11
+     },
+     "thinking_tokens_median": 7044.5,
+     "thinking_tokens_max": 34655,
+     "seconds_median": 98.9
+    },
+    "case_reading": {
+     "calls": 51,
+     "temperatures": {
+      "0.0": 51
+     },
+     "status_codes": {
+      "200": 51
+     },
+     "stop_reasons": {
+      "end_turn": 51
+     },
+     "thinking_tokens_median": 0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 21.6
+    },
+    "case_views": {
+     "calls": 58,
+     "temperatures": {
+      "0.0": 58
+     },
+     "status_codes": {
+      "200": 58
+     },
+     "stop_reasons": {
+      "end_turn": 58
+     },
+     "thinking_tokens_median": 0.0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 8.5
+    }
+   },
+   "usd": 0.239,
+   "seconds_median": 131.55
+  },
+  "t0_nothink": {
+   "runs": 50,
+   "stage_errors": {
+    "write: CaseAnalysisFailure: case_reading_invalid": 1
+   },
+   "write_completed": 49,
+   "assess_completed": 50,
+   "views_failed": 3,
+   "stages": {
+    "assess": {
+     "calls": 50,
+     "temperatures": {
+      "0.0": 50
+     },
+     "status_codes": {
+      "200": 50
+     },
+     "stop_reasons": {
+      "end_turn": 50
+     },
+     "thinking_tokens_median": 0.0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 5.3
+    },
+    "case_judgement": {
+     "calls": 49,
+     "temperatures": {
+      "0.0": 49
+     },
+     "status_codes": {
+      "200": 49
+     },
+     "stop_reasons": {
+      "end_turn": 49
+     },
+     "thinking_tokens_median": 0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 9.0
+    },
+    "case_reading": {
+     "calls": 51,
+     "temperatures": {
+      "0.0": 51
+     },
+     "status_codes": {
+      "200": 51
+     },
+     "stop_reasons": {
+      "end_turn": 51
+     },
+     "thinking_tokens_median": 0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 21.5
+    },
+    "case_views": {
+     "calls": 54,
+     "temperatures": {
+      "0.0": 54
+     },
+     "status_codes": {
+      "200": 54
+     },
+     "stop_reasons": {
+      "end_turn": 54
+     },
+     "thinking_tokens_median": 0.0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 9.0
+    }
+   },
+   "usd": 0.07,
+   "seconds_median": 38.05
+  },
+  "t1_assess": {
+   "runs": 50,
+   "stage_errors": {},
+   "write_completed": 0,
+   "assess_completed": 50,
+   "views_failed": 0,
+   "stages": {
+    "assess": {
+     "calls": 50,
+     "temperatures": {
+      "None": 50
+     },
+     "status_codes": {
+      "200": 50
+     },
+     "stop_reasons": {
+      "end_turn": 50
+     },
+     "thinking_tokens_median": 0.0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 4.7
+    }
+   },
+   "usd": 0.0073,
+   "seconds_median": 4.65
+  }
+ },
+ "cap_usd": 1.5,
+ "spent_usd": 0.3163,
+ "stopped": []
+}

@@ -50,6 +50,9 @@ def stage_payload(
         "model": config.model,
         "max_tokens": config.max_tokens,
         **thinking_fields(config),
+        "temperature": (1.0 if config.thinking_tokens > 0 else 0.0)
+        if temperature is None
+        else temperature,
         "system": structured_system_prompt(system, schema),
         "messages": [
             {
@@ -60,8 +63,6 @@ def stage_payload(
             }
         ],
     }
-    if temperature is not None:
-        payload["temperature"] = temperature
     if config.providers and config.server == "openrouter":
         payload["provider"] = {"order": list(config.providers), "allow_fallbacks": False}
     return payload

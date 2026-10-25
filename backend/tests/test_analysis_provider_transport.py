@@ -410,10 +410,11 @@ async def test_the_stage_asks_for_what_its_config_says(monkeypatch) -> None:
     assert sent[0]["model"] == "test/model"
     assert sent[0]["max_tokens"] == config.output_tokens + config.thinking_tokens
     assert sent[0]["thinking"] == {"type": "enabled", "budget_tokens": config.thinking_tokens}
-    assert "temperature" not in sent[0]
+    assert sent[0]["temperature"] == 1.0
     assert sent[1]["temperature"] == 0.0
     assert sent[2]["thinking"] == {"type": "disabled"}
     assert sent[2]["max_tokens"] == config.output_tokens
+    assert sent[2]["temperature"] == 0.0
     assert json.loads(sent[0]["messages"][0]["content"]) == {"case": "text"}
 
 

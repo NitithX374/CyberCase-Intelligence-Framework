@@ -1,0 +1,198 @@
+{
+ "code": {
+  "commit": "unknown",
+  "app_dirty": null,
+  "messages_url": "https://openrouter.ai/api/v1/messages",
+  "segmenter": "sat:sat-3l-sm@137da054051ad9f1eac42025f758db4ac9f22535:threshold=0.025:wtpsplit=2.2.2",
+  "sat_device": "cuda:0",
+  "python": "3.11.17",
+  "claim_nli_path": "/tmp/ocr_rerun/no_verifier/nli_mdeberta",
+  "claim_selector_path": "/tmp/ocr_rerun/no_verifier/source_selector_mpnet",
+  "recorded_commit": "f0fcf37b59244539a388c3a6255b658ad5e54abf",
+  "image_id": "sha256:e7ea0110390bac0a6e328f7773d5816173d33b06e435024c8f6f6e37cfa8f90f"
+ },
+ "model": "google/gemma-4-26b-a4b-it",
+ "providers": [
+  "nextbit/bf16",
+  "coreweave/bf16"
+ ],
+ "articles": 3,
+ "article_ids": [
+  "r284702",
+  "r337255",
+  "r5339"
+ ],
+ "arms": {
+  "t0_think": {
+   "runs": 3,
+   "stage_errors": {},
+   "write_completed": 3,
+   "assess_completed": 3,
+   "views_failed": 0,
+   "stages": {
+    "assess": {
+     "calls": 3,
+     "temperatures": {
+      "0.0": 3
+     },
+     "status_codes": {
+      "200": 3
+     },
+     "stop_reasons": {
+      "end_turn": 3
+     },
+     "thinking_tokens_median": 0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 5.9
+    },
+    "case_judgement": {
+     "calls": 3,
+     "temperatures": {
+      "0.0": 3
+     },
+     "status_codes": {
+      "200": 3
+     },
+     "stop_reasons": {
+      "end_turn": 3
+     },
+     "thinking_tokens_median": 6452,
+     "thinking_tokens_max": 8017,
+     "seconds_median": 76.4
+    },
+    "case_reading": {
+     "calls": 3,
+     "temperatures": {
+      "0.0": 3
+     },
+     "status_codes": {
+      "200": 3
+     },
+     "stop_reasons": {
+      "end_turn": 3
+     },
+     "thinking_tokens_median": 0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 14.1
+    },
+    "case_views": {
+     "calls": 3,
+     "temperatures": {
+      "0.0": 3
+     },
+     "status_codes": {
+      "200": 3
+     },
+     "stop_reasons": {
+      "end_turn": 3
+     },
+     "thinking_tokens_median": 0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 5.8
+    }
+   },
+   "usd": 0.0081,
+   "seconds_median": 103.7
+  },
+  "t0_nothink": {
+   "runs": 3,
+   "stage_errors": {},
+   "write_completed": 3,
+   "assess_completed": 3,
+   "views_failed": 0,
+   "stages": {
+    "assess": {
+     "calls": 3,
+     "temperatures": {
+      "0.0": 3
+     },
+     "status_codes": {
+      "200": 3
+     },
+     "stop_reasons": {
+      "end_turn": 3
+     },
+     "thinking_tokens_median": 0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 5.4
+    },
+    "case_judgement": {
+     "calls": 3,
+     "temperatures": {
+      "0.0": 3
+     },
+     "status_codes": {
+      "200": 3
+     },
+     "stop_reasons": {
+      "end_turn": 3
+     },
+     "thinking_tokens_median": 0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 8.6
+    },
+    "case_reading": {
+     "calls": 3,
+     "temperatures": {
+      "0.0": 3
+     },
+     "status_codes": {
+      "200": 3
+     },
+     "stop_reasons": {
+      "end_turn": 3
+     },
+     "thinking_tokens_median": 0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 13.3
+    },
+    "case_views": {
+     "calls": 3,
+     "temperatures": {
+      "0.0": 3
+     },
+     "status_codes": {
+      "200": 3
+     },
+     "stop_reasons": {
+      "end_turn": 3
+     },
+     "thinking_tokens_median": 0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 6.5
+    }
+   },
+   "usd": 0.0036,
+   "seconds_median": 28.8
+  },
+  "t1_assess": {
+   "runs": 3,
+   "stage_errors": {},
+   "write_completed": 0,
+   "assess_completed": 3,
+   "views_failed": 0,
+   "stages": {
+    "assess": {
+     "calls": 3,
+     "temperatures": {
+      "None": 3
+     },
+     "status_codes": {
+      "200": 3
+     },
+     "stop_reasons": {
+      "end_turn": 3
+     },
+     "thinking_tokens_median": 0,
+     "thinking_tokens_max": 0,
+     "seconds_median": 6.0
+    }
+   },
+   "usd": 0.0005,
+   "seconds_median": 6.4
+  }
+ },
+ "cap_usd": 0.1,
+ "spent_usd": 0.0122,
+ "stopped": []
+}

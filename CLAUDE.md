@@ -210,6 +210,10 @@ llm/                    calling a model
   request.py            request_stage: the one transport every model call
                         takes, the LLM gate's included. All stages specify JSON
                         in the system prompt, with no provider schema grammar.
+                        Temperature follows thinking (`stage_payload`): 0 for a
+                        stage without thinking, 1.0, the value the Gemma 4 model
+                        card recommends, for a stage with thinking. A caller may
+                        pass its own.
                         Invalid/truncated replies are asked at most twice. A
                         dropped connection or an HTTP 429, 500, 502, 503 or
                         504 is asked once more after 2 seconds (one retry

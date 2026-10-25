@@ -215,7 +215,6 @@ async def ask_mitre_applicability(
         system=MITRE_APPLICABILITY_SYSTEM_PROMPT,
         content=build_mitre_applicability_prompt(case_sources),
         schema=ProviderMitreApplicability,
-        temperature=0.0,
     )
     return validate_mitre_applicability(provider_result, case_sources)
 
