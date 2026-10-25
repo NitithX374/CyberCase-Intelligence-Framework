@@ -1,0 +1,122 @@
+{
+ "code": {
+  "commit": "unknown",
+  "app_dirty": null,
+  "messages_url": "https://openrouter.ai/api/v1/messages",
+  "segmenter": "sat:sat-3l-sm@137da054051ad9f1eac42025f758db4ac9f22535:threshold=0.025:wtpsplit=2.2.2",
+  "sat_device": "cuda:0",
+  "python": "3.11.17",
+  "claim_nli_path": "/tmp/ocr_rerun/no_verifier/nli_mdeberta",
+  "claim_selector_path": "/tmp/ocr_rerun/no_verifier/source_selector_mpnet",
+  "recorded_commit": "f0fcf37b59244539a388c3a6255b658ad5e54abf",
+  "image_id": "sha256:e7ea0110390bac0a6e328f7773d5816173d33b06e435024c8f6f6e37cfa8f90f"
+ },
+ "model": "google/gemma-4-26b-a4b-it",
+ "providers": [
+  "nextbit/bf16",
+  "coreweave/bf16"
+ ],
+ "config": {
+  "model": "google/gemma-4-26b-a4b-it",
+  "providers": [
+   "nextbit/bf16",
+   "coreweave/bf16"
+  ],
+  "server": "openrouter",
+  "context_tokens": 128000,
+  "input_tokens": 80000,
+  "output_tokens": 32608,
+  "thinking_tokens": 8192,
+  "reading_thinking_tokens": 0,
+  "assess_thinking_tokens": null,
+  "judgement_thinking_tokens": 2048,
+  "safety_tokens": 4000,
+  "timeout_seconds": 120.0
+ },
+ "reading_max_tokens": 32608,
+ "judgement_max_tokens": 34656,
+ "views_max_tokens": 4096,
+ "articles": 3,
+ "article_ids": [
+  "r284702",
+  "r337255",
+  "r5339"
+ ],
+ "arms": {
+  "clean": {
+   "runs": 3,
+   "completed": 3,
+   "errors": {},
+   "view_failures": 0,
+   "verdicts": {
+    "unassessed:verifier_unavailable": 36
+   },
+   "calls": 9,
+   "calls_by_stage": {
+    "case_reading": 3,
+    "case_views": 3,
+    "case_judgement": 3
+   },
+   "usd": 0.0074,
+   "usd_per_article": 0.00246,
+   "model_seconds": 505.6,
+   "status_codes": {
+    "200": 9
+   },
+   "providers": {
+    "NextBit": 9
+   }
+  },
+  "targeted": {
+   "runs": 3,
+   "completed": 3,
+   "errors": {},
+   "view_failures": 0,
+   "verdicts": {
+    "unassessed:verifier_unavailable": 40
+   },
+   "calls": 11,
+   "calls_by_stage": {
+    "case_reading": 3,
+    "case_views": 5,
+    "case_judgement": 3
+   },
+   "usd": 0.008,
+   "usd_per_article": 0.00266,
+   "model_seconds": 526.6,
+   "status_codes": {
+    "200": 11
+   },
+   "providers": {
+    "NextBit": 11
+   }
+  },
+  "realistic": {
+   "runs": 3,
+   "completed": 3,
+   "errors": {},
+   "view_failures": 0,
+   "verdicts": {
+    "unassessed:verifier_unavailable": 41
+   },
+   "calls": 9,
+   "calls_by_stage": {
+    "case_reading": 3,
+    "case_views": 3,
+    "case_judgement": 3
+   },
+   "usd": 0.0078,
+   "usd_per_article": 0.00261,
+   "model_seconds": 426.4,
+   "status_codes": {
+    "200": 9
+   },
+   "providers": {
+    "NextBit": 9
+   }
+  }
+ },
+ "cap_usd": 0.1,
+ "spent_usd": 0.0232,
+ "stopped": []
+}

@@ -1,0 +1,14 @@
+{
+  "device": "cuda",
+  "nli_dtype": "torch.float16",
+  "selector_dtype": "torch.float32",
+  "python": "3.14.0",
+  "libraries": {
+    "torch": "2.11.0+cu128",
+    "transformers": "5.8.0",
+    "sentence-transformers": "5.4.1"
+  },
+  "cuda_device": "NVIDIA GeForce GTX 1650",
+  "policy": "Both EN and TH recomputed with identical frozen assets/device; archived EN scores retained separately",
+  "segmenter": "sat:sat-3l-sm@137da054051ad9f1eac42025f758db4ac9f22535:threshold=0.025:wtpsplit=2.2.2"
+}

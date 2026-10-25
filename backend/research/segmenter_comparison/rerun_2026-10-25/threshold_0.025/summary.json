@@ -1,0 +1,105 @@
+{
+  "environment": {
+    "python": "3.11.17 (main, Oct 21 2026, 01:07:38) [GCC 14.2.0]",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41",
+    "cpu": "11th Gen Intel(R) Core(TM) i5-11320H @ 3.20GHz",
+    "cpu_count": 8,
+    "torch_threads": 4,
+    "packages": {
+      "wtpsplit": "2.2.2",
+      "pythainlp": "5.4.0",
+      "python-crfsuite": "0.9.12",
+      "torch": "2.11.0+cu128",
+      "transformers": "5.8.0",
+      "numpy": "2.4.6",
+      "huggingface-hub": "1.33.0"
+    },
+    "sat_model": "sat-3l-sm",
+    "sat_threshold_argument": 0.025,
+    "sat_device": "cuda",
+    "crfcut_call": "pythainlp.tokenize.sent_tokenize(line, engine='crfcut')",
+    "sat_load_seconds": 19.26,
+    "hf_hub_offline": "1",
+    "hf_home": "/app/models/hf",
+    "min_sentence_chars": 25,
+    "warmup": "2 docs per language, first 500 characters, untimed",
+    "timing": "one timed call per line per engine; the same call's pieces feed the unit and boundary counts",
+    "input": "/tmp/segcmp/xlsum_th_en_100.jsonl"
+  },
+  "summary": {
+    "en": {
+      "docs": 100,
+      "chars": 290264,
+      "lines": 100,
+      "sat": {
+        "raw_pieces_per_1000_chars": 9.36,
+        "rejoin_failed_lines": 0,
+        "units_per_1000_chars": 8.46,
+        "median_unit_chars": 110,
+        "mean_unit_chars": 117.2,
+        "total_seconds": 7.73,
+        "ms_per_1000_chars": 26.6,
+        "median_doc_ms_per_1000_chars": 18.8
+      },
+      "crfcut": {
+        "raw_pieces_per_1000_chars": 7.2,
+        "rejoin_failed_lines": 0,
+        "units_per_1000_chars": 7.1,
+        "median_unit_chars": 123.0,
+        "mean_unit_chars": 139.8,
+        "total_seconds": 3.33,
+        "ms_per_1000_chars": 11.5,
+        "median_doc_ms_per_1000_chars": 10.5
+      },
+      "raw_boundary_agreement": {
+        "sat_boundaries": 2616,
+        "crfcut_boundaries": 1991,
+        "shared": 1977,
+        "agreement_f1": 0.8583
+      },
+      "unit_start_agreement": {
+        "sat_boundaries": 2357,
+        "crfcut_boundaries": 1962,
+        "shared": 1941,
+        "agreement_f1": 0.8988
+      }
+    },
+    "th": {
+      "docs": 100,
+      "chars": 360387,
+      "lines": 100,
+      "sat": {
+        "raw_pieces_per_1000_chars": 8.97,
+        "rejoin_failed_lines": 0,
+        "units_per_1000_chars": 7.98,
+        "median_unit_chars": 97.0,
+        "mean_unit_chars": 124.3,
+        "total_seconds": 14.48,
+        "ms_per_1000_chars": 40.2,
+        "median_doc_ms_per_1000_chars": 33.2
+      },
+      "crfcut": {
+        "raw_pieces_per_1000_chars": 13.17,
+        "rejoin_failed_lines": 0,
+        "units_per_1000_chars": 10.75,
+        "median_unit_chars": 71.0,
+        "mean_unit_chars": 92.1,
+        "total_seconds": 4.15,
+        "ms_per_1000_chars": 11.5,
+        "median_doc_ms_per_1000_chars": 10.6
+      },
+      "raw_boundary_agreement": {
+        "sat_boundaries": 3132,
+        "crfcut_boundaries": 4645,
+        "shared": 1759,
+        "agreement_f1": 0.4524
+      },
+      "unit_start_agreement": {
+        "sat_boundaries": 2776,
+        "crfcut_boundaries": 3774,
+        "shared": 1487,
+        "agreement_f1": 0.454
+      }
+    }
+  }
+}
