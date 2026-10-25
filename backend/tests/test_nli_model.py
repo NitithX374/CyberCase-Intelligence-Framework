@@ -191,6 +191,23 @@ def test_the_label_is_the_argmax_and_the_entailment_is_its_own_probability():
     assert (contradicted.label, contradicted.entailment) == ("contradiction", 0.1)
 
 
+def test_the_model_reads_its_input_in_nfkc_so_thai_sara_am_is_not_unknown():
+    seen = []
+
+    def tokenizer(premise, hypothesis, **options):
+        seen.append((premise, hypothesis))
+        return Encoded(10)
+
+    torch = SimpleNamespace(
+        no_grad=nullcontext,
+        softmax=lambda logits, dim: [SimpleNamespace(tolist=lambda: [0.7, 0.2, 0.1])],
+    )
+    nli = MdebertaNli(torch, tokenizer, lambda **batch: SimpleNamespace(logits=None), LABEL_ORDER)
+    nli.predict("ทำงาน", "จำนวน")
+
+    assert seen == [("ทํางาน", "จํานวน")] * 2
+
+
 def test_inference_is_one_at_a_time():
     running = {"now": 0, "most": 0}
     guard = threading.Lock()
