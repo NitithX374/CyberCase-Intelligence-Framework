@@ -132,7 +132,6 @@ async def derive_claim_views(
                     system=CASE_VIEWS_SYSTEM_PROMPT,
                     content=view_request(claims),
                     schema=DerivedCaseViewsReply,
-                    temperature=0,
                 )
             parties, timeline, impacts, extraction.items_dropped = materialize_views(reply, claims)
         except Exception as error:

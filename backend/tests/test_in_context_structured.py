@@ -70,7 +70,15 @@ async def test_every_stage_uses_a_prompt_contract_and_local_validation(
         calls=calls,
     )
     [payload] = sent
-    assert set(payload) == {"model", "max_tokens", "thinking", "system", "messages", "provider"}
+    assert set(payload) == {
+        "model",
+        "max_tokens",
+        "thinking",
+        "temperature",
+        "system",
+        "messages",
+        "provider",
+    }
     assert payload["system"].startswith("Stage instructions\n")
     contract = prompt_contract(payload)
     assert set(contract["required"]) == set(model.model_fields)
