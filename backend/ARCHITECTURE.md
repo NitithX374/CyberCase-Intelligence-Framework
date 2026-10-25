@@ -327,7 +327,9 @@ uses Pydantic to require every contract field recursively, forbid extra fields,
 and check types, enums and bounds before applying the original DTO validators.
 This prevents DTO defaults or coercion from hiding malformed model output.
 `llm/payload.py` preserves exact source values in compact JSON and counts the
-contract against the input budget. `llm/response.py` decodes provider envelopes.
+contract against the input budget. It also sets the temperature: 0 for a stage
+without thinking, 1.0 (the Gemma 4 model card's value) for a stage with thinking,
+unless the caller passes its own. `llm/response.py` decodes provider envelopes.
 Replies may be fence-stripped, then locally validated. A malformed or truncated
 reply is asked again at most once; exhaustion raises `<stage>_invalid` for schema
 violations or `<stage>_incomplete` for token limits. Refusals and timeouts are not
