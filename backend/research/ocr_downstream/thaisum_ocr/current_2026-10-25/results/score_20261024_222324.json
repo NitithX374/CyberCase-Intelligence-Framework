@@ -1,0 +1,5036 @@
+{
+ "run": "run_20261024_222324",
+ "articles": 100,
+ "excluded_targets": {
+  "not in clean model text": 24
+ },
+ "tables": {
+  "targeted|written": {
+   "cells": {
+    "substitution|all": {
+     "n": 75,
+     "propagated": {
+      "count": 26,
+      "share": 0.3466666666666667,
+      "interval": [
+       0.23942085347908346,
+       0.45590504720406666
+      ]
+     },
+     "restored": {
+      "count": 39,
+      "share": 0.52,
+      "interval": [
+       0.410958904109589,
+       0.6266666666666667
+      ]
+     },
+     "mixed": {
+      "count": 2,
+      "share": 0.02666666666666667,
+      "interval": [
+       0.0,
+       0.0685169330289192
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 8,
+      "share": 0.10666666666666667,
+      "interval": [
+       0.04225352112676056,
+       0.17567938817938816
+      ]
+     }
+    },
+    "substitution|number": {
+     "n": 22,
+     "propagated": {
+      "count": 19,
+      "share": 0.8636363636363636,
+      "interval": [
+       0.6956521739130435,
+       1.0
+      ]
+     },
+     "restored": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "mixed": {
+      "count": 1,
+      "share": 0.045454545454545456,
+      "interval": [
+       0.0,
+       0.15384615384615385
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 2,
+      "share": 0.09090909090909091,
+      "interval": [
+       0.0,
+       0.25
+      ]
+     }
+    },
+    "substitution|place": {
+     "n": 11,
+     "propagated": {
+      "count": 3,
+      "share": 0.2727272727272727,
+      "interval": [
+       0.0,
+       0.5555555555555556
+      ]
+     },
+     "restored": {
+      "count": 6,
+      "share": 0.5454545454545454,
+      "interval": [
+       0.25,
+       0.8571428571428571
+      ]
+     },
+     "mixed": {
+      "count": 1,
+      "share": 0.09090909090909091,
+      "interval": [
+       0.0,
+       0.3
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 1,
+      "share": 0.09090909090909091,
+      "interval": [
+       0.0,
+       0.3
+      ]
+     }
+    },
+    "substitution|other": {
+     "n": 42,
+     "propagated": {
+      "count": 4,
+      "share": 0.09523809523809523,
+      "interval": [
+       0.022222222222222223,
+       0.19047619047619047
+      ]
+     },
+     "restored": {
+      "count": 33,
+      "share": 0.7857142857142857,
+      "interval": [
+       0.6511337209302326,
+       0.9
+      ]
+     },
+     "mixed": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 5,
+      "share": 0.11904761904761904,
+      "interval": [
+       0.02631578947368421,
+       0.2222222222222222
+      ]
+     }
+    },
+    "deletion|all": {
+     "n": 80,
+     "restored": {
+      "count": 13,
+      "share": 0.1625,
+      "interval": [
+       0.08860759493670886,
+       0.23597723240685972
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 67,
+      "share": 0.8375,
+      "interval": [
+       0.7640227675931401,
+       0.9113924050632911
+      ]
+     }
+    },
+    "deletion|number": {
+     "n": 23,
+     "restored": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 23,
+      "share": 1.0,
+      "interval": [
+       1.0,
+       1.0
+      ]
+     }
+    },
+    "deletion|place": {
+     "n": 12,
+     "restored": {
+      "count": 5,
+      "share": 0.4166666666666667,
+      "interval": [
+       0.125,
+       0.7142857142857143
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 7,
+      "share": 0.5833333333333334,
+      "interval": [
+       0.2857142857142857,
+       0.875
+      ]
+     }
+    },
+    "deletion|other": {
+     "n": 45,
+     "restored": {
+      "count": 8,
+      "share": 0.17777777777777778,
+      "interval": [
+       0.07308564946114578,
+       0.2895095693779903
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 37,
+      "share": 0.8222222222222222,
+      "interval": [
+       0.7104904306220096,
+       0.9269143505388538
+      ]
+     }
+    }
+   },
+   "run_failed": 0
+  },
+  "targeted|bound": {
+   "cells": {
+    "substitution|all": {
+     "n": 75,
+     "propagated": {
+      "count": 26,
+      "share": 0.3466666666666667,
+      "interval": [
+       0.23942085347908346,
+       0.45590504720406666
+      ]
+     },
+     "restored": {
+      "count": 39,
+      "share": 0.52,
+      "interval": [
+       0.410958904109589,
+       0.6266666666666667
+      ]
+     },
+     "mixed": {
+      "count": 2,
+      "share": 0.02666666666666667,
+      "interval": [
+       0.0,
+       0.0685169330289192
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 8,
+      "share": 0.10666666666666667,
+      "interval": [
+       0.04225352112676056,
+       0.17567938817938816
+      ]
+     }
+    },
+    "substitution|number": {
+     "n": 22,
+     "propagated": {
+      "count": 19,
+      "share": 0.8636363636363636,
+      "interval": [
+       0.6956521739130435,
+       1.0
+      ]
+     },
+     "restored": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "mixed": {
+      "count": 1,
+      "share": 0.045454545454545456,
+      "interval": [
+       0.0,
+       0.15384615384615385
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 2,
+      "share": 0.09090909090909091,
+      "interval": [
+       0.0,
+       0.25
+      ]
+     }
+    },
+    "substitution|place": {
+     "n": 11,
+     "propagated": {
+      "count": 3,
+      "share": 0.2727272727272727,
+      "interval": [
+       0.0,
+       0.5555555555555556
+      ]
+     },
+     "restored": {
+      "count": 6,
+      "share": 0.5454545454545454,
+      "interval": [
+       0.25,
+       0.8571428571428571
+      ]
+     },
+     "mixed": {
+      "count": 1,
+      "share": 0.09090909090909091,
+      "interval": [
+       0.0,
+       0.3
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 1,
+      "share": 0.09090909090909091,
+      "interval": [
+       0.0,
+       0.3
+      ]
+     }
+    },
+    "substitution|other": {
+     "n": 42,
+     "propagated": {
+      "count": 4,
+      "share": 0.09523809523809523,
+      "interval": [
+       0.022222222222222223,
+       0.19047619047619047
+      ]
+     },
+     "restored": {
+      "count": 33,
+      "share": 0.7857142857142857,
+      "interval": [
+       0.6511337209302326,
+       0.9
+      ]
+     },
+     "mixed": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 5,
+      "share": 0.11904761904761904,
+      "interval": [
+       0.02631578947368421,
+       0.2222222222222222
+      ]
+     }
+    },
+    "deletion|all": {
+     "n": 80,
+     "restored": {
+      "count": 13,
+      "share": 0.1625,
+      "interval": [
+       0.08860759493670886,
+       0.23597723240685972
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 67,
+      "share": 0.8375,
+      "interval": [
+       0.7640227675931401,
+       0.9113924050632911
+      ]
+     }
+    },
+    "deletion|number": {
+     "n": 23,
+     "restored": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 23,
+      "share": 1.0,
+      "interval": [
+       1.0,
+       1.0
+      ]
+     }
+    },
+    "deletion|place": {
+     "n": 12,
+     "restored": {
+      "count": 5,
+      "share": 0.4166666666666667,
+      "interval": [
+       0.125,
+       0.7142857142857143
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 7,
+      "share": 0.5833333333333334,
+      "interval": [
+       0.2857142857142857,
+       0.875
+      ]
+     }
+    },
+    "deletion|other": {
+     "n": 45,
+     "restored": {
+      "count": 8,
+      "share": 0.17777777777777778,
+      "interval": [
+       0.07308564946114578,
+       0.2895095693779903
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 37,
+      "share": 0.8222222222222222,
+      "interval": [
+       0.7104904306220096,
+       0.9269143505388538
+      ]
+     }
+    }
+   },
+   "run_failed": 0
+  },
+  "realistic|written": {
+   "cells": {
+    "substitution|all": {
+     "n": 75,
+     "propagated": {
+      "count": 21,
+      "share": 0.28,
+      "interval": [
+       0.18030685161832705,
+       0.37932125709297243
+      ]
+     },
+     "restored": {
+      "count": 42,
+      "share": 0.56,
+      "interval": [
+       0.4545151515151515,
+       0.6666666666666666
+      ]
+     },
+     "mixed": {
+      "count": 2,
+      "share": 0.02666666666666667,
+      "interval": [
+       0.0,
+       0.06756756756756757
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 10,
+      "share": 0.13333333333333333,
+      "interval": [
+       0.06382134414049308,
+       0.21335714285714275
+      ]
+     }
+    },
+    "substitution|number": {
+     "n": 22,
+     "propagated": {
+      "count": 19,
+      "share": 0.8636363636363636,
+      "interval": [
+       0.7058823529411765,
+       1.0
+      ]
+     },
+     "restored": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "mixed": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 3,
+      "share": 0.13636363636363635,
+      "interval": [
+       0.0,
+       0.29411764705882354
+      ]
+     }
+    },
+    "substitution|place": {
+     "n": 11,
+     "propagated": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "restored": {
+      "count": 10,
+      "share": 0.9090909090909091,
+      "interval": [
+       0.6923076923076923,
+       1.0
+      ]
+     },
+     "mixed": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 1,
+      "share": 0.09090909090909091,
+      "interval": [
+       0.0,
+       0.3076923076923077
+      ]
+     }
+    },
+    "substitution|other": {
+     "n": 42,
+     "propagated": {
+      "count": 2,
+      "share": 0.047619047619047616,
+      "interval": [
+       0.0,
+       0.125
+      ]
+     },
+     "restored": {
+      "count": 32,
+      "share": 0.7619047619047619,
+      "interval": [
+       0.627906976744186,
+       0.8868448637316559
+      ]
+     },
+     "mixed": {
+      "count": 2,
+      "share": 0.047619047619047616,
+      "interval": [
+       0.0,
+       0.11764705882352941
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 6,
+      "share": 0.14285714285714285,
+      "interval": [
+       0.046485200845665965,
+       0.2600217391304347
+      ]
+     }
+    },
+    "deletion|all": {
+     "n": 80,
+     "restored": {
+      "count": 14,
+      "share": 0.175,
+      "interval": [
+       0.09876543209876543,
+       0.25
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 66,
+      "share": 0.825,
+      "interval": [
+       0.75,
+       0.9012345679012346
+      ]
+     }
+    },
+    "deletion|number": {
+     "n": 23,
+     "restored": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 23,
+      "share": 1.0,
+      "interval": [
+       1.0,
+       1.0
+      ]
+     }
+    },
+    "deletion|place": {
+     "n": 12,
+     "restored": {
+      "count": 5,
+      "share": 0.4166666666666667,
+      "interval": [
+       0.14261904761904762,
+       0.7
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 7,
+      "share": 0.5833333333333334,
+      "interval": [
+       0.3,
+       0.857380952380951
+      ]
+     }
+    },
+    "deletion|other": {
+     "n": 45,
+     "restored": {
+      "count": 9,
+      "share": 0.2,
+      "interval": [
+       0.08887254901960785,
+       0.3148148148148148
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 36,
+      "share": 0.8,
+      "interval": [
+       0.6851851851851852,
+       0.911127450980392
+      ]
+     }
+    }
+   },
+   "run_failed": 0
+  },
+  "realistic|bound": {
+   "cells": {
+    "substitution|all": {
+     "n": 75,
+     "propagated": {
+      "count": 21,
+      "share": 0.28,
+      "interval": [
+       0.18030685161832705,
+       0.37932125709297243
+      ]
+     },
+     "restored": {
+      "count": 42,
+      "share": 0.56,
+      "interval": [
+       0.4545151515151515,
+       0.6666666666666666
+      ]
+     },
+     "mixed": {
+      "count": 2,
+      "share": 0.02666666666666667,
+      "interval": [
+       0.0,
+       0.06756756756756757
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 10,
+      "share": 0.13333333333333333,
+      "interval": [
+       0.06382134414049308,
+       0.21335714285714275
+      ]
+     }
+    },
+    "substitution|number": {
+     "n": 22,
+     "propagated": {
+      "count": 19,
+      "share": 0.8636363636363636,
+      "interval": [
+       0.7058823529411765,
+       1.0
+      ]
+     },
+     "restored": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "mixed": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 3,
+      "share": 0.13636363636363635,
+      "interval": [
+       0.0,
+       0.29411764705882354
+      ]
+     }
+    },
+    "substitution|place": {
+     "n": 11,
+     "propagated": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "restored": {
+      "count": 10,
+      "share": 0.9090909090909091,
+      "interval": [
+       0.6923076923076923,
+       1.0
+      ]
+     },
+     "mixed": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 1,
+      "share": 0.09090909090909091,
+      "interval": [
+       0.0,
+       0.3076923076923077
+      ]
+     }
+    },
+    "substitution|other": {
+     "n": 42,
+     "propagated": {
+      "count": 2,
+      "share": 0.047619047619047616,
+      "interval": [
+       0.0,
+       0.125
+      ]
+     },
+     "restored": {
+      "count": 32,
+      "share": 0.7619047619047619,
+      "interval": [
+       0.627906976744186,
+       0.8868448637316559
+      ]
+     },
+     "mixed": {
+      "count": 2,
+      "share": 0.047619047619047616,
+      "interval": [
+       0.0,
+       0.11764705882352941
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 6,
+      "share": 0.14285714285714285,
+      "interval": [
+       0.046485200845665965,
+       0.2600217391304347
+      ]
+     }
+    },
+    "deletion|all": {
+     "n": 80,
+     "restored": {
+      "count": 14,
+      "share": 0.175,
+      "interval": [
+       0.09876543209876543,
+       0.25
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 66,
+      "share": 0.825,
+      "interval": [
+       0.75,
+       0.9012345679012346
+      ]
+     }
+    },
+    "deletion|number": {
+     "n": 23,
+     "restored": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 23,
+      "share": 1.0,
+      "interval": [
+       1.0,
+       1.0
+      ]
+     }
+    },
+    "deletion|place": {
+     "n": 12,
+     "restored": {
+      "count": 5,
+      "share": 0.4166666666666667,
+      "interval": [
+       0.14261904761904762,
+       0.7
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 7,
+      "share": 0.5833333333333334,
+      "interval": [
+       0.3,
+       0.857380952380951
+      ]
+     }
+    },
+    "deletion|other": {
+     "n": 45,
+     "restored": {
+      "count": 9,
+      "share": 0.2,
+      "interval": [
+       0.08887254901960785,
+       0.3148148148148148
+      ]
+     },
+     "flagged": {
+      "count": 0,
+      "share": 0.0,
+      "interval": [
+       0.0,
+       0.0
+      ]
+     },
+     "omitted": {
+      "count": 36,
+      "share": 0.8,
+      "interval": [
+       0.6851851851851852,
+       0.911127450980392
+      ]
+     }
+    }
+   },
+   "run_failed": 0
+  }
+ },
+ "measures": {
+  "clean": {
+   "runs": 100,
+   "completed": 100,
+   "failures": {},
+   "quotes": {
+    "selected_unit_ids": 1621,
+    "bound_citations": 1621,
+    "bound_with_corrupted": 0,
+    "bound_with_original": 0
+   },
+   "invalid_evidence": {},
+   "verdicts": {
+    "unassessed:verifier_unavailable": 1385,
+    "unassessed:claim_uncertain": 1
+   },
+   "views": {
+    "completed": 94,
+    "failed": 6
+   },
+   "claims": 1386,
+   "hedged_claims_written": 1,
+   "claims_judged": 1385,
+   "calls_to_cap": 0,
+   "reasks": 20,
+   "invalid_replies": 26,
+   "median_model_seconds": 145.815,
+   "usd": 0.2517839775,
+   "usd_per_article": 0.002517839775,
+   "usd_by_stage": {
+    "case_reading": 0.05676636,
+    "case_judgement": 0.1626701625,
+    "case_views": 0.032347455
+   },
+   "rouge_l": 0.14101570548003245
+  },
+  "targeted": {
+   "runs": 100,
+   "completed": 100,
+   "failures": {},
+   "quotes": {
+    "selected_unit_ids": 1626,
+    "bound_citations": 1626,
+    "bound_with_corrupted": 311,
+    "bound_with_original": 0
+   },
+   "invalid_evidence": {},
+   "verdicts": {
+    "unassessed:verifier_unavailable": 1384,
+    "unassessed:conflicting_source": 3
+   },
+   "views": {
+    "completed": 85,
+    "failed": 15
+   },
+   "claims": 1387,
+   "hedged_claims_written": 0,
+   "claims_judged": 1384,
+   "calls_to_cap": 0,
+   "reasks": 18,
+   "invalid_replies": 32,
+   "median_model_seconds": 154.86950000000002,
+   "usd": 0.25393104,
+   "usd_per_article": 0.0025393104,
+   "usd_by_stage": {
+    "case_reading": 0.0552599025,
+    "case_judgement": 0.1664401875,
+    "case_views": 0.03223095
+   },
+   "rouge_l": 0.13505960545227166,
+   "rouge_l_minus_clean": [
+    -0.0059561000277607735,
+    -0.014882212052130923,
+    0.0030488597765468517,
+    100
+   ]
+  },
+  "realistic": {
+   "runs": 100,
+   "completed": 100,
+   "failures": {},
+   "quotes": {
+    "selected_unit_ids": 1621,
+    "bound_citations": 1621,
+    "bound_with_corrupted": 282,
+    "bound_with_original": 0
+   },
+   "invalid_evidence": {},
+   "verdicts": {
+    "unassessed:verifier_unavailable": 1346,
+    "unassessed:conflicting_source": 5
+   },
+   "views": {
+    "completed": 91,
+    "failed": 9
+   },
+   "claims": 1351,
+   "hedged_claims_written": 0,
+   "claims_judged": 1346,
+   "calls_to_cap": 0,
+   "reasks": 20,
+   "invalid_replies": 29,
+   "median_model_seconds": 142.531,
+   "usd": 0.2553291075,
+   "usd_per_article": 0.0025532910749999998,
+   "usd_by_stage": {
+    "case_reading": 0.056174625,
+    "case_judgement": 0.1673441475,
+    "case_views": 0.031810335
+   },
+   "rouge_l": 0.12795928501598586,
+   "rouge_l_minus_clean": [
+    -0.013056420464046606,
+    -0.021489331667791767,
+    -0.005190172861316401,
+    100
+   ]
+  }
+ },
+ "hypotheses": {
+  "targeted": {
+   "H1": {
+    "restored_propagated_mixed": 0.8933333333333333,
+    "omitted": 0.10666666666666667,
+    "holds": true
+   },
+   "H2": {
+    "omitted": 0.8375,
+    "holds": true
+   },
+   "H3": {
+    "flagged_substitution": 0.0,
+    "flagged_deletion": 0.0,
+    "holds": true
+   }
+  },
+  "realistic": {
+   "H1": {
+    "restored_propagated_mixed": 0.8666666666666667,
+    "omitted": 0.13333333333333333,
+    "holds": true
+   },
+   "H2": {
+    "omitted": 0.825,
+    "holds": true
+   },
+   "H3": {
+    "flagged_substitution": 0.0,
+    "flagged_deletion": 0.0,
+    "holds": true
+   }
+  }
+ },
+ "units": {
+  "targeted": {
+   "written": [
+    {
+     "article": "r284702",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r284702",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r337255",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r5339",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r5339",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r192322",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r192322",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r25648",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r25648",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r232094",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r200387",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r4509",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r4509",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r17505",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r17505",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r154884",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r154884",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r233272",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r233272",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r73582",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r127876",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r127876",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r127876",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r203824",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r331726",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r21039",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r248347",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r248347",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r248347",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r337910",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r123380",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r123380",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r35213",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r35213",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r146696",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r221439",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r221439",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r107909",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r107909",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r246412",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r246412",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r246412",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r100711",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r100711",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r96200",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "mixed"
+    },
+    {
+     "article": "r133555",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r103688",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r103688",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r214389",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r344406",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r185156",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r185156",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r218132",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r30761",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r30761",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r34103",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r339715",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r47931",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r47931",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r26634",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r26634",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r26634",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r237233",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r230876",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r302355",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r302355",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r216145",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r121222",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r293066",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r81696",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r316652",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r316652",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r241479",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r349226",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "mixed"
+    },
+    {
+     "article": "r349226",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r55608",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r110910",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r110910",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r278782",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r278782",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r296894",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r130890",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r269094",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r269094",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r31199",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r31199",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r31199",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r26805",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r26805",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r274985",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r274985",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r274985",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r19119",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r19119",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r19119",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r247513",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r317015",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r317015",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r124444",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r45738",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r45738",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r304573",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r293833",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r293833",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r245442",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r73640",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r87232",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r87232",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r348014",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r78003",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r82354",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r82354",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r92667",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r92667",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r66077",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r92503",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r182365",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r182365",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r36573",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r38800",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r285341",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r285341",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r285341",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r338615",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r153101",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r153101",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r34594",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r169149",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r306563",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r306563",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r229673",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r52314",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r52314",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r52314",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r32298",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r309267",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r309267",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r343601",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r343601",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r343601",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r191358",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r59496",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r204801",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r204801",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r204801",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r20206",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r20206",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r20206",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r172760",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r172760",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r172760",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r252658",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r252658",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r349691",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r349691",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    }
+   ],
+   "bound": [
+    {
+     "article": "r284702",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r284702",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r337255",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r5339",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r5339",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r192322",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r192322",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r25648",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r25648",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r232094",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r200387",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r4509",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r4509",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r17505",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r17505",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r154884",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r154884",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r233272",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r233272",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r73582",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r127876",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r127876",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r127876",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r203824",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r331726",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r21039",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r248347",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r248347",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r248347",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r337910",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r123380",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r123380",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r35213",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r35213",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r146696",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r221439",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r221439",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r107909",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r107909",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r246412",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r246412",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r246412",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r100711",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r100711",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r96200",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "mixed"
+    },
+    {
+     "article": "r133555",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r103688",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r103688",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r214389",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r344406",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r185156",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r185156",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r218132",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r30761",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r30761",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r34103",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r339715",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r47931",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r47931",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r26634",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r26634",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r26634",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r237233",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r230876",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r302355",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r302355",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r216145",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r121222",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r293066",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r81696",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r316652",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r316652",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r241479",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r349226",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "mixed"
+    },
+    {
+     "article": "r349226",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r55608",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r110910",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r110910",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r278782",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r278782",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r296894",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r130890",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r269094",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r269094",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r31199",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r31199",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r31199",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r26805",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r26805",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r274985",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r274985",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r274985",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r19119",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r19119",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r19119",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r247513",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r317015",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r317015",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r124444",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r45738",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r45738",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r304573",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r293833",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r293833",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r245442",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r73640",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r87232",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r87232",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r348014",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r78003",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r82354",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r82354",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r92667",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r92667",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r66077",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r92503",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r182365",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r182365",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r36573",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r38800",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r285341",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r285341",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r285341",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r338615",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r153101",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r153101",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r34594",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r169149",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r306563",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r306563",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r229673",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r52314",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r52314",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r52314",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r32298",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r309267",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r309267",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r343601",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r343601",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r343601",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r191358",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r59496",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r204801",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r204801",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r204801",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r20206",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r20206",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r20206",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r172760",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r172760",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r172760",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r252658",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r252658",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r349691",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r349691",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    }
+   ]
+  },
+  "realistic": {
+   "written": [
+    {
+     "article": "r284702",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r284702",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r337255",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r5339",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r5339",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r192322",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r192322",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r25648",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r25648",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "mixed"
+    },
+    {
+     "article": "r232094",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r200387",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r4509",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r4509",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r17505",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r17505",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r154884",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r154884",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r233272",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r233272",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r73582",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r127876",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r127876",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r127876",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r203824",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r331726",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r21039",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r248347",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r248347",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r248347",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r337910",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r123380",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r123380",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r35213",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r35213",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r146696",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r221439",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r221439",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r107909",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r107909",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r246412",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r246412",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r246412",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r100711",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r100711",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r96200",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r133555",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r103688",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r103688",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r214389",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r344406",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r185156",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r185156",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r218132",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r30761",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r30761",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r34103",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r339715",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r47931",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r47931",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r26634",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r26634",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r26634",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r237233",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r230876",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r302355",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r302355",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r216145",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r121222",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r293066",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r81696",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r316652",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r316652",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r241479",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r349226",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r349226",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r55608",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r110910",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r110910",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r278782",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r278782",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r296894",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r130890",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r269094",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r269094",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "mixed"
+    },
+    {
+     "article": "r31199",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r31199",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r31199",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r26805",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r26805",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r274985",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r274985",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r274985",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r19119",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r19119",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r19119",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r247513",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r317015",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r317015",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r124444",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r45738",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r45738",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r304573",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r293833",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r293833",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r245442",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r73640",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r87232",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r87232",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r348014",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r78003",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r82354",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r82354",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r92667",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r92667",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r66077",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r92503",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r182365",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r182365",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r36573",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r38800",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r285341",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r285341",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r285341",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r338615",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r153101",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r153101",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r34594",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r169149",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r306563",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r306563",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r229673",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r52314",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r52314",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r52314",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r32298",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r309267",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r309267",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r343601",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r343601",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r343601",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r191358",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r59496",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r204801",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r204801",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r204801",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r20206",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r20206",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r20206",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r172760",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r172760",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r172760",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r252658",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r252658",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r349691",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r349691",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    }
+   ],
+   "bound": [
+    {
+     "article": "r284702",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r284702",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r337255",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r5339",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r5339",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r192322",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r192322",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r25648",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r25648",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "mixed"
+    },
+    {
+     "article": "r232094",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r200387",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r4509",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r4509",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r17505",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r17505",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r154884",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r154884",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r233272",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r233272",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r73582",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r127876",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r127876",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r127876",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r203824",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r331726",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r21039",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r248347",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r248347",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r248347",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r337910",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r123380",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r123380",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r35213",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r35213",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r146696",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r221439",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r221439",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r107909",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r107909",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r246412",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r246412",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r246412",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r100711",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r100711",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r96200",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r133555",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r103688",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r103688",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r214389",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r344406",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r185156",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r185156",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r218132",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r30761",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r30761",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r34103",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r339715",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r47931",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r47931",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r26634",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r26634",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r26634",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r237233",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r230876",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r302355",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r302355",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r216145",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r121222",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r293066",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r81696",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r316652",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r316652",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r241479",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r349226",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r349226",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r55608",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r110910",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r110910",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r278782",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r278782",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r296894",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r130890",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r269094",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r269094",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "mixed"
+    },
+    {
+     "article": "r31199",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r31199",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r31199",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r26805",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r26805",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r274985",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r274985",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r274985",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r19119",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r19119",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r19119",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r247513",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r317015",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r317015",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r124444",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r45738",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r45738",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r304573",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r293833",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r293833",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r245442",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r73640",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r87232",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r87232",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r348014",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r78003",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r82354",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r82354",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r92667",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r92667",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r66077",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r92503",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r182365",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r182365",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r36573",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r38800",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r285341",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r285341",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r285341",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r338615",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r153101",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r153101",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r34594",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r169149",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r306563",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r306563",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r229673",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r52314",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r52314",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r52314",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r32298",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r309267",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "propagated"
+    },
+    {
+     "article": "r309267",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r343601",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r343601",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r343601",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r191358",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r59496",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r204801",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r204801",
+     "category": "place",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r204801",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    },
+    {
+     "article": "r20206",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r20206",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r20206",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r172760",
+     "category": "number",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r172760",
+     "category": "place",
+     "type": "deletion",
+     "outcome": "restored"
+    },
+    {
+     "article": "r172760",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r252658",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r252658",
+     "category": "other",
+     "type": "deletion",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r349691",
+     "category": "number",
+     "type": "substitution",
+     "outcome": "omitted"
+    },
+    {
+     "article": "r349691",
+     "category": "other",
+     "type": "substitution",
+     "outcome": "restored"
+    }
+   ]
+  }
+ }
+}

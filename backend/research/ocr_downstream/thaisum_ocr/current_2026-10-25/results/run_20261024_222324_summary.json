@@ -1,0 +1,222 @@
+{
+ "code": {
+  "commit": "unknown",
+  "app_dirty": null,
+  "messages_url": "https://openrouter.ai/api/v1/messages",
+  "segmenter": "sat:sat-3l-sm@137da054051ad9f1eac42025f758db4ac9f22535:threshold=0.025:wtpsplit=2.2.2",
+  "sat_device": "cuda:0",
+  "python": "3.11.17",
+  "claim_nli_path": "/tmp/ocr_rerun/no_verifier/nli_mdeberta",
+  "claim_selector_path": "/tmp/ocr_rerun/no_verifier/source_selector_mpnet",
+  "recorded_commit": "f0fcf37b59244539a388c3a6255b658ad5e54abf",
+  "image_id": "sha256:e7ea0110390bac0a6e328f7773d5816173d33b06e435024c8f6f6e37cfa8f90f"
+ },
+ "model": "google/gemma-4-26b-a4b-it",
+ "providers": [
+  "nextbit/bf16",
+  "coreweave/bf16"
+ ],
+ "config": {
+  "model": "google/gemma-4-26b-a4b-it",
+  "providers": [
+   "nextbit/bf16",
+   "coreweave/bf16"
+  ],
+  "server": "openrouter",
+  "context_tokens": 128000,
+  "input_tokens": 80000,
+  "output_tokens": 32608,
+  "thinking_tokens": 8192,
+  "reading_thinking_tokens": 0,
+  "assess_thinking_tokens": null,
+  "judgement_thinking_tokens": 2048,
+  "safety_tokens": 4000,
+  "timeout_seconds": 120.0
+ },
+ "reading_max_tokens": 32608,
+ "judgement_max_tokens": 34656,
+ "views_max_tokens": 4096,
+ "articles": 100,
+ "article_ids": [
+  "r284702",
+  "r337255",
+  "r5339",
+  "r192322",
+  "r25648",
+  "r232094",
+  "r200387",
+  "r4509",
+  "r17505",
+  "r154884",
+  "r233272",
+  "r73582",
+  "r127876",
+  "r203824",
+  "r331726",
+  "r21039",
+  "r248347",
+  "r337910",
+  "r123380",
+  "r35213",
+  "r146696",
+  "r221439",
+  "r107909",
+  "r246412",
+  "r100711",
+  "r96200",
+  "r303443",
+  "r133555",
+  "r103688",
+  "r214389",
+  "r344406",
+  "r185156",
+  "r218132",
+  "r30761",
+  "r34103",
+  "r339715",
+  "r47931",
+  "r26634",
+  "r237233",
+  "r230876",
+  "r302355",
+  "r216145",
+  "r121222",
+  "r293066",
+  "r81696",
+  "r37611",
+  "r316652",
+  "r241479",
+  "r349226",
+  "r55608",
+  "r110910",
+  "r278782",
+  "r296894",
+  "r130890",
+  "r269094",
+  "r31199",
+  "r243285",
+  "r26805",
+  "r153212",
+  "r274985",
+  "r19119",
+  "r247513",
+  "r317015",
+  "r124444",
+  "r45738",
+  "r304573",
+  "r293833",
+  "r245442",
+  "r73640",
+  "r87232",
+  "r348014",
+  "r78003",
+  "r82354",
+  "r92667",
+  "r121041",
+  "r66077",
+  "r92503",
+  "r182365",
+  "r36573",
+  "r38800",
+  "r285341",
+  "r338615",
+  "r153101",
+  "r34594",
+  "r169149",
+  "r306563",
+  "r229673",
+  "r321031",
+  "r52314",
+  "r32298",
+  "r309267",
+  "r343601",
+  "r191358",
+  "r59496",
+  "r204801",
+  "r20206",
+  "r318748",
+  "r172760",
+  "r252658",
+  "r349691"
+ ],
+ "arms": {
+  "clean": {
+   "runs": 100,
+   "completed": 100,
+   "errors": {},
+   "view_failures": 6,
+   "verdicts": {
+    "unassessed:verifier_unavailable": 1385,
+    "unassessed:claim_uncertain": 1
+   },
+   "calls": 320,
+   "calls_by_stage": {
+    "case_reading": 103,
+    "case_views": 115,
+    "case_judgement": 102
+   },
+   "usd": 0.2518,
+   "usd_per_article": 0.00252,
+   "model_seconds": 16629.0,
+   "status_codes": {
+    "200": 320
+   },
+   "providers": {
+    "NextBit": 320
+   }
+  },
+  "targeted": {
+   "runs": 100,
+   "completed": 100,
+   "errors": {},
+   "view_failures": 15,
+   "verdicts": {
+    "unassessed:verifier_unavailable": 1384,
+    "unassessed:conflicting_source": 3
+   },
+   "calls": 317,
+   "calls_by_stage": {
+    "case_reading": 100,
+    "case_views": 117,
+    "case_judgement": 100
+   },
+   "usd": 0.2539,
+   "usd_per_article": 0.00254,
+   "model_seconds": 16705.2,
+   "status_codes": {
+    "200": 317
+   },
+   "providers": {
+    "NextBit": 317
+   }
+  },
+  "realistic": {
+   "runs": 100,
+   "completed": 100,
+   "errors": {},
+   "view_failures": 9,
+   "verdicts": {
+    "unassessed:verifier_unavailable": 1346,
+    "unassessed:conflicting_source": 5
+   },
+   "calls": 320,
+   "calls_by_stage": {
+    "case_reading": 103,
+    "case_views": 116,
+    "case_judgement": 101
+   },
+   "usd": 0.2553,
+   "usd_per_article": 0.00255,
+   "model_seconds": 16914.9,
+   "status_codes": {
+    "200": 320
+   },
+   "providers": {
+    "NextBit": 320
+   }
+  }
+ },
+ "cap_usd": 1.97,
+ "spent_usd": 0.761,
+ "stopped": []
+}
