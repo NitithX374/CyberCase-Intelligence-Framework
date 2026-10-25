@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import threading
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -62,6 +63,8 @@ class MdebertaNli:
         )
 
     def predict(self, premise: str, hypothesis: str) -> NliProbabilities:
+        premise = unicodedata.normalize("NFKC", premise)
+        hypothesis = unicodedata.normalize("NFKC", hypothesis)
         raw_tokens = int(self.encoded(premise, hypothesis)["input_ids"].shape[-1])
         batch = self.tokenizer(
             premise,

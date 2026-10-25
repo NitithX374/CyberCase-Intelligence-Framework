@@ -241,8 +241,10 @@ trace/                  what the analysis, chat and reports share
   b1_lr.json            small frozen coefficients, selector revision/hashes and provenance
   claim_validation.py   structural blockers then B1-LR; saved per-Claim verdict, reason
                         and the method and artifact hash of the verifier that gave it
-  nli_model.py          pinned mDeBERTa full E/N/C vector; longest-first truncation512,
-                        raw token count/truncation on each result; unavailable model leaves Claims unassessed
+  nli_model.py          pinned mDeBERTa full E/N/C vector; input normalized with NFKC
+                        (its tokenizer otherwise turns Thai sara am into [UNK]);
+                        longest-first truncation512, raw token count/truncation on
+                        each result; unavailable model leaves Claims unassessed
   sentences.py          the sentence splitter, line by line: SaT at a pinned
                         revision, or PyThaiNLP crfcut when SaT cannot be
                         loaded; Source units and the sentence around a

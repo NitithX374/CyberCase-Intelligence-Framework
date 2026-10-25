@@ -120,7 +120,12 @@ markup included. The frozen method, `b1-lr-wice-train-v1`:
 2. The kept units are joined with one newline.
 3. `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` at revision
    `b5113eb38ab63efdd7f280f8c144ea8b13f978ce` reads the (premise, Claim) pair with
-   longest-first truncation at 512 tokens (`trace/nli_model.py`).
+   longest-first truncation at 512 tokens (`trace/nli_model.py`). Both are normalized
+   with NFKC first: the tokenizer normalizes with NFC, its vocabulary holds only the
+   decomposed Thai sara am (U+0E4D U+0E32), and without NFKC every U+0E33 became an
+   unknown token. On WiCE test this changes no decision (0 of 1,070); on
+   machine-translated Thai AttributionBench in-domain it lowers the false-support rate
+   from 52.05% to 49.19% (`research/attribution_benchmark/sat_units_2026-10-25`).
 4. `[P(entailment), P(neutral), P(contradiction)]` goes into the logistic regression
    fitted on WiCE TRAIN. A score >= 0.50 is `supported`; lower is `not_supported`.
 
