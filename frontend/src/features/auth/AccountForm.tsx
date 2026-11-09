@@ -111,14 +111,14 @@ export function AccountForm({ register = false }: { register?: boolean }) {
             <Link
               href="/login"
               aria-current={register ? undefined : "page"}
-              className={`rounded-lg py-2.5 ${register ? "text-ink-muted hover:text-ink" : "bg-surface font-semibold text-primary shadow-[0_2px_6px_rgba(30,29,27,0.08)]"}`}
+              className={`rounded-lg py-2.5 ${register ? "text-ink-muted hover:text-ink" : "bg-surface font-semibold text-primary shadow-[0_2px_6px_rgba(24,24,28,0.08)]"}`}
             >
               Sign in
             </Link>
             <Link
               href="/register"
               aria-current={register ? "page" : undefined}
-              className={`rounded-lg py-2.5 ${register ? "bg-surface font-semibold text-primary shadow-[0_2px_6px_rgba(30,29,27,0.08)]" : "text-ink-muted hover:text-ink"}`}
+              className={`rounded-lg py-2.5 ${register ? "bg-surface font-semibold text-primary shadow-[0_2px_6px_rgba(24,24,28,0.08)]" : "text-ink-muted hover:text-ink"}`}
             >
               Create account
             </Link>

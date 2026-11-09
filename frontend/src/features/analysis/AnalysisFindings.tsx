@@ -118,7 +118,7 @@ function FilterButton({
       onClick={onClick}
       className={`inline-flex min-h-9 items-center gap-1.5 rounded-[7px] px-3.5 text-sm transition-colors ${
         pressed
-          ? "bg-surface font-semibold text-primary shadow-[0_2px_6px_rgba(30,29,27,0.08)]"
+          ? "bg-surface font-semibold text-primary shadow-[0_2px_6px_rgba(24,24,28,0.08)]"
           : "text-ink-muted hover:text-ink"
       }`}
     >

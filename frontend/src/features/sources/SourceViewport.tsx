@@ -112,7 +112,7 @@ function PreviewTab({
       onClick={onClick}
       className={`min-h-9 rounded-[7px] px-3.5 text-sm transition-colors ${
         selected
-          ? "bg-surface font-semibold text-primary shadow-[0_2px_6px_rgba(30,29,27,0.08)]"
+          ? "bg-surface font-semibold text-primary shadow-[0_2px_6px_rgba(24,24,28,0.08)]"
           : "text-ink-muted hover:text-ink"
       }`}
     >

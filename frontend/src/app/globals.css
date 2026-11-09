@@ -19,39 +19,39 @@
   --text-3xl: 36px;
   --text-3xl--line-height: 1.15;
 
-  --color-ground: #f5f3ef;
+  --color-ground: #f4f4f6;
   --color-surface: #ffffff;
-  --color-surface-nested: #faf8f5;
-  --color-surface-hover: #f5f3ef;
+  --color-surface-nested: #f9f9fa;
+  --color-surface-hover: #efeff2;
   --color-field: #ffffff;
-  --color-control-disabled: #ebe7e1;
+  --color-control-disabled: #e7e7e9;
 
-  --color-ink: #1e1d1b;
-  --color-ink-secondary: #5f5b54;
-  --color-ink-muted: #6d6a63;
-  --color-ink-disabled: #9a958c;
-  --color-line: #efebe5;
-  --color-line-strong: #d9d4cb;
+  --color-ink: #1c1c1f;
+  --color-ink-secondary: #55555b;
+  --color-ink-muted: #66666c;
+  --color-ink-disabled: #9a9aa0;
+  --color-line: #e7e7e7;
+  --color-line-strong: #d2d2d4;
 
-  --color-primary: #9c4f33;
-  --color-primary-hover: #874329;
-  --color-primary-pressed: #723823;
-  --color-primary-soft: #f2e2da;
-  --color-primary-wash: #fbf7f5;
-  --color-primary-line: #e9dbd3;
+  --color-primary: #b93a25;
+  --color-primary-hover: #a1321f;
+  --color-primary-pressed: #8a2a1a;
+  --color-primary-soft: #fde2dc;
+  --color-primary-wash: #fff6f4;
+  --color-primary-line: #f6d3cb;
   --color-ivory: #ffffff;
 
-  --color-espresso: #3a2a22;
-  --color-espresso-raised: #47352c;
-  --color-espresso-line: #54423a;
+  --color-espresso: #2b2b2e;
+  --color-espresso-raised: #38383c;
+  --color-espresso-line: #47474c;
   --color-espresso-ink: #ffffff;
-  --color-espresso-muted: #c9bcb3;
+  --color-espresso-muted: #bdbdc2;
 
   --color-linked: #2f6b45;
   --color-linked-soft: #e4efe7;
 
-  --color-mark: #9c4f33;
-  --color-unresolved: #9c4f33;
+  --color-mark: #b93a25;
+  --color-unresolved: #b93a25;
   --color-critical: #a3261c;
   --color-established: #2f6b45;
 }
@@ -77,7 +77,7 @@ body {
 }
 
 @utility sheet {
-  @apply rounded-[10px] bg-surface text-ink shadow-[0_4px_24px_rgba(34,30,27,0.07)];
+  @apply rounded-[10px] bg-surface text-ink shadow-[0_4px_24px_rgba(24,24,28,0.07)];
 }
 
 @utility card-head {

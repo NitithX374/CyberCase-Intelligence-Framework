@@ -184,7 +184,7 @@ export function CaseLibraryPage() {
                   type="button"
                   aria-pressed={status === card.status}
                   onClick={() => setStatus(card.status)}
-                  className={`sheet px-5 py-4 text-left transition-shadow hover:shadow-[0_6px_28px_rgba(34,30,27,0.12)] ${
+                  className={`sheet px-5 py-4 text-left transition-shadow hover:shadow-[0_6px_28px_rgba(24,24,28,0.12)] ${
                     status === card.status ? "ring-2 ring-primary" : ""
                   }`}
                 >
