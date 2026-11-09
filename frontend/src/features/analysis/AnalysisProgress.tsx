@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatElapsed, progressRows, useAnalysisProgress } from "./progress";
+import { Icon } from "@/components/icons";
+import {
+  formatElapsed,
+  progressStages,
+  useAnalysisProgress,
+  type ProgressRow,
+  type ProgressStage,
+} from "./progress";
 
 export function AnalysisProgress({
   caseId,
@@ -14,32 +21,92 @@ export function AnalysisProgress({
   const now = useClock(reached.length > 0);
   if (reached.length === 0) return null;
 
-  const rows = progressRows(reached, now ?? reached[reached.length - 1].reachedAt);
+  const stages = progressStages(reached, now ?? reached[reached.length - 1].reachedAt);
   return (
     <ol
       aria-label="Analysis progress"
-      className={`w-full max-w-sm space-y-1.5 text-left ${className}`}
+      className={`flex w-full items-start overflow-x-auto pt-1 pb-2 text-center ${className}`}
     >
-      {rows.map((row) => (
+      {stages.map((stage, index) => (
         <li
-          key={row.step}
-          aria-current={row.state === "current" ? "step" : undefined}
-          className={`flex items-baseline justify-between gap-6 text-sm leading-5 ${
-            row.state === "waiting"
-              ? "text-ink-muted"
-              : row.state === "current"
-                ? "font-medium text-ink"
-                : "text-ink-secondary"
+          key={stage.key}
+          aria-current={stage.state === "current" ? "step" : undefined}
+          className={`relative flex flex-1 flex-col items-center px-2 ${
+            stage.rows.length > 1 ? "min-w-[12.5rem]" : "min-w-[8.5rem]"
           }`}
         >
-          <span>{row.label}</span>
-          {row.seconds !== null && (
-            <span className="shrink-0 tabular-nums">{formatElapsed(row.seconds)}</span>
+          {index > 0 && (
+            <span
+              aria-hidden="true"
+              className={`absolute top-[18px] right-1/2 h-0.5 w-full ${
+                stage.state === "waiting" ? "bg-line-strong" : "bg-primary"
+              }`}
+            />
+          )}
+          <StageNode stage={stage} number={index + 1} />
+          {stage.rows.length > 1 ? (
+            <>
+              <span className="mt-2 text-xs font-semibold tracking-[0.06em] text-ink-muted uppercase">
+                At the same time
+              </span>
+              <ul className="mt-1.5 flex flex-col gap-1.5 text-left whitespace-nowrap">
+                {stage.rows.map((row) => (
+                  <li key={row.step} className={`flex items-center gap-1.5 ${rowText(row)}`}>
+                    <span
+                      aria-hidden="true"
+                      className={`h-2 w-2 shrink-0 rounded-full ${
+                        row.state === "waiting" ? "bg-line-strong" : "bg-primary"
+                      }`}
+                    />
+                    {row.label}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <span className={`mt-2 ${rowText(stage.rows[0])}`}>{stage.rows[0].label}</span>
+          )}
+          {stage.seconds !== null && (
+            <span className="mt-1 text-xs text-ink-muted tabular-nums">
+              {formatElapsed(stage.seconds)}
+            </span>
           )}
         </li>
       ))}
     </ol>
   );
+}
+
+function StageNode({ stage, number }: { stage: ProgressStage; number: number }) {
+  if (stage.state === "done") {
+    return (
+      <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white">
+        <Icon name="check" className="text-xl" />
+      </span>
+    );
+  }
+  if (stage.state === "current") {
+    return (
+      <span className="relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-primary bg-surface text-primary shadow-[0_0_0_4px_var(--color-primary-soft)]">
+        <Icon name="spinner" className="text-lg" />
+      </span>
+    );
+  }
+  return (
+    <span className="relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-line-strong bg-surface text-xs font-semibold text-ink-muted">
+      {number}
+    </span>
+  );
+}
+
+function rowText(row: ProgressRow): string {
+  return `text-sm leading-5 ${
+    row.state === "waiting"
+      ? "text-ink-muted"
+      : row.state === "current"
+        ? "font-semibold text-ink"
+        : "text-ink-secondary"
+  }`;
 }
 
 function useClock(running: boolean): number | null {

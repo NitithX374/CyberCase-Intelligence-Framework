@@ -11,7 +11,7 @@ export interface ReachedStep {
   reachedAt: number;
 }
 
-interface ProgressRow {
+export interface ProgressRow {
   step: AnalysisStepName;
   label: string;
   state: "done" | "current" | "waiting";
@@ -19,16 +19,18 @@ interface ProgressRow {
 }
 
 const STEP_LABELS: Record<AnalysisStepName, string> = {
-  warmup: "Starting the model server",
-  assess: "Checking what the case is missing",
-  gate: "Checking whether ATT&CK applies",
-  retrieve: "Retrieving ATT&CK context",
-  read: "Reading case sources",
-  judge: "Preparing the summary and case details",
-  bind: "Linking findings to sources",
-  verify: "Checking whether sources support the findings",
-  views: "Starting case details preparation",
+  warmup: "Start the model server",
+  assess: "Check what is missing",
+  gate: "Check if ATT&CK applies",
+  retrieve: "Fetch ATT&CK context",
+  read: "Read the sources",
+  bind: "Link findings to sources",
+  verify: "Check source support",
+  views: "Prepare case details",
+  judge: "Write the summary",
 };
+
+const TOGETHER: AnalysisStepName[] = ["verify", "views", "judge"];
 
 const PLANNED: AnalysisStepName[] = [
   "warmup",
@@ -77,10 +79,15 @@ export function progressRows(reached: ReachedStep[], now: number): ProgressRow[]
   ).flatMap((step): AnalysisStepName[] =>
     step === "gate" && reached.some((r) => r.step === "retrieve") ? ["gate", "retrieve"] : [step],
   );
+  const together = reached.filter((r) => TOGETHER.includes(r.step));
+  const togetherSince = together.length > 0 ? together[0].reachedAt : null;
   return order.map((step) => {
     const label = STEP_LABELS[step];
     const index = reached.findIndex((r) => r.step === step);
     if (index < 0) return { step, label, state: "waiting", seconds: null };
+    if (TOGETHER.includes(step) && togetherSince !== null) {
+      return { step, label, state: "current", seconds: Math.max(0, (now - togetherSince) / 1000) };
+    }
     const next = reached[index + 1];
     if (next) return { step, label, state: "done", seconds: next.elapsed - reached[index].elapsed };
     return {
@@ -90,6 +97,30 @@ export function progressRows(reached: ReachedStep[], now: number): ProgressRow[]
       seconds: Math.max(0, (now - reached[index].reachedAt) / 1000),
     };
   });
+}
+
+export interface ProgressStage {
+  key: string;
+  state: ProgressRow["state"];
+  seconds: number | null;
+  rows: ProgressRow[];
+}
+
+export function progressStages(reached: ReachedStep[], now: number): ProgressStage[] {
+  const stages: ProgressStage[] = [];
+  for (const row of progressRows(reached, now)) {
+    const last = stages[stages.length - 1];
+    if (TOGETHER.includes(row.step) && last && TOGETHER.includes(last.rows[0].step)) {
+      last.rows.push(row);
+      if (row.state === "current") {
+        last.state = "current";
+        last.seconds = row.seconds;
+      }
+      continue;
+    }
+    stages.push({ key: row.step, state: row.state, seconds: row.seconds, rows: [row] });
+  }
+  return stages;
 }
 
 export function formatElapsed(seconds: number): string {

@@ -5,6 +5,7 @@ import {
   clearProgress,
   formatElapsed,
   progressRows,
+  progressStages,
   recordStep,
   type ReachedStep,
 } from "@/features/analysis/progress";
@@ -86,7 +87,7 @@ describe("the steps an analysis has reached", () => {
       { step: "gate", state: "waiting" },
     ]);
     expect(rows[0].seconds).toBeCloseTo(274.8);
-    expect(rows[0].label).toBe("Starting the model server");
+    expect(rows[0].label).toBe("Start the model server");
     expect(
       progressRows([{ step: "warmup", elapsed: 0, reachedAt: 1_000 }], 5_000).map(
         (row) => row.step,
@@ -119,22 +120,36 @@ describe("the steps an analysis has reached", () => {
     expect([0, 9.9, 72.4, 725].map(formatElapsed)).toEqual(["0:00", "0:09", "1:12", "12:05"]);
   });
 
-  it("times local claim view extraction between binding and Judgement", () => {
-    const rows = progressRows(
-      [
-        { step: "bind", elapsed: 20, reachedAt: 21_000 },
-        { step: "views", elapsed: 22, reachedAt: 23_000 },
-        { step: "judge", elapsed: 24, reachedAt: 25_000 },
-      ],
-      27_000,
-    );
+  it("runs the support check, the case details and the summary together on one clock", () => {
+    const reached: ReachedStep[] = [
+      { step: "bind", elapsed: 20, reachedAt: 21_000 },
+      { step: "verify", elapsed: 22, reachedAt: 23_000 },
+      { step: "views", elapsed: 22, reachedAt: 23_000 },
+      { step: "judge", elapsed: 22, reachedAt: 23_000 },
+    ];
+    const rows = progressRows(reached, 33_000);
     expect(rows.find((row) => row.step === "bind")).toMatchObject({ state: "done", seconds: 2 });
-    expect(rows.find((row) => row.step === "judge")).toMatchObject({
-      state: "current",
-      seconds: 2,
-    });
-    expect(rows.find((row) => row.step === "views")).toMatchObject({ state: "done", seconds: 2 });
-    expect(rows.some((row) => row.label.includes("parties"))).toBe(false);
+    for (const step of ["verify", "views", "judge"]) {
+      expect(rows.find((row) => row.step === step)).toMatchObject({
+        state: "current",
+        seconds: 10,
+      });
+    }
+
+    const stages = progressStages(reached, 33_000);
+    expect(stages.map((stage) => stage.rows.map((row) => row.step))).toEqual([
+      ["gate"],
+      ["read"],
+      ["bind"],
+      ["verify", "views", "judge"],
+    ]);
+    expect(stages[3]).toMatchObject({ state: "current", seconds: 10 });
+  });
+
+  it("keeps the together column waiting until the first of its steps starts", () => {
+    const stages = progressStages([{ step: "read", elapsed: 0, reachedAt: 1_000 }], 5_000);
+    expect(stages[stages.length - 1]).toMatchObject({ state: "waiting", seconds: null });
+    expect(stages[stages.length - 1].rows).toHaveLength(3);
   });
 
   it("keeps only the steps it knows, and forgets them all when told", () => {

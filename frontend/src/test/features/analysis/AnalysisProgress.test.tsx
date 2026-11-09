@@ -22,7 +22,7 @@ describe("the progress of a running analysis", () => {
     expect(screen.queryByRole("list", { name: "Analysis progress" })).not.toBeInTheDocument();
   });
 
-  it("names each step, marks the one running, and times the ones finished", () => {
+  it("lays the steps out in order, marks the one running, and times the ones finished", () => {
     const now = Date.now();
     renderWith([
       { step: "assess", elapsed: 0, reachedAt: now - 30_000 },
@@ -30,20 +30,18 @@ describe("the progress of a running analysis", () => {
       { step: "retrieve", elapsed: 25, reachedAt: now - 5_000 },
     ]);
 
-    const items = within(screen.getByRole("list", { name: "Analysis progress" })).getAllByRole(
-      "listitem",
-    );
-    expect(items.map((item) => item.textContent)).toEqual([
-      "Checking what the case is missing0:21",
-      "Checking whether ATT&CK applies0:04",
-      "Retrieving ATT&CK context0:00",
-      "Reading case sources",
-      "Linking findings to sources",
-      "Checking whether sources support the findings",
-      "Starting case details preparation",
-      "Preparing the summary and case details",
+    const list = screen.getByRole("list", { name: "Analysis progress" });
+    const stages = Array.from(list.children);
+    expect(stages.map((stage) => stage.textContent)).toEqual([
+      "Check what is missing0:21",
+      "Check if ATT&CK applies0:04",
+      expect.stringMatching(/^Fetch ATT&CK context0:0\d$/),
+      "4Read the sources",
+      "5Link findings to sources",
+      "6At the same timeCheck source supportPrepare case detailsWrite the summary",
     ]);
-    expect(items[2]).toHaveAttribute("aria-current", "step");
-    expect(items[0]).not.toHaveAttribute("aria-current");
+    expect(stages[2]).toHaveAttribute("aria-current", "step");
+    expect(stages[0]).not.toHaveAttribute("aria-current");
+    expect(within(stages[5] as HTMLElement).getAllByRole("listitem")).toHaveLength(3);
   });
 });
