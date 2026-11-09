@@ -3,7 +3,7 @@ import Image from "next/image";
 export function CyberCaseLogo({ size = 32 }: { size?: number }) {
   return (
     <Image
-      src="/cybercase-mark.png"
+      src="/cybercase-mark-white-background.png"
       alt=""
       width={size}
       height={size}

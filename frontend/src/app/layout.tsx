@@ -26,8 +26,8 @@ const redHatMono = Red_Hat_Mono({
 export const metadata: Metadata = {
   title: "CyberCase",
   icons: {
-    icon: "/cybercase-mark.png",
-    apple: "/cybercase-mark.png",
+    icon: "/cybercase-mark-white-background.png",
+    apple: "/cybercase-mark-white-background.png",
   },
   description: "A source-bound workspace for case summarization, analysis, and guided follow-up.",
 };
