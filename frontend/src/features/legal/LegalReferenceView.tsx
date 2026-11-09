@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import type { CaseAnalysisResultRead } from "@/lib/api/types";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DisclosureToggle } from "@/components/Disclosure";
-import { EmptyState } from "@/components/EmptyState";
 import { Icon } from "@/components/icons";
 import {
   legalLookupSkipped,
@@ -17,7 +15,6 @@ interface LegalReferenceViewProps {
   analysisResult: CaseAnalysisResultRead | null;
   isLoading?: boolean;
   isError?: boolean;
-  onDecline: () => void;
 }
 
 const LONG_PROVISION_TEXT = 480;
@@ -26,7 +23,6 @@ export function LegalReferenceView({
   analysisResult,
   isLoading = false,
   isError = false,
-  onDecline,
 }: LegalReferenceViewProps) {
   if (isLoading) return <LegalSkeleton />;
   if (isError) {
@@ -64,46 +60,36 @@ export function LegalReferenceView({
       />
     );
   }
-  return <LegalProvisions reference={reference} onDecline={onDecline} />;
+  return <LegalProvisions reference={reference} />;
 }
 
-function LegalProvisions({
-  reference,
-  onDecline,
-}: {
-  reference: LegalReference;
-  onDecline: () => void;
-}) {
-  const [accepted, setAccepted] = useState(false);
-
+function LegalProvisions({ reference }: { reference: LegalReference }) {
   return (
     <>
       <section
         id="workspace-legal-panel"
         aria-label="Legal references"
-        className="flex shrink-0 flex-col bg-surface"
+        className="flex shrink-0 flex-col"
       >
-        <div className="mx-auto w-full max-w-[52rem] px-5 pt-8 pb-16 sm:px-8 sm:pt-12">
+        <div className="w-full pt-6">
           <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
             <div className="flex items-baseline gap-2">
               <h2 className="text-base font-semibold text-ink">Legal references</h2>
-              <span className="text-[13px] font-medium text-ink-muted">
+              <span className="text-sm font-medium text-ink-muted">
                 {reference.provisions.length}
               </span>
             </div>
             <span
-              className="text-[13px] text-ink-muted"
+              className="text-sm text-ink-muted"
               title={`From ${reference.provider || "an external legal service"}. It is not a case source.`}
             >
               External reference
             </span>
           </header>
 
-          {accepted && (
+          {
             <>
-              <p className="mt-4 text-[13px] leading-6 text-ink-secondary">
-                {reference.disclaimer}
-              </p>
+              <p className="mt-4 text-sm font-medium text-ink">{reference.disclaimer}</p>
 
               <ol className="divide-y divide-line">
                 {reference.provisions.map((item, index) => (
@@ -113,7 +99,7 @@ function LegalProvisions({
 
               {reference.querySent && (
                 <details className="group border-t border-line py-3">
-                  <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-1 rounded-md text-[13px] font-medium text-ink-secondary hover:text-ink">
+                  <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-1 rounded-md text-sm font-medium text-ink-secondary hover:text-ink">
                     What was searched
                     <Icon
                       name="chevron"
@@ -131,21 +117,9 @@ function LegalProvisions({
                 </details>
               )}
             </>
-          )}
+          }
         </div>
       </section>
-
-      <ConfirmDialog
-        isOpen={!accepted}
-        title="โปรดอ่านก่อนดูข้อมูลกฎหมาย"
-        description={reference.disclaimer}
-        confirmLabel="รับทราบ"
-        cancelLabel="ยกเลิก"
-        onCancel={onDecline}
-        onConfirm={() => setAccepted(true)}
-        titleId="legal-notice-title"
-        descriptionId="legal-notice-description"
-      />
     </>
   );
 }
@@ -161,8 +135,8 @@ function ProvisionItem({ item, index }: { item: LegalProvision; index: number })
     <li className="py-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h3 className="text-[15px] leading-7 font-semibold text-ink">{heading}</h3>
-          {showTitle && <p className="text-[13px] text-ink-muted">{item.title}</p>}
+          <h3 className="text-base leading-7 font-semibold text-ink">{heading}</h3>
+          {showTitle && <p className="text-sm text-ink-muted">{item.title}</p>}
         </div>
         {item.url && (
           <a
@@ -204,27 +178,16 @@ function ProvisionItem({ item, index }: { item: LegalProvision; index: number })
 
 function LegalState({ title, description }: { title: string; description: string }) {
   return (
-    <section
-      id="workspace-legal-panel"
-      aria-label="Legal references"
-      className="flex shrink-0 flex-col bg-surface"
-    >
-      <EmptyState
-        title={title}
-        description={description}
-        className="mx-auto min-h-[420px] w-full max-w-[52rem] justify-center px-5 py-16 sm:px-8"
-      />
+    <section id="workspace-legal-panel" aria-label="Legal references" className="pt-6">
+      <h3 className="text-base font-semibold text-ink">Thai legal provisions: {title}</h3>
+      <p className="mt-1 text-sm text-ink-secondary">{description}</p>
     </section>
   );
 }
 
 function LegalSkeleton() {
   return (
-    <div
-      role="status"
-      aria-label="Loading legal references"
-      className="mx-auto w-full max-w-[52rem] space-y-6 px-5 pt-8 sm:px-8 sm:pt-12"
-    >
+    <div role="status" aria-label="Loading legal references" className="w-full space-y-6 pt-6">
       <div className="h-4 w-40 animate-pulse rounded bg-surface-nested" />
       <div className="h-16 w-full animate-pulse rounded bg-surface-nested" />
       <div className="h-16 w-full animate-pulse rounded bg-surface-nested" />

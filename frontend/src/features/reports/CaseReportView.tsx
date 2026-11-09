@@ -63,16 +63,19 @@ export function CaseReportView({ caseId, analysisResult }: CaseReportViewProps) 
     <section
       id="workspace-report-panel"
       aria-label="Case report"
-      className="flex shrink-0 flex-col bg-surface"
+      className="flex shrink-0 flex-col px-3 pt-5 sm:px-6 lg:px-8"
     >
-      <div className="mx-auto w-full max-w-[52rem] px-5 pt-8 sm:px-8">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+      <div className="sheet w-full px-6 pt-4 pb-6">
+        <header className="-mx-6 flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 pb-4">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-            <h2 className="text-base font-semibold text-ink">Report</h2>
+            <h2 className="flex items-center gap-2.5 text-lg font-semibold text-ink">
+              <Icon name="report" className="text-xl text-primary" />
+              Report
+            </h2>
             {selectedReport && (
               <>
                 <span
-                  className="text-[13px] text-unresolved"
+                  className="text-sm text-unresolved"
                   title="Generated from the analysis. Not yet verified by an analyst."
                 >
                   Provisional
@@ -84,7 +87,7 @@ export function CaseReportView({ caseId, analysisResult }: CaseReportViewProps) 
                       aria-label="Report version"
                       value={selectedReport.report_id}
                       onChange={(event) => setSelectedReportId(event.target.value)}
-                      className="h-7 cursor-pointer appearance-none rounded-md bg-surface-nested py-0 pr-6 pl-2 text-[13px] font-medium text-ink outline-none hover:bg-line"
+                      className="h-7 cursor-pointer appearance-none rounded-md bg-surface-nested py-0 pr-6 pl-2 text-sm font-medium text-ink outline-none hover:bg-line"
                     >
                       {reports.map((report, index) => (
                         <option key={report.report_id} value={report.report_id}>
@@ -99,7 +102,7 @@ export function CaseReportView({ caseId, analysisResult }: CaseReportViewProps) 
                     />
                   </label>
                 ) : (
-                  <span className="text-[13px] text-ink-muted">
+                  <span className="text-sm text-ink-muted">
                     Version {selectedReport.version_number} ·{" "}
                     {formatDate(selectedReport.created_at, "monthDay")}
                   </span>
@@ -246,12 +249,12 @@ function ReportPreview({ caseId, report }: { caseId: string; report: CaseReportR
       ) : (
         <div
           aria-label="HTML Report Viewer"
-          className="overflow-hidden rounded-xl border border-line bg-canvas"
+          className="overflow-hidden rounded-xl border border-line bg-ground"
         >
           <iframe
             ref={attach}
             title={`Case report: ${report.report.title}`}
-            className="h-[820px] w-full border-0 bg-canvas"
+            className="h-[820px] w-full border-0 bg-ground"
           />
         </div>
       )}

@@ -3,7 +3,7 @@
 import { plural } from "@/lib/format";
 import { isTurnedOff, itemTitle, type RailItem } from "./SourceRail";
 import { FileSourcePreview, TextSourcePreview, ViewportMessage } from "./SourcePreviews";
-import { documentPages, fileKind } from "./sourcePresentation";
+import { documentPages, fileKind, readByOcr } from "./sourcePresentation";
 
 export type PreviewMode = "original" | "ocr" | "split";
 
@@ -42,11 +42,11 @@ export function SourceViewport({
   return (
     <section
       aria-label="Source preview"
-      className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface"
+      className="sheet flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
     >
-      <header className="flex min-h-12 flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-4 py-2 sm:px-5">
+      <header className="card-head">
         <div className="flex min-w-0 flex-1 basis-56 items-baseline gap-2.5">
-          <h2 className="truncate text-[14px] font-semibold text-ink">
+          <h2 className="truncate text-lg font-semibold text-ink">
             {item ? itemTitle(item) : "Select a source"}
           </h2>
           {subtitle && <p className="shrink-0 text-xs text-ink-muted">{subtitle}</p>}
@@ -54,13 +54,13 @@ export function SourceViewport({
 
         {item?.kind === "file" && (
           <div
-            role="tablist"
+            role="group"
             aria-label="Source representation"
-            className="flex h-8 items-center gap-0.5 rounded-lg bg-surface-nested p-0.5"
+            className="flex items-center gap-0.5 rounded-[9px] bg-surface-hover p-[3px]"
           >
             {PREVIEW_MODES.map(([value, label]) => (
               <PreviewTab key={value} selected={mode === value} onClick={() => onModeChange(value)}>
-                {label}
+                {value === "ocr" && readByOcr(item.source) ? "Machine-read text" : label}
               </PreviewTab>
             ))}
           </div>
@@ -68,12 +68,12 @@ export function SourceViewport({
       </header>
 
       {turnedOff && (
-        <p className="border-b border-line px-4 py-2 text-xs text-ink-secondary sm:px-5">
+        <p className="border-b border-line bg-primary-wash px-6 py-2.5 text-sm text-ink-secondary">
           This source is turned off. The next analysis will not read it.
         </p>
       )}
 
-      <div className="min-h-0 flex-1 bg-canvas">
+      <div className="min-h-0 flex-1 bg-surface">
         {!item ? (
           <ViewportMessage title="Select a source to read it." />
         ) : item.kind === "followup_answer" ? (
@@ -108,12 +108,12 @@ function PreviewTab({
   return (
     <button
       type="button"
-      role="tab"
-      aria-selected={selected}
-      tabIndex={selected ? 0 : -1}
+      aria-pressed={selected}
       onClick={onClick}
-      className={`h-7 rounded-md px-2.5 text-[13px] font-medium transition-colors ${
-        selected ? "bg-surface text-ink shadow-xs" : "text-ink-muted hover:text-ink"
+      className={`min-h-9 rounded-[7px] px-3.5 text-sm transition-colors ${
+        selected
+          ? "bg-surface font-semibold text-primary shadow-[0_2px_6px_rgba(30,29,27,0.08)]"
+          : "text-ink-muted hover:text-ink"
       }`}
     >
       {children}

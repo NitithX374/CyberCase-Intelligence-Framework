@@ -13,6 +13,7 @@ function finding(
 ): CaseFinding {
   return {
     id,
+    number: 1,
     text: `Original finding ${id}`,
     claimType,
     epistemicStatus,
@@ -220,6 +221,24 @@ describe("Findings reached from a summary link", () => {
     expect(screen.getAllByRole("article")).toHaveLength(5);
     await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
     expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+});
+
+describe("Finding numbers", () => {
+  it("print the number each finding was given, whichever findings are shown", () => {
+    const shown = [
+      { ...finding("A-05"), number: 5 },
+      { ...finding("A-09"), number: 9 },
+    ];
+    render(<CaseFindingsSection caseId={caseId} findings={shown} onSelectSource={vi.fn()} />);
+
+    expect(screen.getByRole("article", { name: "Finding 5" })).toHaveTextContent(
+      "Original finding A-05",
+    );
+    expect(screen.getByRole("article", { name: "Finding 9" })).toHaveTextContent(
+      "Original finding A-09",
+    );
+    expect(screen.queryByRole("article", { name: "Finding 1" })).not.toBeInTheDocument();
   });
 });
 

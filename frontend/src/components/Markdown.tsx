@@ -13,7 +13,7 @@ export function Markdown({ content, allowHtml = false }: MarkdownProps) {
   const rehypePlugins = allowHtml ? [rehypeRaw] : [];
 
   return (
-    <div className="text-[15px] leading-7 text-ink">
+    <div className="text-base leading-7 text-ink">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={rehypePlugins}
@@ -29,14 +29,12 @@ export function Markdown({ content, allowHtml = false }: MarkdownProps) {
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="mt-3.5 mb-1.5 text-[15px] font-semibold text-ink first:mt-0">
+            <h3 className="mt-3.5 mb-1.5 text-base font-semibold text-ink first:mt-0">
               {children}
             </h3>
           ),
           h4: ({ children }) => (
-            <h4 className="mt-3 mb-1.5 text-[15px] font-semibold text-ink first:mt-0">
-              {children}
-            </h4>
+            <h4 className="mt-3 mb-1.5 text-base font-semibold text-ink first:mt-0">{children}</h4>
           ),
           h5: ({ children }) => (
             <h5 className="mt-2 mb-1 text-sm font-semibold text-ink-secondary first:mt-0">
@@ -49,15 +47,15 @@ export function Markdown({ content, allowHtml = false }: MarkdownProps) {
             </h6>
           ),
           p: ({ children }) => (
-            <p className="mb-3 text-[15px] leading-7 text-ink break-words last:mb-0">{children}</p>
+            <p className="mb-3 text-base leading-7 text-ink break-words last:mb-0">{children}</p>
           ),
           ul: ({ children }) => (
-            <ul className="mb-3 space-y-1 pl-5 list-disc text-[15px] leading-7 text-ink last:mb-0 marker:text-ink-muted">
+            <ul className="mb-3 space-y-1 pl-5 list-disc text-base leading-7 text-ink last:mb-0 marker:text-ink-muted">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="mb-3 space-y-1 pl-5 list-decimal text-[15px] leading-7 text-ink last:mb-0 marker:text-ink-muted font-sans">
+            <ol className="mb-3 space-y-1 pl-5 list-decimal text-base leading-7 text-ink last:mb-0 marker:text-ink-muted font-sans">
               {children}
             </ol>
           ),
@@ -69,7 +67,7 @@ export function Markdown({ content, allowHtml = false }: MarkdownProps) {
             </blockquote>
           ),
           pre: ({ children }) => (
-            <pre className="my-3 max-w-full overflow-x-auto rounded-lg bg-primary p-4 font-mono text-[13px] leading-relaxed text-ivory">
+            <pre className="my-3 max-w-full overflow-x-auto rounded-lg bg-primary p-4 font-mono text-sm leading-relaxed text-ivory">
               {children}
             </pre>
           ),
@@ -85,7 +83,7 @@ export function Markdown({ content, allowHtml = false }: MarkdownProps) {
             }
             return (
               <code
-                className="rounded bg-surface-hover px-1.5 py-0.5 font-mono text-[13px] text-ink break-words"
+                className="rounded bg-surface-hover px-1.5 py-0.5 font-mono text-sm text-ink break-words"
                 {...props}
               >
                 {children}
@@ -118,10 +116,7 @@ export function Markdown({ content, allowHtml = false }: MarkdownProps) {
             </th>
           ),
           td: ({ children, className, ...props }: React.ComponentPropsWithoutRef<"td">) => (
-            <td
-              className={`px-3 py-2 text-ink break-words ${className ?? ""}`.trim()}
-              {...props}
-            >
+            <td className={`px-3 py-2 text-ink break-words ${className ?? ""}`.trim()} {...props}>
               {children}
             </td>
           ),
@@ -135,7 +130,7 @@ export function Markdown({ content, allowHtml = false }: MarkdownProps) {
                 href={isSafe ? href : undefined}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold text-ink underline decoration-line-strong underline-offset-2 transition-colors hover:text-charcoal-hover hover:decoration-primary"
+                className="font-semibold text-ink underline decoration-line-strong underline-offset-2 transition-colors hover:text-primary-hover hover:decoration-primary"
               >
                 {children}
               </a>

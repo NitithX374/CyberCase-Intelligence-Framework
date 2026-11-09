@@ -23,6 +23,7 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ caseId }),
   useRouter: () => ({ push: state.push, replace: vi.fn() }),
   useSelectedLayoutSegment: () => state.segment,
+  usePathname: () => `/case/${caseId}/${state.segment ?? "analysis"}`,
 }));
 vi.mock("@/features/analysis/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/analysis/api")>()),
@@ -87,7 +88,10 @@ function renderLayout(page: ReactNode = <p>workspace</p>) {
     </QueryClientProvider>
   );
   const view = render(layout(page));
-  return { showPage: (next: ReactNode) => view.rerender(layout(next)) };
+  return {
+    showPage: (next: ReactNode) => view.rerender(layout(next)),
+    unmount: () => view.unmount(),
+  };
 }
 
 const ask = () => screen.queryByRole("complementary", { name: "Ask about this case" });
@@ -110,7 +114,26 @@ describe("CaseWorkspace", () => {
     fireEvent.click(screen.getByRole("button", { name: "New case" }));
 
     expect(await screen.findByRole("dialog")).toHaveTextContent("ระบบไม่สามารถดำเนินการได้");
-    expect(localStorage.getItem("cybercase:chat-open")).toBe("false");
+    expect(localStorage.getItem("cybercase:ask-open")).toBe("false");
+  });
+
+  it("starts with Ask closed unless the reader left it open", () => {
+    const first = renderLayout();
+    expect(ask()).not.toBeInTheDocument();
+    first.unmount();
+
+    localStorage.setItem("cybercase:ask-open", "true");
+    renderLayout();
+    expect(ask()).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close Ask" }));
+    expect(ask()).not.toBeInTheDocument();
+    expect(localStorage.getItem("cybercase:ask-open")).toBe("false");
+  });
+
+  it("ignores the preference saved under the old key", () => {
+    localStorage.setItem("cybercase:chat-open", "true");
+    renderLayout();
+    expect(ask()).not.toBeInTheDocument();
   });
 
   it("reads the open view from the route", () => {
@@ -142,7 +165,7 @@ describe("a case that does not exist", () => {
   });
 
   it("opens none of the case pages, its header or its Ask panel", () => {
-    localStorage.setItem("cybercase:chat-open", "true");
+    localStorage.setItem("cybercase:ask-open", "true");
     renderLayout(<p>the case page</p>);
 
     expect(screen.queryByText("the case page")).not.toBeInTheDocument();
@@ -207,7 +230,7 @@ describe("an analysis run started from a page", () => {
   });
 
   it("opens Ask for a follow-up and blocks another run after Ask is closed or the page remounts", async () => {
-    localStorage.setItem("cybercase:chat-open", "false");
+    localStorage.setItem("cybercase:ask-open", "false");
     state.start.mockImplementation(async () => {
       state.pendingQuestionId = "question-1";
       return QUESTION;

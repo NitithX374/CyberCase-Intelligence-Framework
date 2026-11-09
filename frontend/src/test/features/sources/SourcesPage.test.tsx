@@ -110,16 +110,17 @@ describe("SourcesPage", () => {
     const dialog = await screen.findByRole("dialog");
     expect(dialog.querySelector("#meaningful-error-message")).toHaveTextContent("แบ่งไฟล์");
   });
-  it("starts the analysis and opens the analysis page when Analyze is pressed", () => {
+  it("leaves starting the analysis to the top bar and says so in the rail", () => {
     state.sources = [narrative];
     state.freshness = "missing";
     renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
-
-    expect(state.runAnalysis).toHaveBeenCalledOnce();
-    expect(state.push).toHaveBeenCalledOnce();
-    expect(state.push).toHaveBeenCalledWith(`/case/${caseId}/analysis`);
+    expect(screen.queryByRole("button", { name: /Analy[sz]/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Not analyzed yet. Use Analyze at the top when the sources are ready.",
+    );
+    expect(state.runAnalysis).not.toHaveBeenCalled();
+    expect(state.push).not.toHaveBeenCalled();
   });
 
   it("stays on the sources page while a follow-up question awaits an answer", () => {
@@ -128,10 +129,10 @@ describe("SourcesPage", () => {
     state.canAnalyze = false;
     renderPage();
 
-    const button = screen.getByRole("button", { name: /^Analyze/ });
-    expect(button).toBeDisabled();
-    fireEvent.click(button);
-
+    expect(screen.queryByRole("button", { name: /Analy[sz]/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Waiting for your answer in Ask. The analysis continues when you answer.",
+    );
     expect(state.runAnalysis).not.toHaveBeenCalled();
     expect(state.push).not.toHaveBeenCalled();
   });

@@ -1,31 +1,24 @@
 import type { Metadata } from "next";
-import { Manrope, JetBrains_Mono } from "next/font/google";
-import localFont from "next/font/local";
+import { DM_Sans, Mitr, Red_Hat_Mono } from "next/font/google";
 import "./globals.css";
 import "boxicons/css/boxicons.min.css";
 import Providers from "./providers";
 
-const manrope = Manrope({
-  variable: "--font-manrope",
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
   subsets: ["latin"],
   display: "swap",
 });
 
-const plexSansThai = localFont({
-  variable: "--font-thai",
+const mitr = Mitr({
+  variable: "--font-mitr",
+  subsets: ["thai", "latin"],
+  weight: ["300", "400", "500", "600"],
   display: "swap",
-  adjustFontFallback: false,
-  declarations: [{ prop: "size-adjust", value: "115%" }],
-  src: [
-    { path: "./fonts/ibm-plex-sans-thai-thai-400-normal.woff2", weight: "400", style: "normal" },
-    { path: "./fonts/ibm-plex-sans-thai-thai-500-normal.woff2", weight: "500", style: "normal" },
-    { path: "./fonts/ibm-plex-sans-thai-thai-600-normal.woff2", weight: "600", style: "normal" },
-    { path: "./fonts/ibm-plex-sans-thai-thai-700-normal.woff2", weight: "700", style: "normal" },
-  ],
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-geist-mono",
+const redHatMono = Red_Hat_Mono({
+  variable: "--font-red-hat-mono",
   subsets: ["latin"],
   display: "swap",
 });
@@ -48,7 +41,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${manrope.variable} ${plexSansThai.variable} ${jetbrainsMono.variable}`}
+      className={`${dmSans.variable} ${mitr.variable} ${redHatMono.variable}`}
     >
       <body className="font-sans antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>

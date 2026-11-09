@@ -9,6 +9,7 @@ import type { SourceMessageRef } from "@/features/citations/types";
 import { Icon } from "@/components/icons";
 import { SourceCitationChip } from "@/features/citations/SourceCitationChip";
 import { groupSourceRefs } from "@/features/citations/groupSourceRefs";
+import { CitedPassages } from "./CitedPassages";
 import { FindingTraceability } from "./FindingTraceability";
 
 const INITIAL_FINDINGS = 5;
@@ -59,104 +60,101 @@ const groupTitleClass: Record<string, string> = {
 function FindingRow({
   caseId,
   finding,
-  number,
   showClaimType = false,
   ...sourceActions
 }: FindingSourceActions & {
   caseId: string;
   finding: CaseFinding;
-  number: number;
   showClaimType?: boolean;
 }) {
-  const isSupported = finding.traceability.semanticSupport === "supported";
-
-  const isUnknown = finding.claimType === "unknown" || finding.epistemicStatus === "unknown";
-  const isNotConfirmed = finding.epistemicStatus === "not_confirmed";
-  const isContradicted =
-    finding.epistemicStatus === "contradicted" || finding.epistemicStatus === "not_established";
+  const number = finding.number;
+  const flagged = finding.traceability.semanticSupport === "not_supported";
+  const linked =
+    !flagged && finding.epistemicStatus !== "not_confirmed" && finding.supportingSources.length > 0;
 
   return (
     <article
       id={`finding-${finding.id}`}
       aria-label={`Finding ${number}`}
-      className={`scroll-mt-5 rounded-xl border p-4 sm:p-5 transition-all duration-150 ${
-        isSupported ? "border-l-4 border-l-established" : ""
-      } ${
-        isNotConfirmed
-          ? "border-unresolved/30 bg-surface shadow-xs"
-          : isUnknown
-            ? "border-amber-500/25 bg-amber-500/[0.02] shadow-xs"
-            : isContradicted
-              ? "border-critical/30 bg-critical/[0.02] shadow-xs"
-              : isSupported
-                ? "border-established/30 bg-accent-soft/40 shadow-xs"
-                : "border-line bg-surface hover:border-line-strong hover:shadow-xs"
-      }`}
+      className="grid scroll-mt-5 grid-cols-[2.75rem_minmax(0,1fr)] gap-x-4 gap-y-3 border-t border-line px-6 py-5 min-[1400px]:grid-cols-[2.75rem_minmax(0,1fr)_17rem]"
     >
-      <div className="flex items-start justify-between gap-3">
-        <span
-          aria-hidden="true"
-          className={`inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full px-2 text-xs font-semibold tabular-nums ${
-            isSupported
-              ? "bg-established/10 text-established"
-              : "bg-surface-nested text-ink-secondary"
-          }`}
-        >
-          {number}
-        </span>
-        <p className="break-words text-[15px] sm:text-[16px] font-medium leading-relaxed text-ink flex-1 tracking-tight">
-          {finding.text}
-        </p>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {showClaimType && finding.claimType !== "reported" && (
-            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700">
-              {claimTypeLabels[finding.claimType]}
-            </span>
-          )}
-        </div>
-      </div>
+      <span
+        aria-hidden="true"
+        className={`flex h-9 w-9 items-center justify-center rounded-[9px] text-sm font-bold tabular-nums ${
+          flagged
+            ? "bg-primary text-white shadow-[0_4px_10px_rgba(156,79,51,0.3)]"
+            : "bg-surface-hover text-ink"
+        }`}
+      >
+        {number}
+      </span>
+      <div className="min-w-0">
+        <p className="text-base text-ink [overflow-wrap:anywhere]">{finding.text}</p>
+        {(flagged || linked || (showClaimType && finding.claimType !== "reported")) && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {flagged && (
+              <span className="badge-check">
+                <Icon name="alert" />
+                Check against the source
+              </span>
+            )}
+            {linked && (
+              <span className="badge-linked">
+                <Icon name="check" />
+                Linked to the source
+              </span>
+            )}
+            {showClaimType && finding.claimType !== "reported" && (
+              <span className="text-xs font-semibold text-ink-secondary">
+                {claimTypeLabels[finding.claimType]}
+              </span>
+            )}
+          </div>
+        )}
 
-      <FindingTraceability traceability={finding.traceability} text={finding.text} />
+        <FindingTraceability traceability={finding.traceability} text={finding.text} />
 
-      <div className="mt-3 flex flex-wrap items-center gap-1.5 pt-2.5 border-t border-line/60">
-        <FindingSources
-          sources={finding.supportingSources}
-          findingId={finding.id}
-          role="supporting"
-          {...sourceActions}
-        />
-        <FindingSources
-          sources={finding.contradictingSources}
-          findingId={finding.id}
-          role="conflicting"
-          {...sourceActions}
-        />
-        {finding.techniqueIds.map((techniqueId) => (
-          <Link
-            key={techniqueId}
-            href={`${analysisPath(caseId, "details")}#mitre-${techniqueId}`}
-            title={`ATT&CK ${techniqueId}`}
-            className="inline-flex h-6 items-center px-2 rounded bg-surface-nested text-xs font-mono font-medium text-ink-secondary hover:text-ink hover:bg-surface-hover transition-colors"
-          >
-            {techniqueId}
-          </Link>
-        ))}
-      </div>
-
-      {finding.epistemicStatus === "not_confirmed" && finding.unverifiedQuotes.length > 0 && (
-        <div className="mt-3 space-y-2 rounded-lg border border-unresolved/20 bg-unresolved/5 p-3.5 text-sm">
-          {finding.unverifiedQuotes.map((item, index) => (
-            <p
-              key={`passage-${finding.id}-${index}`}
-              className="text-sm leading-6 font-medium text-unresolved"
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <FindingSources
+            sources={finding.supportingSources}
+            findingId={finding.id}
+            role="supporting"
+            {...sourceActions}
+          />
+          <FindingSources
+            sources={finding.contradictingSources}
+            findingId={finding.id}
+            role="conflicting"
+            {...sourceActions}
+          />
+          {finding.techniqueIds.map((techniqueId) => (
+            <Link
+              key={techniqueId}
+              href={`${analysisPath(caseId, "details")}#mitre-${techniqueId}`}
+              title={`ATT&CK ${techniqueId}`}
+              className="inline-flex h-6 items-center px-2 rounded bg-surface-nested text-xs font-mono font-medium text-ink-secondary hover:text-ink hover:bg-surface-hover transition-colors"
             >
-              {item.evidenceUnitId
-                ? "The source unit reference could not be resolved."
-                : "Not found word for word in the source."}
-            </p>
+              {techniqueId}
+            </Link>
           ))}
         </div>
-      )}
+
+        {finding.epistemicStatus === "not_confirmed" && finding.unverifiedQuotes.length > 0 && (
+          <div className="mt-3 space-y-1">
+            {finding.unverifiedQuotes.map((item, index) => (
+              <p key={`passage-${finding.id}-${index}`} className="text-sm font-semibold text-mark">
+                {item.evidenceUnitId
+                  ? "The source unit reference could not be resolved."
+                  : "Not found word for word in the source."}
+              </p>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="col-start-2 min-w-0 min-[1400px]:col-start-3 min-[1400px]:row-start-1">
+        <CitedPassages sources={finding.supportingSources} />
+        <CitedPassages sources={finding.contradictingSources} conflicting />
+      </div>
     </article>
   );
 }
@@ -182,9 +180,6 @@ export function CaseFindingsSection({
     groupsHolding(findings, focusId),
   );
   const groups = groupCaseFindings(findings);
-  const findingNumbers = Object.fromEntries(
-    groups.flatMap((group) => group.findings).map((finding, index) => [finding.id, index + 1]),
-  );
 
   useEffect(() => {
     if (!focusId) return;
@@ -195,11 +190,19 @@ export function CaseFindingsSection({
   }, [focusId]);
 
   if (groups.length === 0) {
-    return <p className="py-6 text-sm text-ink-muted">No findings in this analysis.</p>;
+    return <p className="px-6 py-6 text-sm text-ink-muted">No findings in this analysis.</p>;
   }
 
   return (
-    <div className="space-y-8 pt-6">
+    <div>
+      <div
+        aria-hidden="true"
+        className="hidden grid-cols-[2.75rem_minmax(0,1fr)_17rem] gap-x-4 bg-surface-nested px-6 py-2.5 text-xs font-semibold tracking-[0.08em] text-ink-muted uppercase min-[1400px]:grid"
+      >
+        <span>No.</span>
+        <span>Finding</span>
+        <span>Words in the source</span>
+      </div>
       {groups.map((group) => {
         const expanded = expandedGroups.includes(group.id);
         const canCollapse = group.collapsible && group.findings.length > INITIAL_FINDINGS;
@@ -220,10 +223,10 @@ export function CaseFindingsSection({
             aria-labelledby={`findings-${group.id}-heading`}
             className="scroll-mt-5"
           >
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between border-t border-line bg-surface-nested px-6 py-2.5">
               <h3
                 id={`findings-${group.id}-heading`}
-                className={`text-[13px] font-semibold flex items-center gap-2 ${
+                className={`text-sm font-semibold flex items-center gap-2 ${
                   groupTitleClass[group.id] ?? "text-ink-secondary"
                 }`}
               >
@@ -239,20 +242,19 @@ export function CaseFindingsSection({
                 </span>
               </h3>
             </div>
-            <div id={`findings-${group.id}`} className="space-y-3">
+            <div id={`findings-${group.id}`}>
               {visible.map((finding) => (
                 <FindingRow
                   key={finding.id}
                   caseId={caseId}
                   finding={finding}
-                  number={findingNumbers[finding.id]}
                   showClaimType={showClaimType}
                   {...sourceActions}
                 />
               ))}
             </div>
             {canCollapse && (
-              <div className="mt-3">
+              <div className="border-t border-line px-6 py-3">
                 <button
                   type="button"
                   aria-expanded={expanded}

@@ -69,7 +69,6 @@ function Findings({
 
 describe("Finding traceability", () => {
   it.each([
-    ["supported", "lr_supported", "Source check: the cited Source passages support this finding"],
     [
       "not_supported",
       "lr_not_supported",
@@ -91,6 +90,43 @@ describe("Finding traceability", () => {
       expect(screen.queryByText("Meaning support not assessed")).not.toBeInTheDocument();
     },
   );
+
+  it("gives a supported finding no check mark, support sentence or styling of its own", () => {
+    const result = structuredClone(reading);
+    const unflagged = structuredClone(result.trace_json!.claims[0]);
+    unflagged.claim_id = "A-02";
+    unflagged.semantic_grounding = null;
+    result.trace_json!.claims[0].semantic_grounding = {
+      verdict: "supported",
+      reason: "lr_supported",
+    };
+    result.trace_json!.claims.push(unflagged);
+    const { container } = render(<Findings result={result} />);
+
+    const [supported, other] = screen.getAllByRole("article");
+    expect(supported.className).toBe(other.className);
+    expect(supported.firstElementChild!.className).toBe(other.firstElementChild!.className);
+    expect(within(supported).queryByLabelText("Finding traceability")).not.toBeInTheDocument();
+    expect(within(other).getByLabelText("Finding traceability")).toBeInTheDocument();
+    expect(supported.querySelector("svg")).toBeNull();
+    expect(supported).not.toHaveTextContent(/support/i);
+    expect(container.innerHTML).not.toMatch(/established|accent-soft/);
+  });
+
+  it("keeps the warning for a finding the verifier did not clearly support", () => {
+    const result = structuredClone(reading);
+    result.trace_json!.claims[0].semantic_grounding = {
+      verdict: "not_supported",
+      reason: "lr_not_supported",
+    };
+    render(<Findings result={result} />);
+
+    expect(
+      screen.getByText(
+        "Source check: the cited Source did not clearly support this finding. Check it before relying on it.",
+      ),
+    ).toHaveClass("text-unresolved");
+  });
 
   it("opens every cited passage from the same Source and page using one chip", () => {
     render(<Findings />);

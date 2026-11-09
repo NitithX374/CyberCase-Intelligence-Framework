@@ -1,5 +1,5 @@
-import { AnalysisSummary } from "@/features/analysis/AnalysisSummary";
+import { CaseReading } from "@/features/analysis/CaseReading";
 
 export default function CaseAnalysisPage() {
-  return <AnalysisSummary />;
+  return <CaseReading />;
 }

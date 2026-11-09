@@ -74,14 +74,16 @@ export function CaseSourcesView({
   return (
     <div
       id="workspace-sources-panel"
-      role="tabpanel"
+      role="region"
       aria-label="Case sources"
-      className="flex min-h-0 flex-1 flex-col overflow-hidden bg-surface"
+      className="flex flex-col px-3 pt-5 pb-8 sm:px-6 lg:px-8"
     >
       {isEmpty ? (
-        <EmptySources onOpenNarrative={openNarrative} onPickFile={pickFile} />
+        <div className="sheet flex min-h-[28rem] flex-col">
+          <EmptySources onOpenNarrative={openNarrative} onPickFile={pickFile} />
+        </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+        <div className="flex h-[calc(100dvh-3rem)] min-h-[36rem] flex-col gap-5 md:flex-row">
           <SourceRail
             groups={groups}
             selectedId={selected?.id ?? null}

@@ -138,7 +138,7 @@ function TechniqueTitle({
         rel="noopener noreferrer"
         aria-label={`Open ${techniqueId} on MITRE ATT&CK`}
         title={`Open ${techniqueId} on MITRE ATT&CK`}
-        className="group inline-flex items-center gap-1 font-mono text-[13px] font-medium text-ink-secondary transition-colors hover:text-ink hover:underline"
+        className="group inline-flex items-center gap-1 font-mono text-sm font-medium text-ink-secondary transition-colors hover:text-ink hover:underline"
       >
         <span>{techniqueId}</span>
         <Icon
@@ -146,7 +146,7 @@ function TechniqueTitle({
           className="h-3 w-3 text-ink-muted transition-colors group-hover:text-ink"
         />
       </a>
-      <Heading className="text-[15px] font-semibold text-ink">
+      <Heading className="text-base font-semibold text-ink">
         <a
           href={mitreUrl}
           target="_blank"
@@ -157,7 +157,7 @@ function TechniqueTitle({
           {techniqueName}
         </a>
       </Heading>
-      {tactic && <span className="text-[13px] text-ink-muted">{tactic}</span>}
+      {tactic && <span className="text-sm text-ink-muted">{tactic}</span>}
     </div>
   );
 }
@@ -222,19 +222,19 @@ export function TechnicalContextView({ analysisResult, sources }: TechnicalConte
     <section
       id="workspace-technical-context-panel"
       aria-label="Technical Context"
-      className="flex shrink-0 flex-col bg-surface"
+      className="flex shrink-0 flex-col"
     >
-      <div className="mx-auto w-full max-w-[52rem] px-5 pt-16 sm:px-8">
+      <div className="w-full pt-6">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
           <div className="flex items-baseline gap-2">
             <h2 className="text-base font-semibold text-ink">MITRE ATT&amp;CK</h2>
-            {count > 0 && <span className="text-[13px] font-medium text-ink-muted">{count}</span>}
+            {count > 0 && <span className="text-sm font-medium text-ink-muted">{count}</span>}
           </div>
           <a
             href="https://attack.mitre.org/"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-[13px] text-ink-muted transition-colors hover:text-ink hover:underline"
+            className="inline-flex items-center gap-1 text-sm text-ink-muted transition-colors hover:text-ink hover:underline"
             title="Open MITRE ATT&CK website"
           >
             <span>External reference</span>
@@ -275,7 +275,7 @@ export function TechnicalContextView({ analysisResult, sources }: TechnicalConte
             {retrievedOnly.length > 0 &&
               (contextData.techniques.length > 0 ? (
                 <details className="group border-t border-line py-3">
-                  <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-1 rounded-md text-[13px] font-medium text-ink-secondary hover:text-ink">
+                  <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-1 rounded-md text-sm font-medium text-ink-secondary hover:text-ink">
                     Also retrieved, not linked to the case
                     <span className="text-ink-muted">{retrievedOnly.length}</span>
                     <Icon

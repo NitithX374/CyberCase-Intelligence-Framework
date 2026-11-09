@@ -23,7 +23,18 @@ export type IconName =
   | "download"
   | "refresh"
   | "info"
-  | "spinner";
+  | "spinner"
+  | "case"
+  | "sources"
+  | "report"
+  | "timeline"
+  | "people"
+  | "impact"
+  | "attention"
+  | "summary"
+  | "findings"
+  | "references"
+  | "play";
 
 const nameToBoxicon: Record<IconName, string> = {
   overview: "bx-grid-alt",
@@ -49,6 +60,17 @@ const nameToBoxicon: Record<IconName, string> = {
   refresh: "bx-refresh",
   info: "bx-info-circle",
   spinner: "bx-loader-alt bx-spin",
+  case: "bx-briefcase-alt-2",
+  sources: "bx-folder-open",
+  report: "bx-file",
+  timeline: "bx-time-five",
+  people: "bx-group",
+  impact: "bx-pulse",
+  attention: "bx-flag",
+  summary: "bx-book-open",
+  findings: "bx-list-check",
+  references: "bx-link-alt",
+  play: "bx-play",
 };
 
 interface IconProps extends HTMLAttributes<HTMLElement> {

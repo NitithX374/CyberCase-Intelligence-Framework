@@ -27,6 +27,25 @@ describe("supportNote", () => {
     );
   });
 
+  it("adds a plain note for a sentence resting on a finding the source check flagged", () => {
+    expect(supportNote("bound", "A file share was encrypted.", true)).toBe(
+      "A finding behind this sentence was not clearly supported by its cited Source. Check it before relying on the sentence.",
+    );
+    expect(supportNote(null, "A file share was encrypted.", true)).toContain(
+      "not clearly supported",
+    );
+    expect(supportNote("bound", "A file share was encrypted.", false)).toBeNull();
+    expect(supportNote("bound", "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน", true)).toContain(
+      "ควรตรวจกับต้นฉบับ",
+    );
+  });
+
+  it("keeps both reasons in one note when a sentence has both", () => {
+    expect(supportNote("mixed", "A file share was encrypted.", true)).toBe(
+      "Only some linked claims have resolved source citations. A finding behind this sentence was not clearly supported by its cited Source. Check it before relying on the sentence.",
+    );
+  });
+
   it("does not say that the fact itself was not confirmed", () => {
     for (const status of ["unbound", "mixed", "no_claim"] as const) {
       expect(supportNote(status, "x")).not.toMatch(/fact|true|false/i);

@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
-import { useDismiss } from "@/lib/useDismiss";
 import { formatBytes, formatDate } from "@/lib/format";
 import type { CaseSourceRead } from "@/lib/api/types";
 import type { SourcesAnalysis } from "./CaseSourcesView";
 import type { FollowupAnswer } from "@/features/citations/types";
+import { documentPages, fileKind, readByOcr } from "./sourcePresentation";
 
 export type RailItem =
   | { id: string; kind: "file"; documentId: string; source: CaseSourceRead }
@@ -104,32 +103,65 @@ export function SourceRail({
   const total = groups.reduce((count, group) => count + group.items.length, 0);
   const shown = total + (isUploading ? 1 : 0);
   const isAnalysing = analysis?.isRunning ?? false;
+  const switchable = groups.flatMap((group) =>
+    group.items.flatMap((item) => (item.kind === "followup_answer" ? [] : [item.source])),
+  );
+  const usedCount = switchable.filter((source) => !isTurnedOff(source)).length;
 
   return (
-    <aside className="flex max-h-72 w-full shrink-0 flex-col border-b border-line bg-sidebar md:max-h-none md:w-72 md:border-r md:border-b-0">
-      <header className="flex h-12 shrink-0 items-center justify-between pr-2 pl-4">
-        <h2 className="flex items-baseline gap-2 text-[13px] font-semibold text-ink">
-          Sources <span className="font-medium text-ink-muted">{shown}</span>
+    <aside className="sheet flex max-h-96 w-full shrink-0 flex-col overflow-hidden md:max-h-none md:w-[25rem]">
+      <header className="shrink-0 space-y-3 border-b border-line px-5 pt-4 pb-4">
+        <h2 className="flex items-center gap-2.5 text-lg font-semibold text-ink">
+          <Icon name="sources" className="text-xl text-primary" />
+          In this case <span className="count-pill">{shown}</span>
+          {onSetSourceActive && switchable.length > 0 && (
+            <span className="ml-auto text-sm font-normal text-ink-muted">
+              {usedCount} of {switchable.length} used
+            </span>
+          )}
         </h2>
-        <AddSourceMenu
-          isUploading={isUploading}
-          isAnalysing={isAnalysing}
-          onOpenNarrative={onOpenNarrative}
-          onPickFile={onPickFile}
-        />
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={isUploading || isAnalysing}
+            onClick={onOpenNarrative}
+            title={isAnalysing ? "Wait for the analysis to finish" : undefined}
+            className="btn-primary"
+          >
+            <Icon name="edit" className="text-xl" />
+            Add narrative
+          </button>
+          <button
+            type="button"
+            disabled={isUploading || isAnalysing}
+            onClick={onPickFile}
+            title={isAnalysing ? "Wait for the analysis to finish" : undefined}
+            className="btn-secondary"
+          >
+            <Icon name="upload" className="text-xl" />
+            Upload file
+          </button>
+        </div>
       </header>
 
-      <div className="min-h-0 flex-1 space-y-5 overflow-auto px-2 pb-4">
+      <div className="min-h-0 flex-1 space-y-5 overflow-auto px-3 pt-3 pb-4">
         {isUploading && <UploadingItem filename={uploadingFilename} />}
         {groups.map((group) => (
           <section key={group.label}>
-            <h3 className="px-2 pb-1 text-xs font-medium text-ink-muted">{group.label}</h3>
-            <ul className="space-y-0.5">
+            <h3 className="px-2 pb-1.5 text-xs font-semibold tracking-[0.08em] text-ink-muted uppercase">
+              {group.label}
+            </h3>
+            <ul className="space-y-1">
               {group.items.map((item) => (
-                <li key={item.id} className="flex items-center">
+                <li
+                  key={item.id}
+                  className={`flex items-start gap-1 rounded-lg pl-2 ${
+                    item.id === selectedId ? "bg-primary-wash ring-1 ring-primary-line" : ""
+                  }`}
+                >
                   {onSetSourceActive &&
                     (item.kind === "followup_answer" ? (
-                      <span aria-hidden="true" className="w-7 shrink-0" />
+                      <span aria-hidden="true" className="w-8 shrink-0" />
                     ) : (
                       <SourceCheckbox
                         source={item.source}
@@ -151,6 +183,12 @@ export function SourceRail({
         ))}
       </div>
 
+      {onSetSourceActive && switchable.length > 0 && (
+        <p className="shrink-0 border-t border-line px-5 py-3 text-sm text-ink-muted">
+          Ticked sources go into the next analysis. Changing a tick makes the current analysis out
+          of date.
+        </p>
+      )}
       {analysis && <AnalyzeFooter analysis={analysis} isUploading={isUploading} />}
     </aside>
   );
@@ -163,31 +201,31 @@ function AnalyzeFooter({
   analysis: SourcesAnalysis;
   isUploading: boolean;
 }) {
-  const { freshness, isRunning, isWaitingForFollowup, canAnalyze, onAnalyze } = analysis;
+  const { freshness, isRunning, isWaitingForFollowup } = analysis;
   if (freshness === "current" && !isRunning && !isWaitingForFollowup) return null;
   const isStale = freshness === "stale";
 
   return (
-    <div className="shrink-0 border-t border-line p-3">
-      {isWaitingForFollowup && !isRunning && (
-        <p className="mb-2.5 px-1 text-xs leading-5 text-ink-secondary">
-          Answer the follow-up question in Ask to continue automatically.
+    <div className="shrink-0 border-t border-line p-4" role="status">
+      {isRunning ? (
+        <p className="flex items-center gap-2 text-sm font-medium text-ink">
+          <Icon name="spinner" className="text-xl" />
+          Analyzing the sources…
+        </p>
+      ) : isWaitingForFollowup ? (
+        <p className="text-sm text-ink-secondary">
+          Waiting for your answer in Ask. The analysis continues when you answer.
+        </p>
+      ) : isStale ? (
+        <p className="text-sm font-semibold text-mark">
+          The analysis is out of date. Sources changed since it was made. Use Analyze at the top.
+        </p>
+      ) : (
+        <p className="text-sm text-ink-secondary">
+          Not analyzed yet. Use Analyze at the top when the sources are ready.
         </p>
       )}
-      {isStale && !isRunning && (
-        <p className="mb-2.5 flex items-center gap-2 px-1 text-xs text-ink-secondary">
-          Sources changed since the last analysis
-        </p>
-      )}
-      <button
-        type="button"
-        onClick={onAnalyze}
-        disabled={!canAnalyze || isRunning || isUploading}
-        className="btn-primary w-full"
-      >
-        {isRunning && <Icon name="spinner" className="h-4 w-4" />}
-        {isRunning ? "Analyzing…" : isStale ? "Analyze latest" : "Analyze"}
-      </button>
+      {isUploading && <p className="mt-1 text-xs text-ink-secondary">Reading the new file…</p>}
     </div>
   );
 }
@@ -207,17 +245,21 @@ function SourceCheckbox({
 }) {
   const included = !isTurnedOff(source);
   return (
-    <span className="flex w-7 shrink-0 justify-center">
+    <label
+      title={isAnalysing ? "Wait for the analysis to finish" : "Include in the analysis"}
+      className={`flex h-11 w-8 shrink-0 items-start justify-center pt-3 ${
+        disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+      }`}
+    >
       <input
         type="checkbox"
         checked={included}
         disabled={disabled}
         onChange={() => void onChange(source.id, !included)}
         aria-label={`Include in the analysis: ${title}`}
-        title={isAnalysing ? "Wait for the analysis to finish" : "Include in the analysis"}
-        className="h-4 w-4 cursor-pointer accent-ink disabled:cursor-not-allowed"
+        className="h-5 w-5 cursor-[inherit] accent-primary"
       />
-    </span>
+    </label>
   );
 }
 
@@ -230,12 +272,17 @@ function RailButton({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const pages = item.kind === "file" ? documentPages(item.source).length : 0;
   const detail =
     item.kind === "file"
-      ? formatBytes(item.source.size_bytes ?? 0)
+      ? [
+          fileKind(item.source),
+          `${pages} ${pages === 1 ? "page" : "pages"}`,
+          readByOcr(item.source) ? "read by OCR" : formatBytes(item.source.size_bytes ?? 0),
+        ].join(" · ")
       : item.kind === "followup_answer"
         ? firstLine(item.followup.answer)
-        : formatDate(item.source.created_at, "day");
+        : `Typed · ${formatDate(item.source.created_at, "day")}`;
   const leftOut = item.kind !== "followup_answer" && isTurnedOff(item.source);
 
   return (
@@ -243,17 +290,19 @@ function RailButton({
       type="button"
       aria-pressed={selected}
       onClick={onSelect}
-      className={`flex min-w-0 flex-1 items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors ${
+      className={`flex min-w-0 flex-1 items-start gap-2.5 rounded-lg px-2 py-2.5 text-left transition-colors ${
         selected
-          ? "bg-surface text-ink shadow-xs ring-1 ring-line"
+          ? "text-ink"
           : leftOut
             ? "text-ink-muted hover:bg-surface-hover hover:text-ink"
-            : "text-ink-secondary hover:bg-surface-hover hover:text-ink"
+            : "text-ink hover:bg-surface-hover"
       }`}
     >
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-medium">{itemTitle(item)}</span>
-        <span className="mt-0.5 block truncate text-xs text-ink-muted">{detail}</span>
+        <span className="block truncate text-sm font-semibold">{itemTitle(item)}</span>
+        <span className="mt-0.5 block truncate text-xs text-ink-muted">
+          {leftOut ? `Not used · ${detail}` : detail}
+        </span>
       </span>
     </button>
   );
@@ -267,77 +316,11 @@ function UploadingItem({ filename }: { filename?: string | null }) {
     >
       <Icon name="spinner" className="mt-0.5 h-4 w-4 shrink-0 text-ink-muted" />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-medium text-ink">
+        <span className="block truncate text-sm font-medium text-ink">
           {filename || "Uploading file…"}
         </span>
         <span className="mt-0.5 block text-xs text-ink-muted">Extracting text…</span>
       </span>
-    </div>
-  );
-}
-
-function AddSourceMenu({
-  isUploading,
-  isAnalysing,
-  onOpenNarrative,
-  onPickFile,
-}: {
-  isUploading: boolean;
-  isAnalysing: boolean;
-  onOpenNarrative: () => void;
-  onPickFile: () => void;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const close = useCallback(() => setIsOpen(false), []);
-  useDismiss(containerRef, isOpen, close);
-
-  return (
-    <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        disabled={isUploading || isAnalysing}
-        onClick={() => setIsOpen((open) => !open)}
-        title={isAnalysing ? "Wait for the analysis to finish" : undefined}
-        className="btn-primary h-8 px-3"
-      >
-        <Icon name="plus" className="h-4 w-4" />
-        Add source
-      </button>
-
-      {isOpen && (
-        <div
-          role="menu"
-          className="absolute right-0 top-9 z-20 w-52 overflow-hidden rounded-xl border border-line bg-surface p-1.5 shadow-lg shadow-black/5"
-        >
-          <button
-            type="button"
-            role="menuitem"
-            disabled={isAnalysing}
-            onClick={() => {
-              setIsOpen(false);
-              onOpenNarrative();
-            }}
-            className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] text-ink hover:bg-surface-hover disabled:text-ink-disabled disabled:hover:bg-transparent"
-          >
-            Case narrative
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            disabled={isAnalysing}
-            onClick={() => {
-              setIsOpen(false);
-              onPickFile();
-            }}
-            className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] text-ink hover:bg-surface-hover disabled:text-ink-disabled disabled:hover:bg-transparent"
-          >
-            File
-          </button>
-        </div>
-      )}
     </div>
   );
 }

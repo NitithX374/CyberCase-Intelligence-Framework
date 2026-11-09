@@ -89,10 +89,12 @@ export function buildCaseOverview(
   const sources = parseCaseSources(rows, analysisFollowups(result));
   const associations = trace.mitre_associations ?? [];
   const incidentSummary = trace.summary || result.summary || "Case summary not provided.";
+  const numbers = findingNumbers(trace.claims);
   const findings: CaseFinding[] = trace.claims.map((claim) => {
     const cited = claimRefs(claim, sources);
     return {
       id: claim.claim_id,
+      number: numbers.get(claim.claim_id)?.number ?? 0,
       text: claim.text,
       claimType: claim.claim_type,
       epistemicStatus: claim.epistemic_status,
@@ -117,6 +119,7 @@ export function buildCaseOverview(
       trace.claims,
       trace.summary ?? "",
       incidentSummary,
+      numbers,
     ),
     findings,
     gaps: (trace.gaps ?? []).map((gap) => ({
@@ -173,11 +176,16 @@ function summaryUnits(
   claims: CaseAnalysisClaim[],
   summary: string,
   writtenText: string,
+  numbers: Map<string, FindingMark>,
 ): SummaryUnit[] {
-  const numbers = findingNumbers(claims);
   const closings = summaryClosings(summary);
   const aligned = closings.length === units.length;
-  let notes = 0;
+  const flaggedIds = new Set(
+    claims
+      .filter((claim) => claim.semantic_grounding?.verdict === "not_supported")
+      .map((claim) => claim.claim_id),
+  );
+  const letters = new Map<string, string>();
   return units.map((unit, index) => {
     const seen = new Set<number>();
     const marks = (unit.claim_ids ?? [])
@@ -188,13 +196,18 @@ function summaryUnits(
         return [mark];
       })
       .sort((first, second) => first.number - second.number);
-    const note = supportNote(unit.support, writtenText);
+    const note = supportNote(
+      unit.support,
+      writtenText,
+      (unit.claim_ids ?? []).some((claimId) => flaggedIds.has(claimId)),
+    );
+    if (note && !letters.has(note)) letters.set(note, noteLetter(letters.size));
     return {
       text: unit.text,
       marks,
       closing: aligned ? closings[index] : "",
       supportNote: note,
-      noteMark: note ? noteLetter(notes++) : null,
+      noteMark: note ? (letters.get(note) ?? null) : null,
     };
   });
 }

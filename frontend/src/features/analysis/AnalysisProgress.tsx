@@ -24,7 +24,7 @@ export function AnalysisProgress({
         <li
           key={row.step}
           aria-current={row.state === "current" ? "step" : undefined}
-          className={`flex items-baseline justify-between gap-6 text-[13px] leading-5 ${
+          className={`flex items-baseline justify-between gap-6 text-sm leading-5 ${
             row.state === "waiting"
               ? "text-ink-muted"
               : row.state === "current"

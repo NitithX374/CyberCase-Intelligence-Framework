@@ -2,18 +2,25 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { CyberCaseLogo } from "@/components/CyberCaseLogo";
-import { Icon } from "@/components/icons";
+import { Icon, type IconName } from "@/components/icons";
 import { AccountMenu } from "@/features/auth/AccountMenu";
+import { formatDate } from "@/lib/format";
 import type { CaseRead } from "@/lib/api/types";
-import type { WorkspaceView } from "@/lib/casePaths";
+import { casePath, type WorkspaceView } from "@/lib/casePaths";
 
 interface WorkspaceHeaderProps {
   activeCase: CaseRead | null;
   activeView: WorkspaceView;
   creatingCase: boolean;
-  isAnalyzing: boolean;
-  isStale: boolean;
+  status: string;
+  statusNeedsAttention: boolean;
+  analyzeLabel: string;
+  canAnalyze: boolean;
+  findingCount?: number;
+  flaggedCount?: number;
+  sourceCount?: number;
+  analysedAt?: string | null;
+  onAnalyze?: () => void;
   onViewChange: (view: WorkspaceView) => void;
   onNewCase: () => void;
   onRenameCase?: (title: string) => void;
@@ -21,26 +28,32 @@ interface WorkspaceHeaderProps {
   onToggleChat?: () => void;
 }
 
-const workspaceViewDescriptions: Record<WorkspaceView, string> = {
-  sources: "What the case knows: narratives, documents and clarification answers",
-  analysis: "Summary, findings, the ATT&CK context behind them, and open questions",
-  legal: "Thai provisions that may bear on the case, from an external legal service",
-  report: "Report versions made from the analysis, to preview and download as PDF",
+const viewLabels: Record<WorkspaceView, string> = {
+  analysis: "Reading",
+  legal: "Reading",
+  sources: "Sources",
+  report: "Report",
 };
 
-const workspaceTabs: Array<{ view: WorkspaceView; label: string }> = [
-  { view: "sources", label: "Sources" },
-  { view: "analysis", label: "Analysis" },
-  { view: "legal", label: "Legal" },
-  { view: "report", label: "Report" },
+const compactTabs: Array<{ view: WorkspaceView; label: string; icon: IconName }> = [
+  { view: "analysis", label: "Reading", icon: "findings" },
+  { view: "sources", label: "Sources", icon: "sources" },
+  { view: "report", label: "Report", icon: "report" },
 ];
 
 export function WorkspaceHeader({
   activeCase,
   activeView,
   creatingCase,
-  isAnalyzing,
-  isStale,
+  status,
+  statusNeedsAttention,
+  analyzeLabel,
+  canAnalyze,
+  findingCount = 0,
+  flaggedCount = 0,
+  sourceCount,
+  analysedAt,
+  onAnalyze,
   onViewChange,
   onNewCase,
   onRenameCase,
@@ -49,118 +62,207 @@ export function WorkspaceHeader({
 }: WorkspaceHeaderProps) {
   const [renaming, setRenaming] = useState(false);
   const displayCaseTitle = activeCase?.title || "New case";
-  const analysisStatus = isAnalyzing ? "running" : isStale ? "out of date" : null;
+  const currentView: WorkspaceView = activeView === "legal" ? "analysis" : activeView;
+  const caseId = activeCase?.id;
+
+  const titleRow = (onBand: boolean) => (
+    <div className="flex min-w-0 items-center gap-2">
+      {renaming ? (
+        <CaseTitleField
+          title={displayCaseTitle}
+          onCommit={(next) => {
+            setRenaming(false);
+            if (next && next !== displayCaseTitle) onRenameCase?.(next);
+          }}
+        />
+      ) : (
+        <>
+          <h1
+            className={`min-w-0 truncate font-bold tracking-[-0.01em] ${
+              onBand ? "text-2xl sm:text-3xl" : "text-2xl text-ink"
+            }`}
+            title={displayCaseTitle}
+          >
+            {displayCaseTitle}
+          </h1>
+          {onRenameCase && activeCase && (
+            <button
+              type="button"
+              onClick={() => setRenaming(true)}
+              aria-label="Rename case"
+              title="Rename case"
+              className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                onBand
+                  ? "text-white hover:bg-white/10 focus-visible:outline-white"
+                  : "text-ink-muted hover:bg-surface-hover hover:text-primary"
+              }`}
+            >
+              <Icon name="edit" className="text-lg" />
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
 
   return (
-    <header className="shrink-0 border-b border-line bg-surface">
-      <div className="flex flex-wrap items-center gap-x-2 px-3 sm:px-4 lg:px-5">
-        <Link
-          href="/case"
-          aria-label="All cases"
-          title="All cases"
-          className="order-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-surface-hover"
-        >
-          <CyberCaseLogo size={26} />
+    <header className="flex shrink-0 flex-col gap-5 px-3 pt-4 sm:px-6 lg:px-8 lg:pt-5">
+      <div className="sheet flex min-h-16 items-center gap-3 px-3 sm:px-5">
+        <Link href="/case" className="hidden text-sm font-semibold text-ink sm:inline lg:hidden">
+          CyberCase
         </Link>
-
-        <div className="group order-2 flex h-14 min-w-0 flex-1 items-center gap-1 md:max-w-[min(42vw,34rem)] md:flex-none">
-          {renaming ? (
-            <CaseTitleField
-              title={displayCaseTitle}
-              onCommit={(next) => {
-                setRenaming(false);
-                if (next && next !== displayCaseTitle) onRenameCase?.(next);
-              }}
-            />
-          ) : (
-            <>
-              <h1
-                className="truncate text-[15px] font-semibold tracking-[-0.01em] text-ink"
-                title={displayCaseTitle}
-              >
-                {displayCaseTitle}
-              </h1>
-              {onRenameCase && activeCase && (
-                <button
-                  type="button"
-                  onClick={() => setRenaming(true)}
-                  aria-label="Rename case"
-                  title="Rename case"
-                  className="icon-btn h-7 w-7 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 max-md:opacity-100"
-                >
-                  <Icon name="edit" className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </>
-          )}
-        </div>
-
         <nav
           aria-label="Case workspace views"
-          role="tablist"
-          className="order-4 -mx-1 flex h-11 w-full items-center gap-1 overflow-x-auto md:order-3 md:mx-0 md:ml-3 md:h-14 md:w-auto"
+          className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto lg:hidden"
         >
-          {workspaceTabs.map((item) => {
-            const selected = item.view === activeView;
-            const status = item.view === "analysis" ? analysisStatus : null;
+          {compactTabs.map((item) => {
+            const selected = item.view === currentView;
             return (
               <button
                 key={item.view}
                 id={`workspace-tab-${item.view}`}
                 type="button"
-                role="tab"
-                aria-selected={selected}
-                aria-controls={`workspace-${item.view}-panel`}
-                tabIndex={selected ? 0 : -1}
-                title={workspaceViewDescriptions[item.view]}
+                aria-current={selected ? "page" : undefined}
                 onClick={() => onViewChange(item.view)}
-                className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium transition-colors ${
-                  selected
-                    ? "bg-surface-nested text-ink"
-                    : "text-ink-muted hover:bg-surface-hover hover:text-ink"
+                className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm ${
+                  selected ? "bg-primary-soft font-semibold text-primary" : "text-ink-secondary"
                 }`}
               >
+                <Icon name={item.icon} className="hidden text-lg sm:inline-flex" />
                 {item.label}
-                {status && " "}
-                {status && (
-                  <span
-                    className={`text-xs font-normal ${isAnalyzing ? "text-ink-muted" : "text-unresolved"}`}
-                  >
-                    {status}
-                  </span>
-                )}
               </button>
             );
           })}
         </nav>
+        <p className="hidden min-w-0 flex-1 truncate text-sm text-ink-muted lg:block">
+          <Link href="/case" className="font-medium text-primary hover:underline">
+            All cases
+          </Link>
+          <span aria-hidden="true" className="px-2">
+            ›
+          </span>
+          {displayCaseTitle}
+          <span aria-hidden="true" className="px-2">
+            ›
+          </span>
+          {viewLabels[activeView]}
+        </p>
+        {onToggleChat && (
+          <button
+            type="button"
+            onClick={onToggleChat}
+            aria-label={isChatOpen ? "Close Ask" : "Open Ask"}
+            aria-pressed={isChatOpen}
+            className={`btn-ghost ${isChatOpen ? "bg-primary-soft text-primary hover:bg-primary-soft" : ""}`}
+          >
+            <Icon name="chat" className="text-xl" />
+            <span className="hidden sm:inline">Ask about this case</span>
+          </button>
+        )}
+        <AccountMenu
+          actions={[
+            { label: "All cases", icon: "folder", href: "/case" },
+            { label: "New case", icon: "plus", onSelect: onNewCase, disabled: creatingCase },
+          ]}
+        />
+      </div>
 
-        <div className="order-3 ml-auto flex h-14 shrink-0 items-center gap-1.5 md:order-4">
-          {onToggleChat && (
+      {currentView !== "analysis" ? (
+        <div className="sheet flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4 sm:px-6">
+          <div className="min-w-0 flex-1">{titleRow(false)}</div>
+          <span role="status" className={statusNeedsAttention ? "badge-check" : "badge-linked"}>
+            {status}
+          </span>
+          {onAnalyze && (
             <button
               type="button"
-              onClick={onToggleChat}
-              aria-label={isChatOpen ? "Close Ask" : "Open Ask"}
-              title={isChatOpen ? "Close Ask" : "Open Ask"}
-              aria-pressed={isChatOpen}
-              className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-semibold transition-colors ${
-                isChatOpen
-                  ? "bg-surface-nested text-ink"
-                  : "text-ink-secondary hover:bg-surface-hover hover:text-ink"
-              }`}
+              onClick={onAnalyze}
+              disabled={!canAnalyze}
+              className="btn-primary"
             >
-              <Icon name="chat" className="h-4 w-4" />
-              <span className="hidden sm:inline">Ask</span>
+              <Icon name={analyzeLabel === "Analyzing…" ? "spinner" : "play"} className="text-lg" />
+              {analyzeLabel}
             </button>
           )}
-
-          <AccountMenu
-            actions={[
-              { label: "All cases", icon: "folder", href: "/case" },
-              { label: "New case", icon: "plus", onSelect: onNewCase, disabled: creatingCase },
-            ]}
-          />
         </div>
-      </div>
+      ) : (
+        <div className="relative overflow-hidden rounded-xl bg-primary px-5 py-6 text-white shadow-[0_10px_30px_rgba(156,79,51,0.22)] sm:px-8 sm:py-7">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-20 -right-16 h-72 w-72 rounded-full border-[40px] border-white/[0.06]"
+          />
+          <div className="relative flex flex-wrap items-center gap-6">
+            <div className="min-w-0 flex-1 basis-full sm:basis-0">
+              {titleRow(true)}
+              <div className="mt-3 flex flex-wrap gap-2 text-xs whitespace-nowrap">
+                {sourceCount !== undefined && (
+                  <span className="hidden items-center gap-1.5 rounded-full border border-white/40 px-3 py-1 sm:inline-flex">
+                    <Icon name="sources" />
+                    {sourceCount} {sourceCount === 1 ? "source" : "sources"}
+                  </span>
+                )}
+                {analysedAt && (
+                  <span className="hidden items-center gap-1.5 rounded-full border border-white/40 px-3 py-1 sm:inline-flex">
+                    <Icon name="timeline" />
+                    Analyzed {formatDate(analysedAt, "dayTime")}
+                  </span>
+                )}
+                <span
+                  role="status"
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 ${
+                    statusNeedsAttention
+                      ? "border-white bg-white font-semibold text-primary"
+                      : "border-white/40"
+                  }`}
+                >
+                  <Icon name={statusNeedsAttention ? "alert" : "check"} />
+                  {status}
+                </span>
+              </div>
+              <div className="mt-5 flex flex-wrap gap-3">
+                {onAnalyze && (
+                  <button
+                    type="button"
+                    onClick={onAnalyze}
+                    disabled={!canAnalyze}
+                    className="btn-on-band"
+                  >
+                    <Icon
+                      name={analyzeLabel === "Analyzing…" ? "spinner" : "play"}
+                      className="text-lg"
+                    />
+                    {analyzeLabel}
+                  </button>
+                )}
+                {caseId && (
+                  <Link href={casePath(caseId, "report")} className="btn-band-line">
+                    <Icon name="report" className="text-lg" />
+                    Create report
+                  </Link>
+                )}
+              </div>
+            </div>
+            {findingCount > 0 && (
+              <div className="hidden flex-col items-center gap-2 sm:flex">
+                <div
+                  className="flex h-28 w-28 items-center justify-center rounded-full"
+                  style={{
+                    background: `conic-gradient(#fff 0 ${(flaggedCount / findingCount) * 100}%, rgba(255,255,255,0.2) 0 100%)`,
+                  }}
+                >
+                  <div className="flex h-[5.5rem] w-[5.5rem] flex-col items-center justify-center rounded-full bg-primary leading-tight">
+                    <span className="text-2xl font-bold">
+                      {flaggedCount}/{findingCount}
+                    </span>
+                    <span className="text-xs text-white">to check</span>
+                  </div>
+                </div>
+                <span className="text-xs text-white">Findings to check against the source</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }
@@ -194,7 +296,7 @@ function CaseTitleField({ title, onCommit }: { title: string; onCommit: (next: s
           if (event.key === "Escape") onCommit("");
         }}
         maxLength={200}
-        className="h-8 w-full min-w-0 rounded-lg border border-line-strong bg-surface px-2 text-[15px] font-semibold tracking-[-0.01em] text-ink outline-none focus:border-ink"
+        className="h-11 w-full min-w-0 rounded-lg border border-line-strong bg-white px-3 text-xl font-semibold text-ink outline-none focus:border-primary"
       />
     </form>
   );

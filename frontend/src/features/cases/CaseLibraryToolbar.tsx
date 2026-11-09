@@ -30,7 +30,7 @@ export function CaseLibraryToolbar({
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
           placeholder="Search cases"
-          className="h-9 w-full rounded-lg border border-line-strong bg-surface pr-3 pl-9 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-ink"
+          className="h-11 w-full rounded-lg bg-surface-hover pr-3 pl-9 text-sm text-ink outline-none placeholder:text-ink-muted focus:bg-surface focus:ring-2 focus:ring-primary"
         />
       </label>
 
@@ -41,7 +41,7 @@ export function CaseLibraryToolbar({
             value={sort}
             onChange={(event) => onSortChange(event.target.value as CaseLibrarySort)}
             aria-label="Sort cases"
-            className="h-9 cursor-pointer appearance-none rounded-lg bg-transparent py-0 pr-7 pl-2.5 text-[13px] font-medium text-ink-secondary outline-none hover:bg-surface-hover hover:text-ink"
+            className="h-9 cursor-pointer appearance-none rounded-lg bg-transparent py-0 pr-7 pl-2.5 text-sm font-medium text-ink-secondary outline-none hover:bg-surface-hover hover:text-ink"
           >
             <option value="recent">Recently updated</option>
             <option value="oldest">Oldest first</option>

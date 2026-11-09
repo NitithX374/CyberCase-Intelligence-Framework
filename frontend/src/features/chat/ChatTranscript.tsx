@@ -105,7 +105,7 @@ function Messages({
         if (isUser) {
           return (
             <article key={message.id} className="flex justify-end">
-              <p className="max-w-[88%] rounded-2xl rounded-br-md bg-surface-nested px-4 py-2.5 text-[15px] leading-7 whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
+              <p className="max-w-[88%] rounded-2xl rounded-br-md bg-surface-nested px-4 py-2.5 text-base leading-7 whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
                 {message.content}
               </p>
             </article>
@@ -139,7 +139,7 @@ function Messages({
       })}
 
       {isProcessing && (
-        <p role="status" className="text-[13px] text-ink-muted">
+        <p role="status" className="text-sm text-ink-muted">
           {isAnsweringQuestion ? "Updating the analysis with your answer…" : "Answering…"}
         </p>
       )}
@@ -198,7 +198,7 @@ function AnswerUnits({
 function SuggestionLine({ suggestion }: { suggestion?: string }) {
   const line = suggestion ? SUGGESTION_LINES[suggestion] : undefined;
   if (!line) return null;
-  return <p className="mt-3 text-[13px] text-ink-muted">{line}</p>;
+  return <p className="mt-3 text-sm text-ink-muted">{line}</p>;
 }
 
 interface AnalysisSourceReference {

@@ -35,6 +35,35 @@ describe("finding numbers", () => {
   });
 });
 
+describe("finding numbers on the findings", () => {
+  it("are the numbers the summary links use, whatever order the findings are grouped in", () => {
+    const mixed = [
+      claimWith("A-01", "first"),
+      { ...claimWith("A-02", "second"), epistemic_status: "not_confirmed" as const },
+      claimWith("A-03", "first"),
+      claimWith("A-04", "third"),
+    ];
+    const result = analysisResult({
+      summary: "Beta [A-02].",
+      trace_json: trace({
+        summary: "Beta [A-02].",
+        claims: mixed,
+        summary_units: [{ text: "Beta", claim_ids: ["A-02"], support: "bound" }],
+      }),
+    });
+
+    const overview = buildCaseOverview(result, [narrativeSource(quote)]);
+
+    expect(overview.findings.map((finding) => [finding.id, finding.number])).toEqual([
+      ["A-01", 1],
+      ["A-02", 2],
+      ["A-03", 1],
+      ["A-04", 3],
+    ]);
+    expect(overview.summaryUnits[0].marks[0].number).toBe(2);
+  });
+});
+
 describe("summary marks", () => {
   const summary = "Alpha [A-03]. Beta [A-04, A-01]. Gamma [A-02]. Delta.";
   const result = analysisResult({
@@ -95,22 +124,19 @@ describe("summary marks", () => {
     expect(summaryUnits.map((unit) => unit.closing)).toEqual([""]);
   });
 
-  it("gives a note letter to each unit that needs a note, in order, past z", () => {
-    const many = Array.from({ length: 28 }, (_, index) => ({
-      text: `Unit ${index}`,
-      claim_ids: [],
-      support: "no_claim" as const,
-    }));
-    const long = analysisResult({
+  it("gives one letter to each distinct note, in order of first use", () => {
+    const units = [
+      { text: "One", claim_ids: [], support: "no_claim" as const },
+      { text: "Two", claim_ids: [], support: "unbound" as const },
+      { text: "Three", claim_ids: [], support: "no_claim" as const },
+    ];
+    const result = analysisResult({
       summary: "x",
-      trace_json: trace({ summary: "x", claims, summary_units: many }),
+      trace_json: trace({ summary: "x", claims, summary_units: units }),
     });
 
-    const { summaryUnits } = buildCaseOverview(long, [narrativeSource(quote)]);
+    const { summaryUnits } = buildCaseOverview(result, [narrativeSource(quote)]);
 
-    expect(summaryUnits[0].noteMark).toBe("a");
-    expect(summaryUnits[25].noteMark).toBe("z");
-    expect(summaryUnits[26].noteMark).toBe("aa");
-    expect(summaryUnits[27].noteMark).toBe("ab");
+    expect(summaryUnits.map((unit) => unit.noteMark)).toEqual(["a", "b", "a"]);
   });
 });

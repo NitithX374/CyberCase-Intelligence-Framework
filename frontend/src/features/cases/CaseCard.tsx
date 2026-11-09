@@ -5,8 +5,20 @@ import { formatDate } from "@/lib/format";
 import { caseDestination, caseStatusLabel, type CaseLibraryViewMode } from "./caseDisplay";
 
 function CaseStatus({ caseRecord }: { caseRecord: CaseRead }) {
-  const stale = caseRecord.analysis_freshness === "stale";
-  return <span className={stale ? "text-unresolved" : ""}>{caseStatusLabel(caseRecord)}</span>;
+  const freshness = caseRecord.analysis_freshness;
+  return (
+    <span
+      className={
+        freshness === "stale"
+          ? "badge-check"
+          : freshness === "current"
+            ? "badge-linked"
+            : "count-pill px-2.5"
+      }
+    >
+      {caseStatusLabel(caseRecord)}
+    </span>
+  );
 }
 
 interface CaseCardProps {
@@ -32,23 +44,21 @@ export function CaseCard({ caseRecord, viewMode, isDeleting, onRequestDelete }: 
 
   if (viewMode === "list") {
     return (
-      <li className="group relative flex items-center gap-3 rounded-lg px-3 transition-colors hover:bg-surface-hover">
+      <li className="group relative flex items-center gap-3 px-5 transition-colors hover:bg-primary-wash sm:px-6">
         <Link
           href={caseDestination(caseRecord)}
-          className="flex min-w-0 flex-1 items-center gap-4 py-3.5 after:absolute after:inset-0 after:content-['']"
+          className="flex min-w-0 flex-1 items-center gap-4 py-4 after:absolute after:inset-0 after:content-['']"
         >
-          <span className="min-w-0 flex-1">
-            <span
-              className="block truncate text-[15px] font-semibold tracking-[-0.01em] text-ink"
-              title={caseRecord.title}
-            >
-              {caseRecord.title}
-            </span>
-            <span className="mt-0.5 block text-[13px] text-ink-muted">
-              <CaseStatus caseRecord={caseRecord} />
-            </span>
+          <span
+            className="min-w-0 flex-1 truncate text-base font-semibold text-ink"
+            title={caseRecord.title}
+          >
+            {caseRecord.title}
           </span>
-          <span className="hidden shrink-0 text-[13px] text-ink-muted sm:block">
+          <span className="shrink-0 text-sm">
+            <CaseStatus caseRecord={caseRecord} />
+          </span>
+          <span className="hidden w-32 shrink-0 text-right text-sm text-ink-muted sm:block">
             {formatDate(caseRecord.updated_at)}
           </span>
         </Link>
@@ -58,8 +68,8 @@ export function CaseCard({ caseRecord, viewMode, isDeleting, onRequestDelete }: 
   }
 
   return (
-    <li className="group relative flex min-h-36 flex-col justify-between rounded-xl border border-line bg-surface p-5 transition-colors hover:border-line-strong">
-      <div className="flex items-start justify-between gap-3 text-[13px] text-ink-muted">
+    <li className="group relative flex min-h-36 flex-col justify-between rounded-[10px] border border-line bg-surface p-5 transition-colors hover:border-primary-line hover:bg-primary-wash">
+      <div className="flex items-start justify-between gap-3 text-sm text-ink-muted">
         <CaseStatus caseRecord={caseRecord} />
         <span className="-mt-1.5 -mr-2">{deleteButton}</span>
       </div>
@@ -73,7 +83,7 @@ export function CaseCard({ caseRecord, viewMode, isDeleting, onRequestDelete }: 
         >
           {caseRecord.title}
         </span>
-        <span className="mt-1 block text-[13px] text-ink-muted">
+        <span className="mt-1 block text-sm text-ink-muted">
           {formatDate(caseRecord.updated_at)}
         </span>
       </Link>

@@ -34,7 +34,7 @@ export function SourcePassages({ sourceRef }: { sourceRef: SourceMessageRef }) {
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
               {label}
             </h3>
-            <p className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
+            <p className="select-text whitespace-pre-wrap text-base leading-7 text-ink [overflow-wrap:anywhere]">
               {passage.before}
               {passage.before || passage.after ? (
                 <strong className="font-semibold bg-amber-200/60 text-ink px-1 py-0.5 rounded">

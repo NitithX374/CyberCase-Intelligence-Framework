@@ -60,10 +60,10 @@ export function WorkspaceChatPanel({
       id="workspace-chat-panel"
       role="complementary"
       aria-label="Ask about this case"
-      className="fixed inset-0 z-50 flex h-full w-full shrink-0 flex-col overflow-hidden bg-surface md:static md:z-auto md:w-[clamp(340px,32vw,440px)] md:border-l md:border-line"
+      className="fixed inset-0 z-50 flex h-full w-full shrink-0 flex-col overflow-hidden bg-surface text-ink md:static md:z-auto md:my-4 md:mr-4 md:h-auto md:w-[clamp(360px,32vw,460px)] md:rounded-xl"
     >
-      <div className="flex h-14 shrink-0 items-center justify-between border-b border-line pr-3 pl-5">
-        <h2 className="text-[15px] font-semibold text-ink">Ask</h2>
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-line pr-3 pl-6">
+        <h2 className="text-lg font-semibold text-ink">Ask</h2>
         <button
           type="button"
           onClick={handleClose}
@@ -76,7 +76,7 @@ export function WorkspaceChatPanel({
       </div>
 
       {messages.length === 0 && !hasSources && !sourcesFailed && (
-        <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-2.5 text-[13px]">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-2.5 text-sm">
           <p className="text-ink-muted">This case has no sources yet.</p>
           <button
             type="button"
@@ -164,14 +164,14 @@ function ChatComposer({
           onKeyDown={handleKeyDown}
           onChange={(event) => onInputChange(event.target.value)}
           placeholder={placeholder}
-          className="max-h-[160px] min-h-6 flex-1 resize-none self-center border-none bg-transparent py-1 text-[15px] leading-6 text-ink shadow-none outline-none placeholder:text-ink-muted focus:ring-0 disabled:text-ink-disabled"
+          className="max-h-[160px] min-h-6 flex-1 resize-none self-center border-none bg-transparent py-1 text-base leading-6 text-ink shadow-none outline-none placeholder:text-ink-muted focus:ring-0 disabled:text-ink-disabled"
         />
         <button
           type="submit"
           disabled={isSubmitting || !input.trim() || isTooLong}
           aria-label="Send message"
           title="Send (Enter)"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-ivory transition-colors hover:bg-charcoal-hover disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-ivory transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled"
         >
           <Icon name="send" className="h-4 w-4" />
         </button>

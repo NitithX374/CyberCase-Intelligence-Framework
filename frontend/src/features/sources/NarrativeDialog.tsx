@@ -52,7 +52,7 @@ function NarrativeForm({
         Case narrative
       </h2>
 
-      <label htmlFor="case-narrative-text" className="mt-5 block text-[13px] font-medium text-ink">
+      <label htmlFor="case-narrative-text" className="mt-5 block text-sm font-medium text-ink">
         Narrative
       </label>
       <textarea
@@ -63,7 +63,7 @@ function NarrativeForm({
         onChange={(event) => setText(event.target.value)}
         disabled={isSaving}
         placeholder="What happened, who was involved, and when."
-        className="mt-1.5 block min-h-44 w-full resize-y rounded-lg border border-line-strong bg-surface p-3 text-[15px] leading-7 text-ink outline-none placeholder:text-ink-muted focus:border-ink disabled:bg-surface-nested"
+        className="mt-1.5 block min-h-44 w-full resize-y rounded-lg border border-line-strong bg-surface p-3 text-base leading-7 text-ink outline-none placeholder:text-ink-muted focus:border-ink disabled:bg-surface-nested"
       />
 
       <div className="mt-6 flex justify-end gap-2">

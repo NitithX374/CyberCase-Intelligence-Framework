@@ -8,7 +8,6 @@ import { useCaseSources } from "@/features/sources/queries";
 import { useIsFollowupPending } from "@/features/chat/useCaseChat";
 import {
   analysisResult,
-  caseId,
   claim,
   followupHistory,
   narrativeSource,
@@ -138,6 +137,10 @@ function configureAndRender(
   render(<AnalysisLayout>{children}</AnalysisLayout>);
 }
 
+function statValue(label: string) {
+  return screen.getByText(label, { selector: "p" }).previousElementSibling?.textContent;
+}
+
 beforeEach(() => {
   state.routerPush.mockClear();
   state.runAnalysis.mockClear();
@@ -157,11 +160,11 @@ describe("AnalysisLayout", () => {
     expect(state.runAnalysis).not.toHaveBeenCalled();
   });
 
-  it("blocks reanalysis of older sources while awaiting a follow-up answer", () => {
+  it("asks for the follow-up answer on an older analysis, and offers no Analyze of its own", () => {
     const projection = caseProjection({ stale: true });
     configureAndRender({ analysisResult: projection.result, waitingForFollowup: true });
-    expect(screen.getByRole("button", { name: "Analyze latest sources" })).toBeDisabled();
     expect(screen.getByRole("status")).toHaveTextContent("Answer the follow-up question in Ask.");
+    expect(screen.queryByRole("button", { name: /Analyze/ })).not.toBeInTheDocument();
   });
 
   it("withholds Analyze again while a saved analysis awaits an answer", () => {
@@ -169,53 +172,91 @@ describe("AnalysisLayout", () => {
     expect(screen.queryByRole("button", { name: "Analyze again" })).not.toBeInTheDocument();
   });
 
-  it("links every section of a finished analysis, with the counts that need reading", () => {
+  it("counts what the overview holds, with the case cards beside the page", () => {
     configureAndRender();
 
-    const nav = screen.getByRole("navigation", { name: "Analysis sections" });
-    const links = Array.from(nav.querySelectorAll("a")).map((link) => [
-      link.textContent,
-      link.getAttribute("href"),
-    ]);
-    const base = `/case/${caseId}/analysis`;
-    expect(links).toEqual([
-      ["Summary", base],
-      ["Findings1", `${base}/findings`],
-      ["Details", `${base}/details`],
-      ["Open questions1", `${base}/questions`],
-    ]);
+    expect(statValue("findings")).toBe("1");
+    expect(statValue("to check")).toBe("0");
+    expect(statValue("open questions")).toBe("1");
+    expect(statValue("source read")).toBe("1");
+    expect(screen.queryByText("sources read")).not.toBeInTheDocument();
     expect(screen.getByText("Section content")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "What happened" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Open questions" }).closest("section"),
+    ).toHaveAttribute("id", "section-attention");
+    expect(screen.getByRole("heading", { name: "Last analysis" })).toBeInTheDocument();
   });
 
-  it("marks the summary as the section the reader is on when no section is open", () => {
+  it("gives a fact page the full width, without the overview cards", () => {
+    state.segment = "people";
     configureAndRender();
 
-    expect(screen.getByRole("link", { name: "Summary" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("Section content")).toBeInTheDocument();
+    expect(statValue("findings")).toBe("1");
+    expect(screen.queryByRole("heading", { name: "What happened" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Open questions" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Last analysis" })).not.toBeInTheDocument();
   });
 
-  it("marks the open section as the one the reader is on", () => {
-    state.segment = "findings";
-    configureAndRender();
+  it("counts flagged findings as to check", () => {
+    const projection = caseProjection();
+    const claims = projection.result.trace_json!.claims;
+    projection.result.trace_json!.claims = [
+      {
+        ...claims[0],
+        semantic_grounding: { verdict: "not_supported", reason: "lr_not_supported" },
+      },
+    ];
+    configureAndRender({ analysisResult: projection.result, sources: projection.sources });
 
-    const nav = screen.getByRole("navigation", { name: "Analysis sections" });
-    expect(nav.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
-    expect(nav.querySelector('[aria-current="page"]')).toHaveTextContent("Findings");
+    expect(statValue("to check")).toBe("1");
+    expect(statValue("open questions")).toBe("1");
   });
 
-  it("offers reanalysis when the canonical result is stale", () => {
+  it("opens a folded section the link's hash names", () => {
+    window.location.hash = "#section-references";
+    configureAndRender(
+      {},
+      <details id="section-references">
+        <summary>Outside references</summary>
+        <p>ATT&amp;CK and Thai law</p>
+      </details>,
+    );
+
+    const folded = document.getElementById("section-references") as HTMLDetailsElement;
+    expect(folded.open).toBe(true);
+    window.location.hash = "";
+  });
+
+  it("says when the analysis is behind the sources, and leaves Analyze to the top bar", () => {
     const projection = caseProjection({ stale: true });
     configureAndRender({ analysisResult: projection.result, sources: projection.sources });
-    expect(screen.getByText(/Analysis is based on older sources/i)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Analyze again" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Analyze latest sources/i }));
-    expect(state.runAnalysis).toHaveBeenCalledOnce();
+
+    expect(screen.getByText("Out of date")).toBeInTheDocument();
+    expect(screen.queryByText(/Analysis is based on older sources/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Analyze/ })).not.toBeInTheDocument();
   });
 
-  it("offers to run an up-to-date analysis again beside its status", () => {
+  it("says an up-to-date analysis is current and when it was made", () => {
     configureAndRender();
 
-    fireEvent.click(screen.getByRole("button", { name: "Analyze again" }));
-    expect(state.runAnalysis).toHaveBeenCalledOnce();
+    expect(screen.getByText("Up to date")).toBeInTheDocument();
+    expect(screen.getByText(/^Analyzed/)).toContainElement(
+      document.querySelector('time[datetime="2026-09-10T00:00:00Z"]') as HTMLElement,
+    );
+    expect(screen.queryByRole("button", { name: /Analyze/ })).not.toBeInTheDocument();
+  });
+
+  it("keeps the analysis record folded until it is asked for", () => {
+    configureAndRender();
+
+    const toggle = screen.getByRole("button", { name: "Analysis record" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Source revision")).not.toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Source revision").nextElementSibling).toHaveTextContent("1");
   });
 
   it("names the case's files in the analysis record", () => {
@@ -262,9 +303,7 @@ describe("AnalysisLayout", () => {
     });
 
     expect(screen.getByRole("status")).toHaveTextContent("Updating the case analysis");
-    expect(
-      screen.queryByRole("button", { name: /Analyze latest sources/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Analyze/ })).not.toBeInTheDocument();
   });
 
   it("offers to analyze a case that has sources but no analysis yet", () => {
@@ -272,7 +311,7 @@ describe("AnalysisLayout", () => {
 
     expect(screen.getByRole("heading", { name: "Not analyzed yet" })).toBeInTheDocument();
     expect(screen.queryByText("Section content")).not.toBeInTheDocument();
-    expect(screen.queryByRole("navigation", { name: "Analysis sections" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "On this page" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
     expect(state.runAnalysis).toHaveBeenCalledOnce();
   });
@@ -341,11 +380,34 @@ describe("AnalysisLayout", () => {
       window.location.hash = "";
     });
 
-    it("brings the top of the section into view when a section opens", () => {
+    it("leaves the page where it is when the section has nothing to scroll to", () => {
       state.segment = "details";
       configureAndRender();
 
-      expect(scrolled).toEqual([screen.getByRole("region", { name: "Case analysis" })]);
+      expect(scrolled).toEqual([]);
+    });
+
+    it("opens and brings into view the outside references for the old details route", () => {
+      state.segment = "details";
+      configureAndRender(
+        {},
+        <details id="section-references">
+          <summary>Outside references</summary>
+        </details>,
+      );
+
+      const folded = document.getElementById("section-references") as HTMLDetailsElement;
+      expect(folded.open).toBe(true);
+      expect(scrolled).toEqual([folded]);
+    });
+
+    it("brings the open questions card into view for the questions route", () => {
+      state.segment = "questions";
+      configureAndRender();
+
+      expect(scrolled).toEqual([
+        screen.getByRole("heading", { name: "Open questions" }).closest("section"),
+      ]);
     });
 
     it("brings a linked ATT&CK entry into view instead of the top of the section", () => {

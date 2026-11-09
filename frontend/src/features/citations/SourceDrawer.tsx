@@ -58,15 +58,12 @@ export function SourceDrawer({
             {citationRole === "conflicting" && (
               <p className="text-xs font-medium text-critical">Conflicting source</p>
             )}
-            <h2
-              id={titleId}
-              className="text-[15px] font-semibold leading-6 [overflow-wrap:anywhere]"
-            >
+            <h2 id={titleId} className="text-base font-semibold leading-6 [overflow-wrap:anywhere]">
               <span className="sr-only">Source: </span>
               {sourceTitle}
             </h2>
             {sourceRef.label !== sourceTitle && (
-              <p className="text-[13px] text-ink-muted">{sourceRef.label}</p>
+              <p className="text-sm text-ink-muted">{sourceRef.label}</p>
             )}
           </div>
           <button type="button" onClick={onClose} aria-label="Close source" className="icon-btn">
@@ -214,13 +211,13 @@ function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
       <dl className="space-y-6">
         <div>
           <dt className="mb-2 text-xs font-medium text-ink-muted">Question</dt>
-          <dd className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink-secondary [overflow-wrap:anywhere]">
+          <dd className="select-text whitespace-pre-wrap text-base leading-7 text-ink-secondary [overflow-wrap:anywhere]">
             {sourceRef.question}
           </dd>
         </div>
         <div>
           <dt className="mb-2 text-xs font-medium text-ink-muted">Answer</dt>
-          <dd className="select-text text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
+          <dd className="select-text text-base leading-7 text-ink [overflow-wrap:anywhere]">
             {content ? (
               <Markdown content={highlightQuote(content, quotes)} allowHtml />
             ) : (
@@ -243,7 +240,7 @@ function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
                 <Markdown content={highlightQuote(page.text, quotes)} allowHtml />
               </div>
             ) : (
-              <p className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink-muted [overflow-wrap:anywhere]">
+              <p className="select-text whitespace-pre-wrap text-base leading-7 text-ink-muted [overflow-wrap:anywhere]">
                 (No text content)
               </p>
             )}
@@ -259,7 +256,7 @@ function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
               <Markdown content={highlightQuote(content, quotes)} allowHtml />
             </div>
           ) : (
-            <p className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink-muted [overflow-wrap:anywhere]">
+            <p className="select-text whitespace-pre-wrap text-base leading-7 text-ink-muted [overflow-wrap:anywhere]">
               (No text content)
             </p>
           )}
