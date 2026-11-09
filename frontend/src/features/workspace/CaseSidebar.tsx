@@ -15,7 +15,15 @@ interface NavItem {
   current: boolean;
 }
 
-export function CaseSidebar({ caseId, caseTitle }: { caseId: string; caseTitle: string }) {
+export function CaseSidebar({
+  caseId,
+  caseTitle,
+  compact = false,
+}: {
+  caseId: string;
+  caseTitle: string;
+  compact?: boolean;
+}) {
   const pathname = usePathname() ?? "";
   const { overview, sources } = useCaseOverview(caseId);
   const analysis = analysisPath(caseId);
@@ -78,23 +86,41 @@ export function CaseSidebar({ caseId, caseTitle }: { caseId: string; caseTitle: 
   ];
 
   return (
-    <aside className="hidden w-[17.5rem] shrink-0 flex-col gap-1 overflow-y-auto bg-espresso px-4 py-6 text-espresso-ink lg:flex">
+    <aside
+      className={`hidden shrink-0 flex-col gap-1 overflow-y-auto bg-espresso py-6 text-espresso-ink transition-[width] duration-200 lg:flex ${
+        compact ? "w-[4.5rem] px-2.5" : "w-[17.5rem] px-4"
+      }`}
+    >
       <Link
         href="/case"
-        className="mb-5 flex items-center gap-3 rounded-lg px-3 text-xl font-bold tracking-[-0.01em]"
+        aria-label={compact ? "CyberCase, all cases" : undefined}
+        className={`mb-5 flex items-center gap-3 rounded-lg text-xl font-bold tracking-[-0.01em] ${
+          compact ? "justify-center" : "px-3"
+        }`}
       >
-        <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-surface">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-surface">
           <CyberCaseLogo size={28} />
         </span>
-        CyberCase
+        {!compact && "CyberCase"}
       </Link>
 
-      <SidebarLink item={{ href: "/case", label: "All cases", icon: "folder", current: false }} />
+      <SidebarLink
+        compact={compact}
+        item={{ href: "/case", label: "All cases", icon: "folder", current: false }}
+      />
 
-      <p className="px-3.5 pt-5 pb-2 text-xs font-semibold tracking-[0.1em] text-espresso-muted uppercase">
-        This case
-      </p>
-      <div className="mb-1.5 rounded-[10px] border border-espresso-line bg-espresso-raised px-3.5 py-3">
+      {compact ? (
+        <span aria-hidden="true" className="mx-2 my-3 border-t border-espresso-line" />
+      ) : (
+        <p className="px-3.5 pt-5 pb-2 text-xs font-semibold tracking-[0.1em] text-espresso-muted uppercase">
+          This case
+        </p>
+      )}
+      <div
+        className={`mb-1.5 rounded-[10px] border border-espresso-line bg-espresso-raised px-3.5 py-3 ${
+          compact ? "hidden" : ""
+        }`}
+      >
         <p className="truncate text-sm font-semibold" title={caseTitle}>
           {caseTitle}
         </p>
@@ -116,23 +142,27 @@ export function CaseSidebar({ caseId, caseTitle }: { caseId: string; caseTitle: 
       </div>
       <nav aria-label="Case pages" className="flex flex-col gap-1">
         {caseItems.map((item) => (
-          <SidebarLink key={item.label} item={item} />
+          <SidebarLink key={item.label} item={item} compact={compact} />
         ))}
       </nav>
 
-      <p className="px-3.5 pt-5 pb-2 text-xs font-semibold tracking-[0.1em] text-espresso-muted uppercase">
-        Material
-      </p>
+      {compact ? (
+        <span aria-hidden="true" className="mx-2 my-3 border-t border-espresso-line" />
+      ) : (
+        <p className="px-3.5 pt-5 pb-2 text-xs font-semibold tracking-[0.1em] text-espresso-muted uppercase">
+          Material
+        </p>
+      )}
       <nav aria-label="Case material" className="flex flex-col gap-1">
         {materialItems.map((item) => (
-          <SidebarLink key={item.label} item={item} />
+          <SidebarLink key={item.label} item={item} compact={compact} />
         ))}
       </nav>
     </aside>
   );
 }
 
-function SidebarLink({ item }: { item: NavItem }) {
+function SidebarLink({ item, compact = false }: { item: NavItem; compact?: boolean }) {
   return (
     <Link
       href={item.href}
@@ -143,17 +173,20 @@ function SidebarLink({ item }: { item: NavItem }) {
         target?.scrollIntoView?.({ block: "start" });
       }}
       aria-current={item.current ? "page" : undefined}
-      className={`flex min-h-11 items-center gap-3.5 rounded-lg px-3.5 text-sm transition-colors focus-visible:outline-white ${
+      title={compact ? item.label : undefined}
+      className={`flex min-h-11 items-center gap-3.5 rounded-lg text-sm transition-colors focus-visible:outline-white ${
+        compact ? "justify-center px-0" : "px-3.5"
+      } ${
         item.current
-          ? "bg-primary font-semibold text-white shadow-[0_0_12px_1px_rgba(156,79,51,0.45)]"
+          ? "bg-primary font-semibold text-white"
           : "text-white/85 hover:bg-espresso-raised hover:text-white"
       }`}
     >
       <Icon name={item.icon} className="text-[22px]" />
-      {item.label}
-      {item.count !== undefined && item.count > 0 && (
+      <span className={compact ? "sr-only" : undefined}>{item.label}</span>
+      {!compact && item.count !== undefined && item.count > 0 && (
         <span
-          className={`ml-auto inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs ${
+          className={`ml-auto inline-flex h-6 min-w-6 items-center justify-center rounded-md px-1.5 text-xs ${
             item.current ? "bg-white/20 text-white" : "bg-white/10 text-white/70"
           }`}
         >

@@ -17,7 +17,7 @@ export function CaseReading() {
       <section
         id="section-findings"
         aria-labelledby="findings-heading"
-        className="sheet min-w-0 scroll-mt-6 overflow-hidden"
+        className="sheet @container min-w-0 scroll-mt-6 overflow-hidden"
       >
         <AnalysisFindings
           heading={

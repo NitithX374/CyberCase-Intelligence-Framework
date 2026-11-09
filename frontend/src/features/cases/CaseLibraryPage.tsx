@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { CyberCaseLogo } from "@/components/CyberCaseLogo";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AccountMenu } from "@/features/auth/AccountMenu";
+import { useAuth } from "@/features/auth/useAuth";
+import Link from "next/link";
 import { Icon } from "@/components/icons";
 import type { CaseRead } from "@/lib/api/types";
 import { detailMessage } from "@/lib/userFacingError";
@@ -24,6 +26,18 @@ import {
   type CaseLibraryViewMode,
 } from "./caseDisplay";
 
+type CaseStatusFilter = "all" | CaseRead["analysis_freshness"];
+
+const STATUS_CARDS: Array<{
+  status: CaseStatusFilter;
+  label: string;
+}> = [
+  { status: "all", label: "all cases" },
+  { status: "current", label: "analyzed" },
+  { status: "stale", label: "out of date" },
+  { status: "missing", label: "not analyzed" },
+];
+
 export function CaseLibraryPage() {
   const router = useRouter();
   const casesQuery = useCases();
@@ -35,7 +49,29 @@ export function CaseLibraryPage() {
   const [viewMode, setViewMode] = useState<CaseLibraryViewMode>("list");
 
   const cases = useMemo(() => casesQuery.data ?? [], [casesQuery.data]);
-  const visibleCases = useMemo(() => matchingCases(cases, query, sort), [cases, query, sort]);
+  const [status, setStatus] = useState<CaseStatusFilter>("all");
+  const { user } = useAuth();
+  const visibleCases = useMemo(
+    () =>
+      matchingCases(cases, query, sort).filter(
+        (caseRecord) => status === "all" || caseRecord.analysis_freshness === status,
+      ),
+    [cases, query, sort, status],
+  );
+  const counts = {
+    all: cases.length,
+    current: cases.filter((caseRecord) => caseRecord.analysis_freshness === "current").length,
+    stale: cases.filter((caseRecord) => caseRecord.analysis_freshness === "stale").length,
+    missing: cases.filter((caseRecord) => caseRecord.analysis_freshness === "missing").length,
+  };
+  const recent = matchingCases(cases, "", "recent").slice(0, 5);
+  const firstName = user?.name?.trim().split(/\s+/)[0];
+  const outstanding = [
+    counts.stale > 0 &&
+      `${counts.stale} ${counts.stale === 1 ? "case is" : "cases are"} out of date`,
+    counts.missing > 0 &&
+      `${counts.missing} ${counts.missing === 1 ? "case has" : "cases have"} not been analyzed`,
+  ].filter(Boolean);
 
   const newCase = async () => {
     if (createMutation.isPending) return;
@@ -68,19 +104,38 @@ export function CaseLibraryPage() {
         </span>
         <span
           aria-current="page"
-          className="flex min-h-11 items-center gap-3.5 rounded-lg bg-primary px-3.5 text-sm font-semibold shadow-[0_0_12px_1px_rgba(156,79,51,0.45)]"
+          className="flex min-h-11 items-center gap-3.5 rounded-lg bg-primary px-3.5 text-sm font-semibold"
         >
           <Icon name="folder" className="text-[22px]" />
           All cases
           {cases.length > 0 && (
-            <span className="ml-auto inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-white/20 px-1.5 text-xs">
+            <span className="ml-auto inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-white/20 px-1.5 text-xs">
               {cases.length}
             </span>
           )}
         </span>
+        {recent.length > 0 && (
+          <nav aria-label="Recent cases" className="flex flex-col gap-1">
+            <p className="px-3.5 pt-5 pb-2 text-xs font-semibold tracking-[0.1em] text-espresso-muted uppercase">
+              Recent
+            </p>
+            {recent.map((caseRecord) => (
+              <Link
+                key={caseRecord.id}
+                href={caseDestination(caseRecord)}
+                className="flex min-h-11 items-center gap-3.5 rounded-lg px-3.5 text-sm text-white/85 transition-colors hover:bg-espresso-raised hover:text-white focus-visible:outline-white"
+              >
+                <Icon name="case" className="shrink-0 text-[22px]" />
+                <span className="truncate" title={caseRecord.title}>
+                  {caseRecord.title}
+                </span>
+              </Link>
+            ))}
+          </nav>
+        )}
       </aside>
       <main className="min-w-0 flex-1 px-3 pt-4 pb-12 sm:px-6 lg:px-8 lg:pt-5">
-        <header className="sheet flex min-h-16 items-center gap-3 px-5">
+        <header className="flex min-h-12 items-center gap-3 border-b border-line-strong pb-4">
           <span className="flex items-center gap-2.5 text-base font-semibold text-ink lg:hidden">
             <CyberCaseLogo size={26} />
             CyberCase
@@ -92,6 +147,59 @@ export function CaseLibraryPage() {
           <AccountMenu />
         </header>
 
+        {cases.length > 0 && (
+          <>
+            <div className="relative mt-5 overflow-hidden rounded-xl bg-primary px-5 py-6 text-white sm:px-8 sm:py-7">
+              <div className="relative flex flex-wrap items-center gap-5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-2xl font-bold tracking-[-0.01em] sm:text-3xl">
+                    {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
+                  </p>
+                  <p className="mt-2 text-sm text-white">
+                    {outstanding.length === 0
+                      ? "Every case has an up-to-date analysis."
+                      : `${outstanding.join(" and ")}.`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void newCase()}
+                  disabled={createMutation.isPending}
+                  className="btn-on-band"
+                >
+                  <Icon name={createMutation.isPending ? "spinner" : "plus"} className="text-lg" />
+                  {createMutation.isPending ? "Creating…" : "New case"}
+                </button>
+              </div>
+            </div>
+
+            <div
+              role="group"
+              aria-label="Show cases"
+              className="mt-5 grid grid-cols-2 gap-5 xl:grid-cols-4"
+            >
+              {STATUS_CARDS.map((card) => (
+                <button
+                  key={card.status}
+                  type="button"
+                  aria-pressed={status === card.status}
+                  onClick={() => setStatus(card.status)}
+                  className={`sheet px-5 py-4 text-left transition-shadow hover:shadow-[0_6px_28px_rgba(34,30,27,0.12)] ${
+                    status === card.status ? "ring-2 ring-primary" : ""
+                  }`}
+                >
+                  <span>
+                    <span className="block text-2xl leading-tight font-bold text-ink">
+                      {counts[card.status]}
+                    </span>
+                    <span className="block text-sm text-ink-muted">{card.label}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
         <div className="sheet mt-5 w-full px-5 py-6 sm:px-6">
           <div className="flex items-center justify-between gap-4">
             <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-[-0.01em] text-ink">
@@ -102,17 +210,6 @@ export function CaseLibraryPage() {
                 </span>
               )}
             </h1>
-            {cases.length > 0 && (
-              <button
-                type="button"
-                onClick={() => void newCase()}
-                disabled={createMutation.isPending}
-                className="btn-primary"
-              >
-                <Icon name={createMutation.isPending ? "spinner" : "plus"} className="h-4 w-4" />
-                {createMutation.isPending ? "Creating…" : "New case"}
-              </button>
-            )}
           </div>
 
           {createMutation.error && (
@@ -150,27 +247,46 @@ export function CaseLibraryPage() {
               />
 
               {visibleCases.length === 0 ? (
-                <NoMatchingCases query={query} onClear={() => setQuery("")} />
+                <NoMatchingCases
+                  query={query}
+                  onClear={() => {
+                    setQuery("");
+                    setStatus("all");
+                  }}
+                />
               ) : (
-                <ul
-                  className={
-                    viewMode === "grid"
-                      ? "mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
-                      : "-mx-5 mt-4 divide-y divide-line border-t border-line sm:-mx-6"
-                  }
-                >
-                  {visibleCases.map((caseRecord) => (
-                    <CaseCard
-                      key={caseRecord.id}
-                      caseRecord={caseRecord}
-                      viewMode={viewMode}
-                      isDeleting={
-                        deleteMutation.isPending && deleteMutation.variables === caseRecord.id
-                      }
-                      onRequestDelete={setDeleteCandidate}
-                    />
-                  ))}
-                </ul>
+                <>
+                  {viewMode === "list" && (
+                    <div
+                      aria-hidden="true"
+                      className="-mx-5 mt-4 flex gap-4 border-t border-line bg-surface-nested px-5 py-2.5 text-xs font-semibold tracking-[0.08em] text-ink-muted uppercase sm:-mx-6 sm:px-6"
+                    >
+                      <span className="flex-1">Case</span>
+                      <span>Status</span>
+                      <span className="hidden w-32 text-right sm:block">Updated</span>
+                      <span className="w-10" />
+                    </div>
+                  )}
+                  <ul
+                    className={
+                      viewMode === "grid"
+                        ? "mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                        : "-mx-5 divide-y divide-line border-t border-line sm:-mx-6"
+                    }
+                  >
+                    {visibleCases.map((caseRecord) => (
+                      <CaseCard
+                        key={caseRecord.id}
+                        caseRecord={caseRecord}
+                        viewMode={viewMode}
+                        isDeleting={
+                          deleteMutation.isPending && deleteMutation.variables === caseRecord.id
+                        }
+                        onRequestDelete={setDeleteCandidate}
+                      />
+                    ))}
+                  </ul>
+                </>
               )}
             </section>
           )}

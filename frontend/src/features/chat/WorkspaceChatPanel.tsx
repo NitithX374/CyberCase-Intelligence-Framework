@@ -60,7 +60,7 @@ export function WorkspaceChatPanel({
       id="workspace-chat-panel"
       role="complementary"
       aria-label="Ask about this case"
-      className="fixed inset-0 z-50 flex h-full w-full shrink-0 flex-col overflow-hidden bg-surface text-ink md:static md:z-auto md:my-4 md:mr-4 md:h-auto md:w-[clamp(360px,32vw,460px)] md:rounded-xl"
+      className="fixed inset-0 z-50 flex h-full w-full shrink-0 flex-col overflow-hidden bg-surface text-ink md:static md:z-auto md:my-4 md:mr-4 md:h-auto md:w-[clamp(360px,30vw,420px)] md:rounded-[10px] md:shadow-[0_4px_24px_rgba(34,30,27,0.07)]"
     >
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-line pr-3 pl-6">
         <h2 className="text-lg font-semibold text-ink">Ask</h2>

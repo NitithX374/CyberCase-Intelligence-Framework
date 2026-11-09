@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CaseRead } from "@/lib/api/types";
 import { CaseLibraryPage } from "@/features/cases/CaseLibraryPage";
@@ -85,7 +85,7 @@ describe("CaseLibraryPage", () => {
     render(<CaseLibraryPage />);
 
     expect(screen.getByRole("heading", { name: "All cases" })).toBeInTheDocument();
-    const titles = screen
+    const titles = within(screen.getByRole("region", { name: "Your cases" }))
       .getAllByRole("link")
       .map((link) => link.textContent ?? "")
       .filter((text) => /Police|SpeedFood/.test(text));
@@ -104,8 +104,9 @@ describe("CaseLibraryPage", () => {
       target: { value: "SpeedFood" },
     });
 
-    expect(screen.getByText("SpeedFood System Architecture")).toBeInTheDocument();
-    expect(screen.queryByText("Police Investigation Report")).not.toBeInTheDocument();
+    const list = within(screen.getByRole("region", { name: "Your cases" }));
+    expect(list.getByText("SpeedFood System Architecture")).toBeInTheDocument();
+    expect(list.queryByText("Police Investigation Report")).not.toBeInTheDocument();
 
     const listButton = screen.getByRole("button", { name: "List view" });
     const gridButton = screen.getByRole("button", { name: "Grid view" });
@@ -113,6 +114,23 @@ describe("CaseLibraryPage", () => {
     fireEvent.click(gridButton);
     expect(gridButton).toHaveAttribute("aria-pressed", "true");
     expect(listButton).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("counts the cases by status, filters by a status card and lists the recent ones", () => {
+    render(<CaseLibraryPage />);
+
+    const cards = within(screen.getByRole("group", { name: "Show cases" }));
+    expect(cards.getByRole("button", { name: /^2 ?all cases$/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    fireEvent.click(cards.getByRole("button", { name: /^1 ?not analyzed$/ }));
+    const list = within(screen.getByRole("region", { name: "Your cases" }));
+    expect(list.getAllByRole("link")).toHaveLength(1);
+    expect(screen.getByText("1 case has not been analyzed.")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("navigation", { name: "Recent cases" })).getAllByRole("link"),
+    ).toHaveLength(2);
   });
 
   it("creates a Case and routes to its sources when the new Case has no analysis", async () => {

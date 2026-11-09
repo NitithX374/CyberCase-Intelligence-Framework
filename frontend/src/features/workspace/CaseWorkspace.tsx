@@ -105,7 +105,11 @@ export function CaseWorkspace({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-dvh overflow-hidden bg-ground text-ink">
-      <CaseSidebar caseId={caseId} caseTitle={activeCase?.title || "New case"} />
+      <CaseSidebar
+        caseId={caseId}
+        caseTitle={activeCase?.title || "New case"}
+        compact={isChatOpen}
+      />
       <main className="relative flex min-w-0 flex-1 flex-col overflow-y-auto bg-ground">
         <WorkspaceHeader
           activeCase={activeCase}

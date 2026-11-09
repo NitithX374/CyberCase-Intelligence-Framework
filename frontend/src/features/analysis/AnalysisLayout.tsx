@@ -12,7 +12,7 @@ import { AnalysisQuestionsCard } from "./AnalysisQuestions";
 import { AnalysisSummary } from "./AnalysisSummary";
 import { analysisSourceIds } from "./analysisRecord";
 import { useCaseOverview } from "./useCaseOverview";
-import { Icon, type IconName } from "@/components/icons";
+import { Icon } from "@/components/icons";
 import { EmptyState } from "@/components/EmptyState";
 
 const SECTION_TARGETS: Record<string, string> = {
@@ -134,7 +134,7 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
       ref={panelRef}
       id="workspace-analysis-panel"
       aria-label="Case analysis"
-      className="flex w-full shrink-0 flex-col gap-7 px-3 pt-5 pb-16 sm:px-6 lg:px-8"
+      className="@container flex w-full shrink-0 flex-col gap-7 px-3 pt-5 pb-16 sm:px-6 lg:px-8"
     >
       {isUpdating ? (
         <div className="sheet px-6 py-4">
@@ -154,38 +154,17 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
-        <StatCard
-          icon="findings"
-          tone="bg-[#f3ece4] text-[#6b4e2e]"
-          value={overview.findings.length}
-          label="findings"
-        />
-        <StatCard
-          icon="alert"
-          tone="bg-primary-soft text-primary"
-          value={flaggedCount}
-          label="to check"
-          strong={flaggedCount > 0}
-        />
-        <StatCard
-          icon="attention"
-          tone="bg-[#efe6df] text-[#3a2a22]"
-          value={overview.gaps.length}
-          label="open questions"
-        />
-        <StatCard
-          icon="sources"
-          tone="bg-linked-soft text-linked"
-          value={readCount}
-          label={readCount === 1 ? "source read" : "sources read"}
-        />
+      <div className="grid grid-cols-2 gap-5 @min-[56rem]:grid-cols-4">
+        <StatCard value={overview.findings.length} label="findings" />
+        <StatCard value={flaggedCount} label="to check" strong={flaggedCount > 0} />
+        <StatCard value={overview.gaps.length} label="open questions" />
+        <StatCard value={readCount} label={readCount === 1 ? "source read" : "sources read"} />
       </div>
 
       {onFactPage ? (
         children
       ) : (
-        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22.5rem]">
+        <div className="grid items-start gap-5 @min-[58rem]:grid-cols-[minmax(0,1fr)_22.5rem]">
           <div className="min-w-0">{children}</div>
           <div className="flex min-w-0 flex-col gap-5">
             <AnalysisSummary />
@@ -199,25 +178,16 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
 }
 
 function StatCard({
-  icon,
-  tone,
   value,
   label,
   strong = false,
 }: {
-  icon: IconName;
-  tone: string;
   value: number;
   label: string;
   strong?: boolean;
 }) {
   return (
-    <div className="sheet flex items-center gap-4 px-5 py-4">
-      <span
-        className={`hidden h-12 w-12 shrink-0 items-center justify-center rounded-xl sm:flex ${tone}`}
-      >
-        <Icon name={icon} className="text-2xl" />
-      </span>
+    <div className="sheet px-5 py-4">
       <div>
         <p className={`text-2xl leading-tight font-bold ${strong ? "text-primary" : "text-ink"}`}>
           {value}

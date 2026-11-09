@@ -61,9 +61,7 @@ describe("Markdown", () => {
     const { container } = render(
       <Markdown
         allowHtml
-        content={
-          "## Header\n<table><tr><td>ครั้งที่ ๑</td><td>วันที่ ๑๐ ก.พ.</td></tr></table>"
-        }
+        content={"## Header\n<table><tr><td>ครั้งที่ ๑</td><td>วันที่ ๑๐ ก.พ.</td></tr></table>"}
       />,
     );
 

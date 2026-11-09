@@ -76,14 +76,12 @@ function FindingRow({
     <article
       id={`finding-${finding.id}`}
       aria-label={`Finding ${number}`}
-      className="grid scroll-mt-5 grid-cols-[2.75rem_minmax(0,1fr)] gap-x-4 gap-y-3 border-t border-line px-6 py-5 min-[1400px]:grid-cols-[2.75rem_minmax(0,1fr)_17rem]"
+      className="grid scroll-mt-5 grid-cols-[2.75rem_minmax(0,1fr)] gap-x-4 gap-y-3 border-t border-line px-6 py-5 @min-[42rem]:grid-cols-[2.75rem_minmax(0,1fr)_17rem]"
     >
       <span
         aria-hidden="true"
         className={`flex h-9 w-9 items-center justify-center rounded-[9px] text-sm font-bold tabular-nums ${
-          flagged
-            ? "bg-primary text-white shadow-[0_4px_10px_rgba(156,79,51,0.3)]"
-            : "bg-surface-hover text-ink"
+          flagged ? "bg-primary text-white" : "bg-surface-hover text-ink"
         }`}
       >
         {number}
@@ -151,7 +149,7 @@ function FindingRow({
           </div>
         )}
       </div>
-      <div className="col-start-2 min-w-0 min-[1400px]:col-start-3 min-[1400px]:row-start-1">
+      <div className="col-start-2 min-w-0 @min-[42rem]:col-start-3 @min-[42rem]:row-start-1">
         <CitedPassages sources={finding.supportingSources} />
         <CitedPassages sources={finding.contradictingSources} conflicting />
       </div>
@@ -197,7 +195,7 @@ export function CaseFindingsSection({
     <div>
       <div
         aria-hidden="true"
-        className="hidden grid-cols-[2.75rem_minmax(0,1fr)_17rem] gap-x-4 bg-surface-nested px-6 py-2.5 text-xs font-semibold tracking-[0.08em] text-ink-muted uppercase min-[1400px]:grid"
+        className="hidden grid-cols-[2.75rem_minmax(0,1fr)_17rem] gap-x-4 bg-surface-nested px-6 py-2.5 text-xs font-semibold tracking-[0.08em] text-ink-muted uppercase @min-[42rem]:grid"
       >
         <span>No.</span>
         <span>Finding</span>
@@ -232,7 +230,7 @@ export function CaseFindingsSection({
               >
                 {group.title}{" "}
                 <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                  className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
                     isAlertGroup
                       ? "bg-unresolved/10 text-unresolved"
                       : "bg-surface-nested text-ink-muted"

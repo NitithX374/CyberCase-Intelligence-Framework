@@ -107,7 +107,7 @@ export function WorkspaceHeader({
 
   return (
     <header className="flex shrink-0 flex-col gap-5 px-3 pt-4 sm:px-6 lg:px-8 lg:pt-5">
-      <div className="sheet flex min-h-16 items-center gap-3 px-3 sm:px-5">
+      <div className="flex min-h-12 items-center gap-3 border-b border-line-strong pb-4">
         <Link href="/case" className="hidden text-sm font-semibold text-ink sm:inline lg:hidden">
           CyberCase
         </Link>
@@ -153,6 +153,7 @@ export function WorkspaceHeader({
             onClick={onToggleChat}
             aria-label={isChatOpen ? "Close Ask" : "Open Ask"}
             aria-pressed={isChatOpen}
+            aria-controls="workspace-chat-panel"
             className={`btn-ghost ${isChatOpen ? "bg-primary-soft text-primary hover:bg-primary-soft" : ""}`}
           >
             <Icon name="chat" className="text-xl" />
@@ -186,30 +187,26 @@ export function WorkspaceHeader({
           )}
         </div>
       ) : (
-        <div className="relative overflow-hidden rounded-xl bg-primary px-5 py-6 text-white shadow-[0_10px_30px_rgba(156,79,51,0.22)] sm:px-8 sm:py-7">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -top-20 -right-16 h-72 w-72 rounded-full border-[40px] border-white/[0.06]"
-          />
+        <div className="relative overflow-hidden rounded-xl bg-primary px-5 py-6 text-white sm:px-8 sm:py-7">
           <div className="relative flex flex-wrap items-center gap-6">
             <div className="min-w-0 flex-1 basis-full sm:basis-0">
               {titleRow(true)}
               <div className="mt-3 flex flex-wrap gap-2 text-xs whitespace-nowrap">
                 {sourceCount !== undefined && (
-                  <span className="hidden items-center gap-1.5 rounded-full border border-white/40 px-3 py-1 sm:inline-flex">
+                  <span className="hidden items-center gap-1.5 rounded-md border border-white/40 px-3 py-1 sm:inline-flex">
                     <Icon name="sources" />
                     {sourceCount} {sourceCount === 1 ? "source" : "sources"}
                   </span>
                 )}
                 {analysedAt && (
-                  <span className="hidden items-center gap-1.5 rounded-full border border-white/40 px-3 py-1 sm:inline-flex">
+                  <span className="hidden items-center gap-1.5 rounded-md border border-white/40 px-3 py-1 sm:inline-flex">
                     <Icon name="timeline" />
                     Analyzed {formatDate(analysedAt, "dayTime")}
                   </span>
                 )}
                 <span
                   role="status"
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 ${
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1 ${
                     statusNeedsAttention
                       ? "border-white bg-white font-semibold text-primary"
                       : "border-white/40"

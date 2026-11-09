@@ -85,7 +85,7 @@ body {
 }
 
 @utility btn-primary {
-  @apply inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-ivory shadow-[0_6px_14px_rgba(156,79,51,0.28)] transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled disabled:shadow-none motion-reduce:transition-none;
+  @apply inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-ivory transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled motion-reduce:transition-none;
 }
 
 @utility btn-secondary {
@@ -109,15 +109,15 @@ body {
 }
 
 @utility badge-check {
-  @apply inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-semibold text-primary;
+  @apply inline-flex items-center gap-1.5 rounded-md bg-primary-soft px-2.5 py-0.5 text-xs font-semibold text-primary;
 }
 
 @utility badge-linked {
-  @apply inline-flex items-center gap-1.5 rounded-full bg-linked-soft px-2.5 py-0.5 text-xs font-semibold text-linked;
+  @apply inline-flex items-center gap-1.5 rounded-md bg-linked-soft px-2.5 py-0.5 text-xs font-semibold text-linked;
 }
 
 @utility count-pill {
-  @apply inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-surface-hover px-1.5 text-xs font-medium text-ink-muted;
+  @apply inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-surface-hover px-1.5 text-xs font-medium text-ink-muted;
 }
 
 ::selection {

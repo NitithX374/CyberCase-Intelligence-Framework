@@ -52,10 +52,6 @@ export function AccountForm({ register = false }: { register?: boolean }) {
   return (
     <main className="grid min-h-dvh bg-surface text-ink lg:grid-cols-[minmax(0,1fr)_35rem]">
       <section className="relative hidden flex-col overflow-hidden bg-primary px-14 py-12 text-white lg:flex">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-32 -bottom-40 h-[32rem] w-[32rem] rounded-full border-[70px] border-white/[0.06]"
-        />
         <div className="relative flex items-center gap-3 text-2xl font-bold">
           <span className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-surface">
             <CyberCaseLogo size={30} />
