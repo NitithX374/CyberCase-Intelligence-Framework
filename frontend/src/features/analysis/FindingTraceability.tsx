@@ -1,25 +1,24 @@
 import { hasThai } from "@/lib/language";
-import { Icon } from "@/components/icons";
 import type { FindingTraceabilityData } from "./findingTraceabilityData";
 
 const SEMANTIC_LABELS = {
   english: {
-    supported: "Source check: the cited Source passages support this finding",
     not_supported:
       "Source check: the cited Source did not clearly support this finding. Check it before relying on it.",
     unassessed: "Meaning support not assessed",
   },
   thai: {
-    supported: "ตัวตรวจอัตโนมัติ: ข้อความใน Source ที่อ้างรองรับข้อค้นพบนี้",
     not_supported:
       "ตัวตรวจอัตโนมัติ: Source ที่อ้างไม่ชัดว่ารองรับข้อค้นพบนี้ ควรตรวจกับต้นฉบับก่อนใช้",
     unassessed: "ยังไม่ได้ตรวจว่า Source รองรับข้อค้นพบนี้หรือไม่",
   },
 };
 
-const SEMANTIC_REASONS = {
+const SEMANTIC_REASONS: Record<
+  "english" | "thai",
+  Partial<Record<NonNullable<FindingTraceabilityData["semanticReason"]>, string>>
+> = {
   english: {
-    lr_supported: "Selected Source passages scored above the cutoff of the automatic check.",
     lr_not_supported:
       "Selected Source passages scored below the cutoff of the automatic check. This is a screening signal, not proof that the finding is wrong.",
     verifier_unavailable:
@@ -32,7 +31,6 @@ const SEMANTIC_REASONS = {
       "The finding has an uncertain or contradicted status and was not used in the summary.",
   },
   thai: {
-    lr_supported: "ข้อความใน Source ที่เลือกได้คะแนนสูงกว่าเกณฑ์ของตัวตรวจอัตโนมัติ",
     lr_not_supported:
       "ข้อความใน Source ที่เลือกได้คะแนนต่ำกว่าเกณฑ์ของตัวตรวจอัตโนมัติ เป็นเพียงสัญญาณคัดกรอง ไม่ใช่การยืนยันว่าข้อค้นพบนี้ผิด",
     verifier_unavailable:
@@ -53,16 +51,14 @@ export function FindingTraceability({
 }) {
   const thai = hasThai(text);
   const language = thai ? "thai" : "english";
-  const isSupported = traceability.semanticSupport === "supported";
+  if (traceability.semanticSupport === "supported") return null;
   return (
     <div className="mt-2 text-xs leading-5" aria-label="Finding traceability">
       <p
         className={
-          isSupported
-            ? "inline-flex items-start gap-1.5 rounded-md bg-established/10 px-2.5 py-1 font-semibold text-established"
-            : traceability.semanticSupport === "not_supported"
-              ? "font-medium text-unresolved"
-              : "text-ink-muted"
+          traceability.semanticSupport === "not_supported"
+            ? "font-medium text-unresolved"
+            : "text-ink-muted"
         }
         title={
           traceability.semanticReason
@@ -72,7 +68,6 @@ export function FindingTraceability({
               : "Source linkage locates cited text. This analysis has no recorded check that the cited passages support the complete finding."
         }
       >
-        {isSupported && <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0" />}
         {traceability.semanticSupport === "unassessed" && traceability.semanticReason
           ? traceability.semanticReason === "verifier_unavailable"
             ? thai

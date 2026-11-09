@@ -7,11 +7,19 @@ import { useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
 import { useIsFollowupPending } from "@/features/chat/useCaseChat";
 import { casePath } from "@/lib/casePaths";
 import { AnalysisMeta } from "./AnalysisMeta";
-import { AnalysisNav } from "./AnalysisNav";
 import { AnalysisProgress } from "./AnalysisProgress";
+import { AnalysisQuestionsCard } from "./AnalysisQuestions";
+import { AnalysisSummary } from "./AnalysisSummary";
+import { analysisSourceIds } from "./analysisRecord";
 import { useCaseOverview } from "./useCaseOverview";
-import { Icon } from "@/components/icons";
+import { Icon, type IconName } from "@/components/icons";
 import { EmptyState } from "@/components/EmptyState";
+
+const SECTION_TARGETS: Record<string, string> = {
+  findings: "section-findings",
+  details: "section-references",
+  questions: "section-attention",
+};
 
 export function AnalysisLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -24,11 +32,16 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
   const section = useSelectedLayoutSegment();
   const panelRef = useRef<HTMLElement | null>(null);
 
+  const hasAnalysis = overview.hasAnalysis;
   useEffect(() => {
+    if (!hasAnalysis) return;
     const hash = window.location.hash.slice(1);
-    const target = hash ? document.getElementById(hash) : null;
-    (target ?? panelRef.current)?.scrollIntoView?.({ block: "start" });
-  }, [section]);
+    const id = hash || (section ? SECTION_TARGETS[section] : undefined);
+    const target = id ? document.getElementById(id) : null;
+    const folded = target?.closest("details");
+    if (folded) folded.open = true;
+    target?.scrollIntoView?.({ block: "start" });
+  }, [section, hasAnalysis]);
 
   const navigateToSources = () => router.push(casePath(caseId, "sources"));
 
@@ -110,84 +123,108 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  const isStale = analysisResult?.freshness === "stale";
+  const flaggedCount = overview.findings.filter(
+    (finding) => finding.traceability.semanticSupport === "not_supported",
+  ).length;
+  const onFactPage = section === "timeline" || section === "people" || section === "impact";
+  const readCount = analysisResult ? analysisSourceIds(analysisResult).length : 0;
 
   return (
     <section
       ref={panelRef}
       id="workspace-analysis-panel"
       aria-label="Case analysis"
-      className="flex shrink-0 flex-col bg-surface pb-16"
+      className="flex w-full shrink-0 flex-col gap-7 px-3 pt-5 pb-16 sm:px-6 lg:px-8"
     >
-      <div className="sticky top-0 z-10 bg-surface">
-        <div className="mx-auto w-full max-w-[52rem] px-5 pt-4 sm:px-8 sm:pt-5">
-          <div className="flex flex-wrap-reverse items-start justify-between gap-x-6 gap-y-1 border-b border-line">
-            <AnalysisNav
-              caseId={caseId}
-              findingCount={overview.findings.length}
-              questionCount={overview.gaps.length}
-            />
-            <div className="pb-3">
-              <AnalysisMeta
-                overview={overview}
-                result={analysisResult}
-                sources={sources ?? []}
-                onReanalyze={isStale || !canAnalyze ? undefined : runAnalysis}
-              />
-            </div>
+      {isUpdating ? (
+        <div className="sheet px-6 py-4">
+          <div role="status" className="flex items-center gap-2.5 text-sm font-medium text-ink">
+            <Icon name="spinner" className="text-lg text-primary" />
+            {isFollowupPending
+              ? "Updating the case analysis with your answer…"
+              : "Updating the case analysis…"}
+          </div>
+          <AnalysisProgress caseId={caseId} className="mt-3" />
+        </div>
+      ) : null}
+      {isWaitingForFollowup && !isUpdating && (
+        <p role="status" className="sheet px-6 py-4 text-sm text-ink-secondary">
+          Answer the follow-up question in Ask. Analysis continues automatically when the answers
+          are complete.
+        </p>
+      )}
+
+      <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
+        <StatCard
+          icon="findings"
+          tone="bg-[#f3ece4] text-[#6b4e2e]"
+          value={overview.findings.length}
+          label="findings"
+        />
+        <StatCard
+          icon="alert"
+          tone="bg-primary-soft text-primary"
+          value={flaggedCount}
+          label="to check"
+          strong={flaggedCount > 0}
+        />
+        <StatCard
+          icon="attention"
+          tone="bg-[#efe6df] text-[#3a2a22]"
+          value={overview.gaps.length}
+          label="open questions"
+        />
+        <StatCard
+          icon="sources"
+          tone="bg-linked-soft text-linked"
+          value={readCount}
+          label={readCount === 1 ? "source read" : "sources read"}
+        />
+      </div>
+
+      {onFactPage ? (
+        children
+      ) : (
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22.5rem]">
+          <div className="min-w-0">{children}</div>
+          <div className="flex min-w-0 flex-col gap-5">
+            <AnalysisSummary />
+            <AnalysisQuestionsCard />
+            <AnalysisMeta overview={overview} result={analysisResult} sources={sources ?? []} />
           </div>
         </div>
-      </div>
-
-      <div className="mx-auto w-full max-w-[52rem] px-5 sm:px-8">
-        {isUpdating ? (
-          <div className="mt-6">
-            <div
-              role="status"
-              className="flex items-center gap-2.5 rounded-lg bg-accent-soft px-3.5 py-2.5 text-[13px] text-accent-strong"
-            >
-              <Icon name="spinner" className="h-4 w-4 shrink-0" />
-              <span className="font-medium">
-                {isFollowupPending
-                  ? "Updating the case analysis with your answer…"
-                  : "Updating the case analysis…"}
-              </span>
-            </div>
-            <AnalysisProgress caseId={caseId} className="mt-3 px-3.5" />
-          </div>
-        ) : null}
-        {isWaitingForFollowup && !isUpdating && (
-          <p
-            role="status"
-            className="mt-6 rounded-lg bg-surface-nested px-3.5 py-2.5 text-[13px] leading-6 text-ink-secondary"
-          >
-            Answer the follow-up question in Ask. Analysis continues automatically when the answers
-            are complete.
-          </p>
-        )}
-        {isStale && !isUpdating && (
-          <div
-            role="alert"
-            className="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-y border-line py-2 text-[13px] text-ink"
-          >
-            <p>
-              <span className="font-semibold">Analysis is based on older sources.</span>{" "}
-              <span className="text-ink-secondary">New material was added since.</span>
-            </p>
-            <button
-              type="button"
-              onClick={runAnalysis}
-              disabled={!canAnalyze}
-              className="btn-secondary h-8 px-3"
-            >
-              Analyze latest sources
-            </button>
-          </div>
-        )}
-      </div>
-
-      {children}
+      )}
     </section>
+  );
+}
+
+function StatCard({
+  icon,
+  tone,
+  value,
+  label,
+  strong = false,
+}: {
+  icon: IconName;
+  tone: string;
+  value: number;
+  label: string;
+  strong?: boolean;
+}) {
+  return (
+    <div className="sheet flex items-center gap-4 px-5 py-4">
+      <span
+        className={`hidden h-12 w-12 shrink-0 items-center justify-center rounded-xl sm:flex ${tone}`}
+      >
+        <Icon name={icon} className="text-2xl" />
+      </span>
+      <div>
+        <p className={`text-2xl leading-tight font-bold ${strong ? "text-primary" : "text-ink"}`}>
+          {value}
+        </p>
+        <p className="text-sm text-ink-muted">{label}</p>
+      </div>
+    </div>
   );
 }
 
@@ -235,7 +272,7 @@ function AnalysisState({
       busy={processing}
       title={title}
       description={description}
-      className="mx-auto min-h-[420px] w-full max-w-[52rem] justify-center px-5 py-16 sm:px-8"
+      className="sheet mx-auto mt-8 min-h-[420px] w-[calc(100%-1.5rem)] max-w-[56rem] justify-center px-5 py-16 sm:px-8"
     >
       {actionLabel && onAction && (
         <button

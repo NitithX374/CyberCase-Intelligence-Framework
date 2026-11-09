@@ -4,15 +4,17 @@ import { useParams, useRouter, useSelectedLayoutSegment } from "next/navigation"
 import { useCallback, useState, type ReactNode } from "react";
 import { casePath, type WorkspaceView } from "@/lib/casePaths";
 import { useCase, useCaseMutations } from "@/features/cases/queries";
-import { useIsAnalysisUpdating } from "@/features/analysis/queries";
-import { useAnalysisRunOutcome } from "@/features/analysis/useRunCaseAnalysis";
+import { useAnalysisAvailability } from "@/features/analysis/queries";
+import { useAnalysisRunOutcome, useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
 import { CaseNotFound } from "@/features/workspace/CaseNotFound";
 import { WorkspaceHeader } from "@/features/workspace/WorkspaceHeader";
+import { CaseSidebar } from "@/features/workspace/CaseSidebar";
+import { useCaseOverview } from "@/features/analysis/useCaseOverview";
 import { WorkspaceChatPanel } from "@/features/chat/WorkspaceChatPanel";
 import { MeaningfulErrorModal } from "@/components/MeaningfulErrorModal";
 import { isCaseNotFound, toUserFacingError } from "@/lib/userFacingError";
 
-const CHAT_OPEN_STORAGE_KEY = "cybercase:chat-open";
+const CHAT_OPEN_STORAGE_KEY = "cybercase:ask-open";
 
 export function CaseWorkspace({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -23,8 +25,7 @@ export function CaseWorkspace({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return false;
     try {
       const saved = localStorage.getItem(CHAT_OPEN_STORAGE_KEY);
-      if (saved !== null) return saved === "true";
-      return window.innerWidth >= 768;
+      return saved === "true";
     } catch {
       return false;
     }
@@ -34,7 +35,26 @@ export function CaseWorkspace({ children }: { children: ReactNode }) {
   const caseQuery = useCase(caseId);
   const activeCase = caseQuery.data ?? null;
   const { createMutation, updateMutation } = useCaseMutations();
-  const isAnalyzing = useIsAnalysisUpdating(caseId);
+  const { isUpdating, isWaitingForFollowup, canAnalyze } = useAnalysisAvailability(caseId);
+  const runAnalysis = useRunCaseAnalysis(caseId);
+  const { analysisResult, sources, overview } = useCaseOverview(caseId);
+  const freshness = activeCase?.analysis_freshness ?? "missing";
+  const status = isUpdating
+    ? "Analyzing…"
+    : isWaitingForFollowup
+      ? "Waiting for your answer in Ask"
+      : freshness === "stale"
+        ? "Out of date: sources changed"
+        : freshness === "current"
+          ? "Analysis up to date"
+          : "Not analyzed yet";
+  const statusNeedsAttention =
+    !isUpdating && (isWaitingForFollowup || freshness === "stale" || freshness === "missing");
+  const analyzeLabel = isUpdating
+    ? "Analyzing…"
+    : freshness === "current"
+      ? "Analyze again"
+      : "Analyze";
 
   const setChatOpen = useCallback((next: boolean) => {
     setIsChatOpen(next);
@@ -79,25 +99,42 @@ export function CaseWorkspace({ children }: { children: ReactNode }) {
 
   if (isCaseNotFound(caseQuery.error)) return <CaseNotFound />;
 
+  const flaggedCount = overview.findings.filter(
+    (finding) => finding.traceability.semanticSupport === "not_supported",
+  ).length;
+
   return (
-    <div className="flex h-dvh overflow-hidden bg-surface text-ink">
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-surface">
+    <div className="flex h-dvh overflow-hidden bg-ground text-ink">
+      <CaseSidebar caseId={caseId} caseTitle={activeCase?.title || "New case"} />
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-y-auto bg-ground">
         <WorkspaceHeader
           activeCase={activeCase}
           activeView={activeView}
           creatingCase={createMutation.isPending}
-          isAnalyzing={isAnalyzing}
-          isStale={activeCase?.analysis_freshness === "stale"}
+          status={status}
+          statusNeedsAttention={statusNeedsAttention}
+          analyzeLabel={analyzeLabel}
+          canAnalyze={canAnalyze}
+          findingCount={overview.hasAnalysis ? overview.findings.length : 0}
+          flaggedCount={flaggedCount}
+          sourceCount={sources?.filter((source) => !source.deactivated_at).length}
+          analysedAt={analysisResult?.created_at ?? null}
+          onAnalyze={
+            activeCase
+              ? () => {
+                  runAnalysis();
+                  router.push(casePath(caseId, "analysis"));
+                }
+              : undefined
+          }
           onViewChange={handleViewChange}
           onNewCase={() => void handleNewCase()}
           onRenameCase={(title) => void renameCase(title)}
           isChatOpen={isChatOpen}
           onToggleChat={() => setChatOpen(!isChatOpen)}
         />
-        <main className="relative flex min-w-0 flex-1 flex-col overflow-y-auto bg-surface">
-          {children}
-        </main>
-      </div>
+        {children}
+      </main>
 
       <WorkspaceChatPanel
         caseId={caseId}

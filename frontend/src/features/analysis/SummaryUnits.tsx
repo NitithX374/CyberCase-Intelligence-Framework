@@ -45,18 +45,18 @@ export function SummaryUnits({
                 ))}
               </sup>
             )}
-            {unit.noteMark && <sup>{unit.noteMark}</sup>}
+            {unit.noteMark && <sup className="font-bold text-mark">{unit.noteMark}</sup>}
             {unit.closing}
           </Fragment>
         ))}
       </p>
-      {named && (
-        <div className="-mt-2 mb-1 text-[13px] leading-6 text-ink-secondary">{words.numbers}</div>
-      )}
-      {units.map((unit) =>
-        unit.noteMark && unit.supportNote ? (
-          <div key={unit.noteMark} className="text-[13px] leading-6 text-ink-secondary">
-            <sup>{unit.noteMark}</sup> {unit.supportNote}
+      {named && <div className="-mt-2 mb-1 text-xs text-ink-secondary">{words.numbers}</div>}
+      {units.map((unit, index) =>
+        unit.noteMark &&
+        unit.supportNote &&
+        units.findIndex((other) => other.noteMark === unit.noteMark) === index ? (
+          <div key={unit.noteMark} className="text-xs text-mark">
+            <sup className="font-bold">{unit.noteMark}</sup> {unit.supportNote}
           </div>
         ) : null,
       )}

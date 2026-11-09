@@ -73,40 +73,93 @@ beforeEach(() => {
 });
 
 describe("AnalysisFindings", () => {
-  it("shows an accurate empty Supported filter and lets the reader return to All", () => {
-    navigation.result = structuredClone(analysis);
-    navigation.result.trace_json!.claims[0].semantic_grounding = null;
+  it("keeps each finding's number from the whole list under every filter", () => {
     render(<AnalysisFindings />);
-    fireEvent.click(screen.getByRole("button", { name: "Supported 0" }));
-    expect(screen.getByText("No supported findings in this analysis.")).toBeVisible();
-    expect(screen.queryByRole("article")).not.toBeInTheDocument();
+
+    const numbered = () =>
+      screen
+        .getAllByRole("article")
+        .map((article) => [article.getAttribute("aria-label"), article.textContent]);
+    const numberOf = (text: string) =>
+      numbered().find(([, content]) => content?.includes(text))?.[0];
+
+    expect(numbered()).toHaveLength(1);
+    expect(numberOf("Another transaction was mentioned.")).toBe("Finding 3");
+
     fireEvent.click(screen.getByRole("button", { name: "All 4" }));
-    expect(screen.getByText("The statement reports a transfer.")).toBeVisible();
+    expect(numberOf("The statement reports a transfer.")).toBe("Finding 1");
+    expect(numberOf("The transfer went to Account B.")).toBe("Finding 2");
+    expect(numberOf("Another transaction was mentioned.")).toBe("Finding 3");
+    expect(numberOf("A legacy report has a Source link.")).toBe("Finding 4");
+
+    fireEvent.click(screen.getByRole("button", { name: /Not confirmed/ }));
+    expect(numbered()).toHaveLength(1);
+    expect(numberOf("The transfer went to Account B.")).toBe("Finding 2");
   });
 
-  it("filters by saved Source support and retains the other findings under All", () => {
+  it("opens on All when nothing is flagged, with an accurate empty To check filter", () => {
+    navigation.result = structuredClone(analysis);
+    navigation.result.trace_json!.claims[2].semantic_grounding = null;
     render(<AnalysisFindings />);
-    fireEvent.click(screen.getByRole("button", { name: "Supported 1" }));
-    expect(screen.getByRole("button", { name: "Supported 1" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "All 4" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "To check 0" }));
+    expect(screen.getByText("No findings to check in this analysis.")).toBeVisible();
+    expect(screen.queryByRole("article")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "All 4" }));
+    expect(screen.getByText("The statement reports a transfer.", { selector: "p" })).toBeVisible();
+  });
+
+  it("opens on To check, listing only the findings the verifier warned about, and All keeps the rest", () => {
+    render(<AnalysisFindings />);
+    expect(screen.getByRole("button", { name: "To check 1" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(screen.getByText("The statement reports a transfer.")).toBeVisible();
+    expect(screen.getByText("Another transaction was mentioned.", { selector: "p" })).toBeVisible();
+    expect(screen.getByText(/did not clearly support this finding/)).toBeVisible();
+    expect(screen.queryByText("The statement reports a transfer.")).not.toBeInTheDocument();
     expect(screen.queryByText("The transfer went to Account B.")).not.toBeInTheDocument();
-    expect(screen.queryByText("Another transaction was mentioned.")).not.toBeInTheDocument();
     expect(screen.queryByText("A legacy report has a Source link.")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "statement.pdf · p. 4" }));
-    expect(screen.getByRole("dialog")).toHaveTextContent("received 52,000 baht");
-    fireEvent.click(screen.getByRole("button", { name: "Close source" }));
     fireEvent.click(screen.getByRole("button", { name: "All 4" }));
-    expect(screen.getByText("Another transaction was mentioned.")).toBeVisible();
-    expect(screen.getByText("A legacy report has a Source link.")).toBeVisible();
+    expect(screen.getByText("The statement reports a transfer.", { selector: "p" })).toBeVisible();
+    expect(screen.getByText("A legacy report has a Source link.", { selector: "p" })).toBeVisible();
+  });
+
+  it("offers no Supported filter", () => {
+    render(<AnalysisFindings />);
+    expect(screen.queryByRole("button", { name: /Supported/ })).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole("button", { name: /^(All|To check|Not confirmed) \d/ }),
+    ).toHaveLength(3);
+  });
+
+  it("opens already narrowed to the flagged findings when the link asked for them", () => {
+    navigation.search = "status=flagged";
+    render(<AnalysisFindings />);
+
+    expect(screen.getByRole("button", { name: "To check 1" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getAllByRole("article")).toHaveLength(1);
+    expect(screen.getByText("Another transaction was mentioned.", { selector: "p" })).toBeVisible();
+  });
+
+  it("opens on All for an old link that asked for the supported findings", () => {
+    navigation.search = "status=supported";
+    render(<AnalysisFindings />);
+
+    expect(screen.getByRole("button", { name: "All 4" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getAllByRole("article")).toHaveLength(4);
   });
 
   it("lists every finding and opens the exact page a quotation came from", () => {
     render(<AnalysisFindings />);
+    fireEvent.click(screen.getByRole("button", { name: "All 4" }));
 
-    expect(screen.getByText("The statement reports a transfer.")).toBeInTheDocument();
+    expect(
+      screen.getByText("The statement reports a transfer.", { selector: "p" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("The transfer went to Account B.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "statement.pdf · p. 4" }));
     expect(screen.getByRole("dialog")).toHaveTextContent("received 52,000 baht");
@@ -126,7 +179,9 @@ describe("AnalysisFindings", () => {
     expect(screen.getByText(/semantic support is shown separately/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /All/ }));
-    expect(screen.getByText("The statement reports a transfer.")).toBeInTheDocument();
+    expect(
+      screen.getByText("The statement reports a transfer.", { selector: "p" }),
+    ).toBeInTheDocument();
   });
 
   it("opens already narrowed when the link asked for the findings not confirmed", () => {
@@ -146,6 +201,8 @@ describe("AnalysisFindings", () => {
 
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
     expect(scrollIntoView.mock.contexts[0]).toBe(container.querySelector("#finding-A-02"));
-    expect(screen.getByText("The statement reports a transfer.")).toBeInTheDocument();
+    expect(
+      screen.getByText("The statement reports a transfer.", { selector: "p" }),
+    ).toBeInTheDocument();
   });
 });

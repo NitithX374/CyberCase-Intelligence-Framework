@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { LegalReferenceView } from "@/features/legal/LegalReferenceView";
 import type { CaseAnalysisResultRead } from "@/lib/api/types";
@@ -52,39 +52,20 @@ function withProvisions() {
 }
 
 describe("LegalReferenceView", () => {
-  it("shows no provision until the reader accepts the notice", () => {
-    render(<LegalReferenceView analysisResult={withProvisions()} onDecline={vi.fn()} />);
-
-    const notice = screen.getByRole("dialog");
-    expect(
-      within(notice).getByRole("heading", { name: "โปรดอ่านก่อนดูข้อมูลกฎหมาย" }),
-    ).toBeInTheDocument();
-    expect(notice).toHaveTextContent("ไม่ใช่ความเห็นทางกฎหมาย");
-    expect(screen.queryByRole("heading", { name: ACCESS_SECTION })).not.toBeInTheDocument();
-
-    fireEvent.click(within(notice).getByRole("button", { name: "รับทราบ" }));
+  it("shows the provisions and the disclaimer at once, with no notice to accept", () => {
+    render(<LegalReferenceView analysisResult={withProvisions()} />);
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "รับทราบ" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: ACCESS_SECTION })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: FRAUD_SECTION })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Legal references" })).toHaveTextContent(
-      "รายการอ้างอิงตัวบทที่อาจเกี่ยวข้อง ไม่ใช่ความเห็นทางกฎหมาย",
-    );
-  });
-
-  it("leaves the page when the reader declines", () => {
-    const onDecline = vi.fn();
-    render(<LegalReferenceView analysisResult={withProvisions()} onDecline={onDecline} />);
-
-    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "ยกเลิก" }));
-
-    expect(onDecline).toHaveBeenCalledOnce();
-    expect(screen.queryByRole("heading", { name: ACCESS_SECTION })).not.toBeInTheDocument();
+    const region = screen.getByRole("region", { name: "Legal references" });
+    expect(region).toHaveTextContent("รายการอ้างอิงตัวบทที่อาจเกี่ยวข้อง ไม่ใช่ความเห็นทางกฎหมาย");
+    expect(within(region).getByRole("heading", { name: "Legal references" })).toBeInTheDocument();
   });
 
   it("links only to web addresses the provider gave", () => {
-    render(<LegalReferenceView analysisResult={withProvisions()} onDecline={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "รับทราบ" }));
+    render(<LegalReferenceView analysisResult={withProvisions()} />);
 
     expect(
       screen.getByRole("link", { name: `Open ${ACCESS_SECTION} at the source` }),
@@ -95,8 +76,7 @@ describe("LegalReferenceView", () => {
   });
 
   it("folds a long provision behind Full text", () => {
-    render(<LegalReferenceView analysisResult={withProvisions()} onDecline={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "รับทราบ" }));
+    render(<LegalReferenceView analysisResult={withProvisions()} />);
 
     const toggle = screen.getByRole("button", { name: "Full text" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -104,15 +84,27 @@ describe("LegalReferenceView", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "true");
   });
 
+  it("says what was searched, folded under the provisions", () => {
+    render(<LegalReferenceView analysisResult={withProvisions()} />);
+
+    const searched = screen.getByText("What was searched").closest("details") as HTMLElement;
+    expect(searched).not.toHaveAttribute("open");
+    expect(searched).toHaveTextContent(
+      "คนร้ายเข้าถึงบัญชีธนาคารออนไลน์ของผู้เสียหายแล้วโอนเงินออก",
+    );
+    expect(searched).toHaveTextContent("Searched on iapp-thai-legal");
+  });
+
   it("says why there is nothing when the case needed no ATT&CK context", () => {
     render(
       <LegalReferenceView
         analysisResult={analysis({ technical_augmentation: { status: "not_applicable" } })}
-        onDecline={vi.fn()}
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "No legal references" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Thai legal provisions: No legal references" }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/judged not to need it/)).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
@@ -129,18 +121,30 @@ describe("LegalReferenceView", () => {
             disclaimer: "",
           },
         })}
-        onDecline={vi.fn()}
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "No provisions found" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Thai legal provisions: No provisions found" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("บริการอ้างอิงตัวบทใช้เวลานานเกินกำหนด")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("waits for an analysis before looking anything up", () => {
-    render(<LegalReferenceView analysisResult={null} onDecline={vi.fn()} />);
+  it("says when the analysis made no legal lookup", () => {
+    render(<LegalReferenceView analysisResult={analysis({})} />);
 
-    expect(screen.getByRole("heading", { name: "Not analyzed yet" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Thai legal provisions: No legal references" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("This analysis made no legal lookup.")).toBeInTheDocument();
+  });
+
+  it("waits for an analysis before looking anything up", () => {
+    render(<LegalReferenceView analysisResult={null} />);
+
+    expect(
+      screen.getByRole("heading", { name: "Thai legal provisions: Not analyzed yet" }),
+    ).toBeInTheDocument();
   });
 });

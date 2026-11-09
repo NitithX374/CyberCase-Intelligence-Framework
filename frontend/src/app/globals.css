@@ -1,49 +1,74 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-manrope), var(--font-thai), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Consolas, monospace;
+  --font-sans: var(--font-dm-sans), var(--font-mitr), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-red-hat-mono), ui-monospace, SFMono-Regular, Consolas, monospace;
 
-  --color-background: #ffffff;
-  --color-canvas: #f7f7f8;
+  --text-xs: 15px;
+  --text-xs--line-height: 1.5;
+  --text-sm: 16px;
+  --text-sm--line-height: 1.55;
+  --text-base: 18px;
+  --text-base--line-height: 1.65;
+  --text-lg: 20px;
+  --text-lg--line-height: 1.4;
+  --text-xl: 24px;
+  --text-xl--line-height: 1.3;
+  --text-2xl: 30px;
+  --text-2xl--line-height: 1.2;
+  --text-3xl: 36px;
+  --text-3xl--line-height: 1.15;
+
+  --color-ground: #f5f3ef;
   --color-surface: #ffffff;
-  --color-sidebar: #fafafa;
+  --color-surface-nested: #faf8f5;
+  --color-surface-hover: #f5f3ef;
+  --color-field: #ffffff;
+  --color-control-disabled: #ebe7e1;
 
-  --color-ink: #18181b;
-  --color-ink-secondary: #52525b;
-  --color-ink-muted: #71717a;
-  --color-ink-disabled: #a1a1aa;
-  --color-line: #ececef;
-  --color-line-strong: #d9d9de;
-  --color-surface-nested: #f4f4f5;
-  --color-surface-hover: #f4f4f5;
-  --color-control-disabled: #ececef;
+  --color-ink: #1e1d1b;
+  --color-ink-secondary: #5f5b54;
+  --color-ink-muted: #6d6a63;
+  --color-ink-disabled: #9a958c;
+  --color-line: #efebe5;
+  --color-line-strong: #d9d4cb;
 
-  --color-accent-soft: #f0fdfa;
-  --color-accent-strong: #115e59;
-  --color-primary: #18181b;
-  --color-charcoal-hover: #27272a;
-  --color-charcoal-pressed: #09090b;
+  --color-primary: #9c4f33;
+  --color-primary-hover: #874329;
+  --color-primary-pressed: #723823;
+  --color-primary-soft: #f2e2da;
+  --color-primary-wash: #fbf7f5;
+  --color-primary-line: #e9dbd3;
   --color-ivory: #ffffff;
 
-  --color-unresolved: #b45309;
-  --color-established: #0f766e;
-  --color-critical: #b91c1c;
+  --color-espresso: #3a2a22;
+  --color-espresso-raised: #47352c;
+  --color-espresso-line: #54423a;
+  --color-espresso-ink: #ffffff;
+  --color-espresso-muted: #c9bcb3;
+
+  --color-linked: #2f6b45;
+  --color-linked-soft: #e4efe7;
+
+  --color-mark: #9c4f33;
+  --color-unresolved: #9c4f33;
+  --color-critical: #a3261c;
+  --color-established: #2f6b45;
 }
 
 :root {
-  --background: var(--color-background);
-  --foreground: var(--color-ink);
+  color-scheme: light;
 }
 
 html {
-  background: var(--background);
+  background: var(--color-ground);
 }
 
 body {
   min-height: 100vh;
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--color-ground);
+  color: var(--color-ink);
+  font-size: var(--text-sm);
 }
 
 * {
@@ -51,33 +76,61 @@ body {
   scrollbar-width: thin;
 }
 
+@utility sheet {
+  @apply rounded-[10px] bg-surface text-ink shadow-[0_4px_24px_rgba(34,30,27,0.07)];
+}
+
+@utility card-head {
+  @apply flex flex-wrap items-center gap-3 border-b border-line px-6 py-4;
+}
+
 @utility btn-primary {
-  @apply inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-ivory transition-colors duration-150 hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled motion-reduce:transition-none;
+  @apply inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-ivory shadow-[0_6px_14px_rgba(156,79,51,0.28)] transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled disabled:shadow-none motion-reduce:transition-none;
 }
 
 @utility btn-secondary {
-  @apply inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3.5 text-[13px] font-semibold text-ink transition-colors duration-150 hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:text-ink-disabled motion-reduce:transition-none;
+  @apply inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-primary bg-surface px-5 text-sm font-semibold text-primary transition-colors duration-150 hover:bg-primary-wash focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary disabled:cursor-not-allowed disabled:border-line-strong disabled:text-ink-disabled motion-reduce:transition-none;
 }
 
 @utility btn-ghost {
-  @apply inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3 text-[13px] font-medium text-ink-secondary transition-colors duration-150 hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:text-ink-disabled motion-reduce:transition-none;
+  @apply inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-surface-hover px-4 text-sm font-semibold text-ink transition-colors duration-150 hover:bg-line focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary disabled:cursor-not-allowed disabled:text-ink-disabled motion-reduce:transition-none;
+}
+
+@utility btn-on-band {
+  @apply inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-surface px-5 text-sm font-semibold text-primary transition-colors duration-150 hover:bg-primary-wash focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none;
+}
+
+@utility btn-band-line {
+  @apply inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-white/45 px-5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-white motion-reduce:transition-none;
 }
 
 @utility icon-btn {
-  @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink-muted transition-colors duration-150 hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none;
+  @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-muted transition-colors duration-150 hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none;
+}
+
+@utility badge-check {
+  @apply inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-semibold text-primary;
+}
+
+@utility badge-linked {
+  @apply inline-flex items-center gap-1.5 rounded-full bg-linked-soft px-2.5 py-0.5 text-xs font-semibold text-linked;
+}
+
+@utility count-pill {
+  @apply inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-surface-hover px-1.5 text-xs font-medium text-ink-muted;
 }
 
 ::selection {
-  background: #ccfbf1;
-  color: #18181b;
+  background: var(--color-primary-soft);
+  color: var(--color-ink);
 }
 
-:where(a, button, select, summary):focus-visible {
+:where(a, button, select, summary, input[type="checkbox"], input[type="radio"]):focus-visible {
   outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
 
-:where(input, textarea):focus-visible {
+:where(input:not([type="checkbox"], [type="radio"]), textarea):focus-visible {
   outline: none;
 }
 

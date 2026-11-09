@@ -24,7 +24,7 @@ export function AccountMenu({ actions = [] }: { actions?: AccountMenuAction[] })
         aria-haspopup="menu"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((open) => !open)}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-nested text-[13px] font-semibold text-ink-secondary transition-colors hover:bg-line hover:text-ink"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary transition-colors hover:bg-primary-line"
       >
         {initial}
       </button>
@@ -46,7 +46,7 @@ interface AccountMenuAction {
 }
 
 const itemClass =
-  "flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] text-ink transition-colors hover:bg-surface-hover disabled:cursor-wait disabled:opacity-50";
+  "flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm text-ink transition-colors hover:bg-surface-hover disabled:cursor-wait disabled:opacity-50";
 
 export function UserProfileMenu({
   actions = [],
@@ -72,7 +72,7 @@ export function UserProfileMenu({
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 px-2.5 py-2 text-[13px] text-ink-muted" role="status">
+      <div className="flex items-center gap-2 px-2.5 py-2 text-sm text-ink-muted" role="status">
         <span className="h-2 w-2 animate-pulse rounded-full bg-ink-muted/40" />
         <span>Loading…</span>
       </div>
@@ -91,7 +91,7 @@ export function UserProfileMenu({
   return (
     <div className="flex w-full flex-col">
       <div className="min-w-0 px-2.5 pt-1.5 pb-2.5">
-        <p className="truncate text-[13px] font-semibold text-ink" title={user.name}>
+        <p className="truncate text-sm font-semibold text-ink" title={user.name}>
           {user.name}
         </p>
         <p className="truncate text-xs text-ink-muted" title={user.email}>

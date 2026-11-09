@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
@@ -36,11 +36,13 @@ const backend = vi.hoisted(() => ({
   upload: vi.fn(),
   send: vi.fn(),
   start: vi.fn(),
+  push: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ caseId }),
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({ push: backend.push, replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
   useSelectedLayoutSegment: () => backend.segment,
   usePathname: () => `/case/${caseId}/${backend.segment}`,
 }));
@@ -158,7 +160,6 @@ function renderWorkspace(page: () => ReactNode) {
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem("cybercase:account", "user-1");
-  localStorage.setItem("cybercase:chat-open", "false");
   backend.segment = "analysis";
   backend.title = "Old title";
   backend.revision = 1;
@@ -169,6 +170,7 @@ beforeEach(() => {
   backend.upload.mockReset();
   backend.send.mockReset();
   backend.start.mockReset();
+  backend.push.mockReset();
 });
 
 function narrativeDialog() {
@@ -177,11 +179,25 @@ function narrativeDialog() {
   )!;
 }
 
+function topBar() {
+  return within(
+    screen
+      .getByRole("navigation", { name: "Case workspace views" })
+      .closest("header") as HTMLElement,
+  );
+}
+
+function openNarrative() {
+  const opener = screen
+    .getAllByRole("button", { name: "Add narrative" })
+    .find((button) => !narrativeDialog()?.contains(button))!;
+  fireEvent.click(opener);
+}
+
 function writeNarrative(text: string) {
-  fireEvent.click(screen.getByRole("button", { name: "Add source" }));
-  fireEvent.click(screen.getByRole("menuitem", { name: "Case narrative" }));
+  openNarrative();
   fireEvent.change(screen.getByLabelText("Narrative"), { target: { value: text } });
-  fireEvent.click(screen.getByRole("button", { name: "Add narrative" }));
+  fireEvent.click(within(narrativeDialog()).getByRole("button", { name: "Add narrative" }));
 }
 
 describe("the case workspace", () => {
@@ -199,7 +215,7 @@ describe("the case workspace", () => {
   });
 
   it("waits for an answer being analysed instead of offering a first analysis beside it", async () => {
-    localStorage.setItem("cybercase:chat-open", "true");
+    localStorage.setItem("cybercase:ask-open", "true");
     backend.chat = { case_id: caseId, messages: [question], pending_question_id: question.id };
     backend.send.mockReturnValue(deferred().promise);
     renderWorkspace(() => (
@@ -211,7 +227,10 @@ describe("the case workspace", () => {
     expect(
       await screen.findByRole("heading", { name: "Waiting for your answer" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();
+    const analyzeButtons = screen.getAllByRole("button", { name: "Analyze" });
+    expect(analyzeButtons).toHaveLength(2);
+    analyzeButtons.forEach((button) => expect(button).toBeDisabled());
+    expect(screen.getByText("Waiting for your answer in Ask")).toBeInTheDocument();
     await screen.findByText(question.content);
     const composer = screen.getByLabelText("Chat message");
     fireEvent.change(composer, { target: { value: "Around 02:00." } });
@@ -221,6 +240,7 @@ describe("the case workspace", () => {
     expect(await screen.findByRole("heading", { name: "Analyzing…" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Not analyzed yet" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Analyze" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Analyzing…" })).toBeDisabled();
     expect(backend.start).not.toHaveBeenCalled();
   });
 
@@ -232,13 +252,14 @@ describe("the case workspace", () => {
       </CaseAnalysisLayout>
     ));
     expect(await screen.findByText("Up to date")).toBeInTheDocument();
+    expect(screen.getByText("Analysis up to date")).toBeInTheDocument();
+    expect(topBar().getByRole("button", { name: "Analyze again" })).toBeEnabled();
 
     workspace.show("sources", () => <SourcesPage />);
-    await screen.findByRole("button", { name: "Add source" });
+    await screen.findByRole("button", { name: "Upload file" });
     writeNarrative("A second narrative.");
-    await waitFor(() =>
-      expect(screen.getByRole("tab", { name: /Analysis\s+out of date/ })).toBeInTheDocument(),
-    );
+    expect(await screen.findByText("Out of date: sources changed")).toBeInTheDocument();
+    expect(topBar().getByRole("button", { name: "Analyze" })).toBeEnabled();
 
     workspace.show("analysis", () => (
       <CaseAnalysisLayout>
@@ -248,8 +269,27 @@ describe("the case workspace", () => {
     await act(async () => {});
 
     expect(await screen.findByText("Out of date")).toBeInTheDocument();
-    expect(screen.getByText("Analysis is based on older sources.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Analyze latest sources" })).toBeInTheDocument();
+    expect(screen.getByText("Out of date: sources changed")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Analyze/ })).toHaveLength(1);
+  });
+
+  it("runs the analysis from the top bar and opens the case", async () => {
+    backend.segment = "sources";
+    backend.start.mockImplementation(async () => {
+      backend.analysis = storedAnalysis();
+      return { ...backend.analysis, freshness: "current" };
+    });
+    renderWorkspace(() => <SourcesPage />);
+
+    const analyze = await topBar().findByRole("button", {
+      name: "Analyze",
+    });
+    await waitFor(() => expect(analyze).toBeEnabled());
+    expect(topBar().getByRole("status")).toHaveTextContent("Not analyzed yet");
+    fireEvent.click(analyze);
+
+    await waitFor(() => expect(backend.start).toHaveBeenCalledOnce());
+    expect(backend.push).toHaveBeenCalledWith(`/case/${caseId}/analysis`);
   });
 
   it("opens the narrative again after the browser closed it during a save that failed", async () => {
@@ -257,7 +297,7 @@ describe("the case workspace", () => {
     const saving = deferred<never>();
     backend.add.mockReturnValue(saving.promise);
     renderWorkspace(() => <SourcesPage />);
-    await screen.findByRole("button", { name: "Add source" });
+    await screen.findByRole("button", { name: "Add narrative" });
 
     writeNarrative("A second narrative.");
     await waitFor(() => expect(backend.add).toHaveBeenCalledOnce());
@@ -271,8 +311,7 @@ describe("the case workspace", () => {
     await act(async () => saving.reject(networkError()));
     fireEvent.click(await screen.findByRole("button", { name: "ปิด" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Add source" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Case narrative" }));
+    openNarrative();
     await waitFor(() => expect(narrativeDialog()).toHaveAttribute("open"));
     expect(screen.getByLabelText("Narrative")).toBeInTheDocument();
   });
@@ -288,9 +327,10 @@ describe("the case workspace", () => {
       </CaseAnalysisLayout>
     ));
 
-    fireEvent.click(await screen.findByRole("button", { name: "Analyze" }));
+    const analyzeButtons = await screen.findAllByRole("button", { name: "Analyze" });
+    fireEvent.click(analyzeButtons.find((button) => !button.closest("header"))!);
 
-    expect(await screen.findByRole("heading", { name: "Summary" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "What happened" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Not analyzed yet" })).not.toBeInTheDocument();
     expect(backend.start).toHaveBeenCalledOnce();
   });
@@ -311,7 +351,7 @@ describe("the case workspace", () => {
       throw timeoutError();
     });
     renderWorkspace(() => <SourcesPage />);
-    await screen.findByRole("button", { name: "Add source" });
+    await screen.findByRole("button", { name: "Upload file" });
 
     fireEvent.change(screen.getByLabelText("Add file"), {
       target: { files: [new File(["%PDF"], "statement.pdf", { type: "application/pdf" })] },
@@ -322,7 +362,7 @@ describe("the case workspace", () => {
   });
 
   it("shows what the server kept of a failed answer, and retries it as the same message", async () => {
-    localStorage.setItem("cybercase:chat-open", "true");
+    localStorage.setItem("cybercase:ask-open", "true");
     backend.chat = { case_id: caseId, messages: [question], pending_question_id: question.id };
     const answer: ChatMessageRead = {
       ...question,
@@ -369,7 +409,7 @@ describe("the case workspace", () => {
     expect(screen.getAllByText(answer.content, { ignore: "textarea" })).toHaveLength(1);
 
     await act(async () => analysing.resolve());
-    expect(await screen.findByRole("heading", { name: "Summary" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "What happened" })).toBeInTheDocument();
     expect(backend.send).toHaveBeenCalledTimes(2);
     const [first, second] = backend.send.mock.calls;
     expect(second[1].idempotencyKey).toBe(first[1].idempotencyKey);

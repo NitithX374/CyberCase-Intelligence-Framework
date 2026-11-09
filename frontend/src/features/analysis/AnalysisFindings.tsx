@@ -8,31 +8,32 @@ import { useSourceDrawer } from "@/features/citations/useSourceDrawer";
 import { CaseFindingsSection } from "./CaseFindingsSection";
 import { useCaseOverview } from "./useCaseOverview";
 
-type FindingsFilter = "all" | "supported" | "not_confirmed";
+type FindingsFilter = "all" | "flagged" | "not_confirmed";
 
-export function AnalysisFindings() {
+function filterFromStatus(status: string | null | undefined): FindingsFilter {
+  return status === "flagged" || status === "not_confirmed" ? status : "all";
+}
+
+export function AnalysisFindings({ heading }: { heading?: ReactNode }) {
   const { caseId } = useParams<{ caseId: string }>();
   const searchParams = useSearchParams();
   const { analysisResult, overview } = useCaseOverview(caseId);
   const drawer = useSourceDrawer();
-  const [filter, setFilter] = useState<FindingsFilter>(() =>
-    searchParams?.get("status") === "not_confirmed" ? "not_confirmed" : "all",
-  );
-
-  if (!analysisResult || !overview.hasAnalysis) return null;
-
   const unconfirmed = overview.findings.filter(
     (finding) => finding.epistemicStatus === "not_confirmed",
   );
-  const supported = overview.findings.filter(
-    (finding) => finding.traceability.semanticSupport === "supported",
+  const flagged = overview.findings.filter(
+    (finding) => finding.traceability.semanticSupport === "not_supported",
   );
+  const [filter, setFilter] = useState<FindingsFilter>(() => {
+    const status = searchParams?.get("status");
+    if (status || searchParams?.get("finding")) return filterFromStatus(status);
+    return flagged.length > 0 ? "flagged" : "all";
+  });
+
+  if (!analysisResult || !overview.hasAnalysis) return null;
   const displayedFindings =
-    filter === "supported"
-      ? supported
-      : filter === "not_confirmed"
-        ? unconfirmed
-        : overview.findings;
+    filter === "flagged" ? flagged : filter === "not_confirmed" ? unconfirmed : overview.findings;
 
   const handleSelectSource = (
     sourceRef: SourceMessageRef,
@@ -42,43 +43,41 @@ export function AnalysisFindings() {
   ) => drawer.toggle({ sourceRef, anchorElement, key, citationRole });
 
   return (
-    <div className="mx-auto w-full max-w-[52rem] px-5 sm:px-8">
-      <div className="pt-6 space-y-4">
-        {(supported.length > 0 || unconfirmed.length > 0 || filter !== "all") && (
-          <div>
-            <div
-              role="group"
-              aria-label="Show findings"
-              className="flex flex-wrap items-center gap-x-5 gap-y-3"
+    <div className="w-full">
+      <div className="card-head">
+        {heading}
+        {(flagged.length > 0 || unconfirmed.length > 0 || filter !== "all") && (
+          <div
+            role="group"
+            aria-label="Show findings"
+            className="inline-flex flex-wrap rounded-[9px] bg-surface-hover p-[3px]"
+          >
+            <FilterButton pressed={filter === "all"} onClick={() => setFilter("all")}>
+              All <Count>{overview.findings.length}</Count>
+            </FilterButton>
+            <FilterButton pressed={filter === "flagged"} onClick={() => setFilter("flagged")}>
+              To check <Count>{flagged.length}</Count>
+            </FilterButton>
+            <FilterButton
+              pressed={filter === "not_confirmed"}
+              onClick={() => setFilter("not_confirmed")}
             >
-              <FilterButton pressed={filter === "all"} onClick={() => setFilter("all")}>
-                All <span className="text-ink-muted">{overview.findings.length}</span>
-              </FilterButton>
-              <FilterButton pressed={filter === "supported"} onClick={() => setFilter("supported")}>
-                Supported <span className="text-established">{supported.length}</span>
-              </FilterButton>
-              <FilterButton
-                pressed={filter === "not_confirmed"}
-                onClick={() => setFilter("not_confirmed")}
-              >
-                Not confirmed <span className="text-unresolved">{unconfirmed.length}</span>
-              </FilterButton>
-            </div>
-            {filter === "not_confirmed" && (
-              <p className="mt-3 max-w-[68ch] text-[13px] leading-6 text-ink-secondary">
-                These findings are marked as not confirmed in the saved analysis. Review their
-                Source linkage and cited text before relying on them; semantic support is shown
-                separately.
-              </p>
-            )}
+              Not confirmed <Count>{unconfirmed.length}</Count>
+            </FilterButton>
           </div>
         )}
       </div>
+      {filter === "not_confirmed" && (
+        <p className="border-b border-line px-6 py-3 text-sm leading-6 text-ink-secondary">
+          These findings are marked as not confirmed in the saved analysis. Review their Source
+          linkage and cited text before relying on them; semantic support is shown separately.
+        </p>
+      )}
 
       {filter !== "all" && displayedFindings.length === 0 ? (
-        <p className="py-6 text-sm text-ink-muted">
-          {filter === "supported"
-            ? "No supported findings in this analysis."
+        <p className="px-6 py-6 text-sm text-ink-muted">
+          {filter === "flagged"
+            ? "No findings to check in this analysis."
             : "No findings marked not confirmed."}
         </p>
       ) : (
@@ -117,11 +116,21 @@ function FilterButton({
       type="button"
       aria-pressed={pressed}
       onClick={onClick}
-      className={`text-[13px] transition-colors ${
-        pressed ? "font-semibold text-ink" : "font-medium text-ink-muted hover:text-ink"
+      className={`inline-flex min-h-9 items-center gap-1.5 rounded-[7px] px-3.5 text-sm transition-colors ${
+        pressed
+          ? "bg-surface font-semibold text-primary shadow-[0_2px_6px_rgba(30,29,27,0.08)]"
+          : "text-ink-muted hover:text-ink"
       }`}
     >
       {children}
     </button>
+  );
+}
+
+function Count({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded-lg bg-primary-soft px-1.5 text-xs font-medium text-primary">
+      {children}
+    </span>
   );
 }

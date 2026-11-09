@@ -10,7 +10,13 @@ import { CaseDetails } from "./CaseDetails";
 import { TechnicalContextView } from "./technical-context/TechnicalContextView";
 import { useCaseOverview } from "./useCaseOverview";
 
-export function AnalysisDetails() {
+export function AnalysisDetails({
+  withTechnical = true,
+  only,
+}: {
+  withTechnical?: boolean;
+  only?: "timeline" | "people" | "impact";
+}) {
   const { caseId } = useParams<{ caseId: string }>();
   const { analysisResult, sources, overview } = useCaseOverview(caseId);
   const drawer = useSourceDrawer();
@@ -30,9 +36,9 @@ export function AnalysisDetails() {
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[52rem] px-5 pt-8 sm:px-8">
+      <div className="w-full pt-4">
         {(detailsFailed || detailsOmitted) && (
-          <div className="mb-6 space-y-1 text-[13px] leading-6 text-ink-secondary">
+          <div className="mb-6 space-y-1 text-sm leading-6 text-ink-secondary">
             {detailsFailed && (
               <p>People, timeline and impacts could not be prepared. The summary is available.</p>
             )}
@@ -51,6 +57,10 @@ export function AnalysisDetails() {
             impacts={overview.impacts}
             onSelectSource={handleSelectSource}
             activeSourceKey={drawer.openKey}
+            only={only}
+            findingNumbers={Object.fromEntries(
+              overview.findings.map((finding) => [finding.id, finding.number]),
+            )}
           />
         ) : (
           <section aria-label="Case details" className="text-sm leading-7 text-ink-secondary">
@@ -68,7 +78,7 @@ export function AnalysisDetails() {
           </section>
         )}
       </div>
-      <TechnicalContextView analysisResult={analysisResult} sources={sources} />
+      {withTechnical && <TechnicalContextView analysisResult={analysisResult} sources={sources} />}
       {drawer.open && (
         <SourceDrawer
           sourceRef={drawer.open.sourceRef}

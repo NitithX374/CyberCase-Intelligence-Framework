@@ -7,7 +7,7 @@ import { casePath } from "@/lib/casePaths";
 import { CaseReportView } from "./CaseReportView";
 
 const stateClassName =
-  "mx-auto min-h-[420px] w-full max-w-[52rem] justify-center px-5 py-16 sm:px-8";
+  "sheet mx-3 mt-5 min-h-[420px] justify-center px-5 py-16 sm:mx-6 sm:px-8 lg:mx-8";
 
 export function ReportPage() {
   const router = useRouter();

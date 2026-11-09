@@ -1,7 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AnalysisSummary } from "@/features/analysis/AnalysisSummary";
-import { useCaseReports } from "@/features/reports/queries";
 import {
   analysisResult,
   caseId,
@@ -46,18 +45,13 @@ vi.mock("@/features/analysis/queries", () => ({
 vi.mock("@/features/sources/queries", () => ({
   useCaseSources: () => ({ data: [source], isLoading: false }),
 }));
-vi.mock("@/features/reports/queries", () => ({ useCaseReports: vi.fn() }));
-
-beforeEach(() => {
-  vi.mocked(useCaseReports).mockReturnValue({ data: [] } as never);
-});
 
 describe("AnalysisSummary with a summary that names its claims", () => {
   it("reads the summary as one paragraph and links each raised number to its finding", () => {
     render(<AnalysisSummary />);
 
     const section = screen
-      .getByRole("heading", { name: "Summary" })
+      .getByRole("heading", { name: "What happened" })
       .closest("section") as HTMLElement;
     const links = within(section).getAllByRole("link");
     expect(

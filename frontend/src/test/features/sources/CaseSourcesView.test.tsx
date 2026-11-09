@@ -105,14 +105,17 @@ describe("CaseSourcesView", () => {
     renderSources(statement);
 
     expect(screen.getAllByText("statement.pdf")).toHaveLength(2);
-    expect(screen.getByRole("tab", { name: "Original" })).toHaveAttribute("aria-selected", "true");
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
+    expect(screen.getByRole("button", { name: "Original" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Text" }));
     expect(screen.getByText("Received statement")).toBeInTheDocument();
   });
 
   it("shows the file size without duplicating source text in the rail", () => {
     renderSources(statement);
-    expect(screen.getByText("2 KB")).toBeInTheDocument();
+    expect(screen.getByText("PDF · 1 page · 2 KB")).toBeInTheDocument();
     expect(screen.queryByText("Received statement")).not.toBeInTheDocument();
   });
 
@@ -120,7 +123,59 @@ describe("CaseSourcesView", () => {
     renderSources(statement);
     expect(screen.getByRole("heading", { level: 2, name: "statement.pdf" })).toBeInTheDocument();
     expect(screen.getByText("PDF · 1 page")).toBeInTheDocument();
-    expect(screen.getByText("2 KB")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^statement\.pdf/ })).toHaveTextContent(
+      "PDF · 1 page · 2 KB",
+    );
+  });
+
+  it("says a file read by OCR was read by OCR instead of giving its size", () => {
+    renderSources({
+      sources: [
+        documentSource(document, "Received statement", {
+          extraction_method: "document_recognition",
+          verification_status: "machine_read",
+          pages: [
+            {
+              page_number: 1,
+              text: "Received statement",
+              text_method: "ocr",
+              verification_status: "machine_read",
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(screen.getByRole("button", { name: /^statement\.pdf/ })).toHaveTextContent(
+      "PDF · 1 page · read by OCR",
+    );
+  });
+
+  it("calls a narrative typed and counts the sources used", () => {
+    renderSources({
+      sources: [
+        caseSource(),
+        caseSource({
+          id: "source-2",
+          exact_text: "The help desk logged a call.",
+          deactivated_at: "2026-10-17T02:00:00Z",
+        }),
+      ],
+      onSetSourceActive: vi.fn().mockResolvedValue(undefined),
+    });
+
+    expect(screen.getByRole("button", { name: /^Files on the shared drive/ })).toHaveTextContent(
+      /Typed · /,
+    );
+    expect(screen.getByRole("button", { name: /^The help desk/ })).toHaveTextContent(
+      /Not used · Typed · /,
+    );
+    expect(screen.getByRole("heading", { level: 2, name: /1 of 2 used/ })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Ticked sources go into the next analysis. Changing a tick makes the current analysis out of date.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("counts the warnings recorded when the file was read", () => {
@@ -131,7 +186,7 @@ describe("CaseSourcesView", () => {
         }),
       ],
     });
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
+    fireEvent.click(screen.getByRole("button", { name: "Text" }));
     expect(screen.getByText("1 extraction warning")).toBeInTheDocument();
   });
 
@@ -144,7 +199,7 @@ describe("CaseSourcesView", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /account-log\.png/i }));
     expect(screen.getByRole("heading", { name: "account-log.png" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
+    fireEvent.click(screen.getByRole("button", { name: "Text" }));
     expect(screen.getByText("Recognized account log")).toBeInTheDocument();
   });
 
@@ -161,7 +216,7 @@ describe("CaseSourcesView", () => {
     expect(
       screen.getByRole("heading", { level: 3, name: "Follow-up answers" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 2, name: "Sources 3" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "In this case 3" })).toBeInTheDocument();
   });
 
   it("lists each file once, by its latest reading, and keeps a turned-off source in its group", () => {
@@ -192,7 +247,7 @@ describe("CaseSourcesView", () => {
     expect(screen.queryByRole("heading", { level: 3, name: "Turned off" })).not.toBeInTheDocument();
 
     fireEvent.click(within(files).getByRole("button"));
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
+    fireEvent.click(screen.getByRole("button", { name: "Text" }));
     expect(screen.getByText("Second reading")).toBeInTheDocument();
     expect(screen.queryByText("First reading")).not.toBeInTheDocument();
   });
@@ -319,7 +374,7 @@ describe("CaseSourcesView", () => {
       onRetryDocument: vi.fn().mockResolvedValue(undefined),
     });
 
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
+    fireEvent.click(screen.getByRole("button", { name: "Text" }));
 
     expect(screen.queryByRole("button", { name: "Retry extraction" })).not.toBeInTheDocument();
   });
@@ -355,18 +410,22 @@ describe("CaseSourcesView", () => {
     expect(definitions).toEqual(["มีหมายจับหรือไม่", "ไม่มี"]);
   });
 
-  it("shows Add source as a labelled primary button, not a bare icon", () => {
+  it("shows Add narrative and Upload file as two visible buttons, with no menu", () => {
     renderSources({ sources: [caseSource()] });
 
-    const button = screen.getByRole("button", { name: "Add source" });
+    const narrative = screen.getByRole("button", { name: "Add narrative" });
+    const upload = screen.getByRole("button", { name: "Upload file" });
 
-    expect(button).toHaveTextContent("Add source");
-    expect(button).not.toContainHTML("sr-only");
-    expect(button).toHaveClass("btn-primary");
-    expect(button).not.toHaveAttribute("title");
+    expect(narrative).toHaveTextContent("Add narrative");
+    expect(narrative).toHaveClass("btn-primary");
+    expect(narrative).not.toHaveAttribute("title");
+    expect(upload).toHaveTextContent("Upload file");
+    expect(upload).not.toHaveAttribute("title");
+    expect(screen.queryByRole("button", { name: "Add source" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
   });
 
-  it("says why Add source is unavailable while an analysis runs", () => {
+  it("says why adding a source is unavailable while an analysis runs", () => {
     renderSources({
       sources: [caseSource()],
       analysis: {
@@ -378,31 +437,58 @@ describe("CaseSourcesView", () => {
       },
     });
 
-    expect(screen.getByRole("button", { name: "Add source" })).toHaveAttribute(
-      "title",
-      "Wait for the analysis to finish",
-    );
+    for (const name of ["Add narrative", "Upload file"]) {
+      const button = screen.getByRole("button", { name });
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute("title", "Wait for the analysis to finish");
+    }
   });
 
-  it("adds a case narrative from the plus menu", async () => {
+  it("adds a case narrative from the Add narrative button", async () => {
     const onAddNarrative = vi.fn().mockResolvedValue(true);
     renderSources({ sources: [caseSource()], onAddNarrative });
 
-    fireEvent.click(screen.getByRole("button", { name: "Add source" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Case narrative" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add narrative" }));
 
     fireEvent.change(screen.getByLabelText("Narrative"), {
       target: { value: "Files were encrypted overnight." },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Add narrative" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Add narrative" }).at(-1)!);
 
     await waitFor(() =>
       expect(onAddNarrative).toHaveBeenCalledWith({ text: "Files were encrypted overnight." }),
     );
   });
 
-  it("offers the analysis under the sources until it has read them", () => {
-    const onAnalyze = vi.fn();
+  it("opens the file picker from the Upload file button", () => {
+    renderSources({ sources: [caseSource()] });
+    const input = screen.getByLabelText("Add file") as HTMLInputElement;
+    const picker = vi.spyOn(input, "click").mockImplementation(() => {});
+
+    fireEvent.click(screen.getByRole("button", { name: "Upload file" }));
+
+    expect(picker).toHaveBeenCalledOnce();
+  });
+
+  it.each(["missing", "stale", "current"] as const)(
+    "has no Analyze button in the rail with %s analysis",
+    (freshness) => {
+      renderSources({
+        sources: [caseSource()],
+        analysis: {
+          freshness,
+          isRunning: false,
+          isWaitingForFollowup: false,
+          canAnalyze: true,
+          onAnalyze: vi.fn(),
+        },
+      });
+
+      expect(screen.queryByRole("button", { name: /Analy[sz]/ })).not.toBeInTheDocument();
+    },
+  );
+
+  it("tells the reader to use Analyze at the top until the sources have been read", () => {
     renderSources({
       sources: [caseSource()],
       analysis: {
@@ -410,12 +496,13 @@ describe("CaseSourcesView", () => {
         isRunning: false,
         isWaitingForFollowup: false,
         canAnalyze: true,
-        onAnalyze,
+        onAnalyze: vi.fn(),
       },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
-    expect(onAnalyze).toHaveBeenCalledOnce();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Not analyzed yet. Use Analyze at the top when the sources are ready.",
+    );
   });
 
   it("says when the sources changed since the last analysis", () => {
@@ -430,14 +517,14 @@ describe("CaseSourcesView", () => {
       },
     });
 
-    expect(screen.getByText("Sources changed since the last analysis")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Analyze latest" })).toBeEnabled();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "The analysis is out of date. Sources changed since it was made. Use Analyze at the top.",
+    );
   });
 
   it.each(["missing", "current", "stale"] as const)(
-    "blocks Analyze while awaiting an answer with %s analysis",
+    "says it is waiting for an answer, with %s analysis, and still lets a source be added",
     (freshness) => {
-      const onAnalyze = vi.fn();
       renderSources({
         sources: [caseSource()],
         analysis: {
@@ -445,15 +532,16 @@ describe("CaseSourcesView", () => {
           isRunning: false,
           isWaitingForFollowup: true,
           canAnalyze: false,
-          onAnalyze,
+          onAnalyze: vi.fn(),
         },
       });
-      const button = screen.getByRole("button", { name: /^Analyze/ });
-      expect(button).toBeDisabled();
-      fireEvent.click(button);
-      expect(onAnalyze).not.toHaveBeenCalled();
-      expect(screen.getByText(/continue automatically/)).toBeVisible();
-      expect(screen.getByRole("button", { name: "Add source" })).toBeEnabled();
+
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Waiting for your answer in Ask. The analysis continues when you answer.",
+      );
+      expect(screen.queryByRole("button", { name: /Analy[sz]/ })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Add narrative" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Upload file" })).toBeEnabled();
     },
   );
 
@@ -469,10 +557,11 @@ describe("CaseSourcesView", () => {
       },
     });
 
-    expect(screen.queryByRole("button", { name: /Analyze/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Analy[sz]/ })).not.toBeInTheDocument();
   });
 
-  it("shows a run in progress instead of a second button", () => {
+  it("shows a run in progress as a note, not a button", () => {
     renderSources({
       sources: [caseSource()],
       analysis: {
@@ -484,7 +573,8 @@ describe("CaseSourcesView", () => {
       },
     });
 
-    expect(screen.getByRole("button", { name: "Analyzing…" })).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent("Analyzing the sources…");
+    expect(screen.queryByRole("button", { name: /Analy[sz]/ })).not.toBeInTheDocument();
   });
 
   it("does not let a source be added while an analysis runs", () => {
@@ -499,11 +589,11 @@ describe("CaseSourcesView", () => {
       },
     });
 
-    expect(screen.getByRole("button", { name: "Add source" })).toBeDisabled();
-    expect(screen.getByLabelText("Add file")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add narrative" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Upload file" })).toBeDisabled();
   });
 
-  it("disables the choices of an add menu that was already open when an analysis began", () => {
+  it("disables both add buttons when an analysis begins", () => {
     const props: React.ComponentProps<typeof CaseSourcesView> = {
       caseId: "case-1",
       sources: [caseSource()],
@@ -530,13 +620,13 @@ describe("CaseSourcesView", () => {
       </QueryClientProvider>
     );
     const { rerender } = render(view(false));
-    fireEvent.click(screen.getByRole("button", { name: "Add source" }));
-    expect(screen.getByRole("menuitem", { name: "File" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Add narrative" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Upload file" })).toBeEnabled();
 
     rerender(view(true));
 
-    expect(screen.getByRole("menuitem", { name: "File" })).toBeDisabled();
-    expect(screen.getByRole("menuitem", { name: "Case narrative" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add narrative" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Upload file" })).toBeDisabled();
   });
 
   it("lets a source be added when no analysis runs", () => {
@@ -551,11 +641,12 @@ describe("CaseSourcesView", () => {
       },
     });
 
-    expect(screen.getByRole("button", { name: "Add source" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Add narrative" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Upload file" })).toBeEnabled();
     expect(screen.getByLabelText("Add file")).toBeEnabled();
   });
 
-  it("waits for an upload to finish before analyzing", () => {
+  it("waits for an upload to finish before more is added, and says the file is being read", () => {
     renderSources({
       sources: [caseSource()],
       isUploading: true,
@@ -569,7 +660,35 @@ describe("CaseSourcesView", () => {
       },
     });
 
-    expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add narrative" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Upload file" })).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent("Reading the new file…");
+  });
+
+  it("marks a turned-off source as not used beside its checkbox", () => {
+    renderSources({
+      sources: [
+        caseSource(),
+        caseSource({
+          id: "source-2",
+          exact_text: "The help desk logged a call.",
+          deactivated_at: "2026-10-17T02:00:00Z",
+        }),
+      ],
+      onSetSourceActive: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const used = screen.getByRole("checkbox", { name: /Include in the analysis: Files on/ });
+    const unused = screen.getByRole("checkbox", { name: /Include in the analysis: The help desk/ });
+    expect(used).toBeVisible();
+    expect(used).toBeChecked();
+    expect(unused).not.toBeChecked();
+    expect(screen.getByRole("button", { name: /Files on the shared drive/ })).not.toHaveTextContent(
+      "Not used",
+    );
+    expect(screen.getByRole("button", { name: /The help desk logged a call/ })).toHaveTextContent(
+      "Not used ·",
+    );
   });
 
   it("starts an empty case with a narrative or a file", async () => {
@@ -591,7 +710,7 @@ describe("CaseSourcesView", () => {
 
   it("renders one card per extracted page", () => {
     renderSources(pagedDocument(2));
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
+    fireEvent.click(screen.getByRole("button", { name: "Text" }));
 
     expect(screen.getByText("Page 1")).toBeInTheDocument();
     expect(screen.getByText("Page 1 content")).toBeInTheDocument();
@@ -602,7 +721,7 @@ describe("CaseSourcesView", () => {
 
   it("offers page links once a document is long enough to need them", () => {
     renderSources(pagedDocument(5));
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
+    fireEvent.click(screen.getByRole("button", { name: "Text" }));
 
     expect(screen.getByRole("navigation", { name: "Page navigation" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Go to page 1" })).toBeInTheDocument();
@@ -611,11 +730,104 @@ describe("CaseSourcesView", () => {
 
   it("renders side-by-side comparison view with original file and extracted text", async () => {
     renderSources(pagedDocument(2));
-    fireEvent.click(screen.getByRole("tab", { name: "Side by side" }));
+    fireEvent.click(screen.getByRole("button", { name: "Side by side" }));
 
     expect(await screen.findByTitle("Original file: multi-page.pdf")).toBeInTheDocument();
     expect(screen.getByText("Page 1")).toBeInTheDocument();
     expect(screen.getByText("Page 1 content")).toBeInTheDocument();
+  });
+
+  it("calls the text of an OCR-read file machine-read and says to check it against the original", () => {
+    renderSources({
+      sources: [
+        documentSource(document, "Received statement", {
+          extraction_method: "document_recognition",
+          verification_status: "machine_read",
+          pages: [
+            {
+              page_number: 1,
+              text: "Received statement",
+              text_method: "ocr",
+              verification_status: "machine_read",
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(screen.queryByRole("button", { name: "Text" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Machine-read text" }));
+
+    expect(
+      screen.getByText("Read by OCR. Check names, dates and numbers against the original."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Received statement")).toBeInTheDocument();
+    expect(screen.queryByText("This page needs review against the original.")).toBeNull();
+  });
+
+  it("keeps Text and adds no line for a file whose text comes from the file itself", () => {
+    renderSources({
+      sources: [
+        documentSource(document, "Received statement", {
+          extraction_method: "native_docx",
+          verification_status: "native",
+          pages: [
+            {
+              page_number: 1,
+              text: "Received statement",
+              text_method: "native",
+              verification_status: "native",
+            },
+          ],
+        }),
+      ],
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Text" }));
+
+    expect(screen.queryByRole("button", { name: "Machine-read text" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Read by OCR/)).not.toBeInTheDocument();
+  });
+
+  it("says in words which page needs review against the original", () => {
+    renderSources({
+      sources: [
+        documentSource(document, "first page", {
+          extraction_method: "document_recognition",
+          verification_status: "needs_review",
+          pages: [
+            {
+              page_number: 1,
+              text: "first page",
+              text_method: "ocr",
+              verification_status: "machine_read",
+            },
+            { page_number: 2, text: "", text_method: "ocr", verification_status: "needs_review" },
+          ],
+        }),
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Machine-read text" }));
+
+    const page = (number: number) =>
+      screen.getByText(`Page ${number}`).closest("section") as HTMLElement;
+    expect(within(page(2)).getByText("This page needs review against the original.")).toBeVisible();
+    expect(within(page(1)).queryByText(/needs review/)).not.toBeInTheDocument();
+    expect(screen.getAllByText("This page needs review against the original.")).toHaveLength(1);
+  });
+
+  it("shows the line in the side-by-side view too", async () => {
+    renderSources({
+      sources: [
+        documentSource(document, "Received statement", {
+          verification_status: "machine_read",
+        }),
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Side by side" }));
+
+    expect(await screen.findByTitle("Original file: statement.pdf")).toBeInTheDocument();
+    expect(screen.getByText(/Read by OCR/)).toBeInTheDocument();
   });
 
   it("renders the in-flight pending document item when uploading", () => {
@@ -623,7 +835,7 @@ describe("CaseSourcesView", () => {
 
     expect(screen.getByText("forensic_report.pdf")).toBeInTheDocument();
     expect(screen.getByText("Extracting text…")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 2, name: "Sources 1" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "In this case 1" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "No sources yet" })).not.toBeInTheDocument();
   });
 });

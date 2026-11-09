@@ -11,6 +11,7 @@ type GapStatus = "NOT_PROVIDED" | "EXPLICITLY_UNKNOWN" | "AMBIGUOUS" | "CONFLICT
 
 export interface CaseFinding {
   id: string;
+  number: number;
   text: string;
   claimType: ClaimType;
   epistemicStatus: EpistemicStatus;

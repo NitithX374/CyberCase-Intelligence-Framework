@@ -247,9 +247,60 @@ describe("extracted claim view context", () => {
         activeSourceKey={null}
       />,
     );
-    expect(screen.getByText("No role extracted; check the linked claim")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Related findings"));
-    expect(screen.getByLabelText("Related findings")).toHaveTextContent("Jane is the complainant.");
+    expect(screen.getByText("Role not identified")).toBeInTheDocument();
+    expect(screen.queryByText(/no role|not stated|not given/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Jane is the complainant.")).toBeVisible();
+    expect(screen.queryByText("Related findings")).not.toBeInTheDocument();
+  });
+
+  it("lists what each party did, each line linking to its finding without a code", () => {
+    render(
+      <CaseDetails
+        parties={[
+          {
+            name: "Jane",
+            role: "complainant",
+            sources: [],
+            unconfirmed: [],
+            linkedClaims: [{ id: "A-01", text: "Jane reported the transfer." }],
+          },
+        ]}
+        timeline={[]}
+        impacts={[]}
+        caseId="case-1"
+        findingNumbers={{ "A-01": 3 }}
+        onSelectSource={vi.fn()}
+        activeSourceKey={null}
+      />,
+    );
+    expect(screen.queryByText(/F0?3/)).not.toBeInTheDocument();
+    expect(screen.getByText("3")).toBeVisible();
+    expect(screen.getByText("complainant")).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Finding 3: Jane reported the transfer." }),
+    ).toHaveAttribute("href", "/case/case-1/analysis/findings?finding=A-01");
+  });
+
+  it("sets an amount from an impact large, exactly as written, and puts it first", () => {
+    render(
+      <CaseDetails
+        parties={[]}
+        timeline={[]}
+        impacts={[
+          { description: "The account was locked.", sources: [], unconfirmed: [] },
+          {
+            description: "A transfer of 485,000 baht went to an unknown account.",
+            sources: [],
+            unconfirmed: [],
+          },
+        ]}
+        onSelectSource={vi.fn()}
+        activeSourceKey={null}
+      />,
+    );
+    const items = screen.getAllByRole("listitem");
+    expect(items[0]).toHaveTextContent(/^485,000 baht/);
+    expect(items[1]).toHaveTextContent("The account was locked.");
   });
 
   it("keeps original attribution visible without implying a semantic check or Judgement admission", () => {
@@ -289,7 +340,7 @@ describe("extracted claim view context", () => {
     expect(
       screen.getByText("No date or time extracted; check the linked claim"),
     ).toBeInTheDocument();
-    expect(screen.getAllByText("Related findings")).toHaveLength(2);
+    expect(screen.getAllByText("Related findings")).toHaveLength(1);
     fireEvent.click(screen.getAllByText("Related findings")[0]);
     expect(screen.getAllByRole("link", { name: "View finding" })[0]).toHaveAttribute(
       "href",

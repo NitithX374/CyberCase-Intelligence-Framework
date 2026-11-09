@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { StrictMode, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CaseSourceRead } from "@/lib/api/types";
@@ -66,14 +66,43 @@ function expectLive(url: string | null) {
   expect(urls.revoked.has(url!)).toBe(false);
 }
 
+describe("the view switcher of a source file", () => {
+  it("is a group of buttons the keyboard reaches, with the current view pressed", () => {
+    renderViewer(fileItem("statement.pdf", "application/pdf"));
+    const group = within(screen.getByRole("group", { name: "Source representation" }));
+
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    expect(group.getAllByRole("button").map((button) => button.textContent)).toEqual([
+      "Original",
+      "Text",
+      "Side by side",
+    ]);
+    for (const button of group.getAllByRole("button")) {
+      expect(button.tabIndex).toBe(0);
+    }
+    expect(group.getByRole("button", { name: "Original" })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(group.getByRole("button", { name: "Side by side" }));
+
+    expect(group.getByRole("button", { name: "Side by side" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(group.getByRole("button", { name: "Original" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+});
+
 describe("the original file of a source", () => {
   it("keeps the download link live after switching to the text and back", async () => {
     renderViewer(fileItem("statement.docx", "application/octet-stream"));
     const first = await screen.findByRole("link", { name: "Download file" });
     expectLive(first.getAttribute("href"));
 
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
-    fireEvent.click(screen.getByRole("tab", { name: "Original" }));
+    fireEvent.click(screen.getByRole("button", { name: "Text" }));
+    fireEvent.click(screen.getByRole("button", { name: "Original" }));
 
     const again = await screen.findByRole("link", { name: "Download file" });
     expectLive(again.getAttribute("href"));
@@ -83,8 +112,8 @@ describe("the original file of a source", () => {
     renderViewer(fileItem("statement.pdf", "application/pdf"));
     expectLive((await screen.findByTitle("Original file: statement.pdf")).getAttribute("src"));
 
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
-    fireEvent.click(screen.getByRole("tab", { name: "Original" }));
+    fireEvent.click(screen.getByRole("button", { name: "Text" }));
+    fireEvent.click(screen.getByRole("button", { name: "Original" }));
 
     expectLive((await screen.findByTitle("Original file: statement.pdf")).getAttribute("src"));
   });

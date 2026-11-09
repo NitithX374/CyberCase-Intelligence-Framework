@@ -9,7 +9,7 @@ import { useBlobUrl } from "@/lib/useBlobUrl";
 import { fetchCaseDocumentContent } from "./api";
 import type { RailItem } from "./SourceRail";
 import type { PreviewMode } from "./SourceViewport";
-import { documentPages } from "./sourcePresentation";
+import { documentPages, readByOcr } from "./sourcePresentation";
 
 type FileItem = Extract<RailItem, { kind: "file" }>;
 
@@ -60,13 +60,13 @@ export function TextSourcePreview({ question, text }: { question: string | null;
             <dl className="space-y-6">
               <div>
                 <dt className="text-xs font-medium text-ink-muted">Question</dt>
-                <dd className="mt-1.5 whitespace-pre-wrap break-words text-[15px] leading-8 text-ink-secondary">
+                <dd className="mt-1.5 whitespace-pre-wrap break-words text-base leading-8 text-ink-secondary">
                   {question}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs font-medium text-ink-muted">Answer</dt>
-                <dd className="mt-1.5 break-words text-[15px] leading-8 text-ink">
+                <dd className="mt-1.5 break-words text-base leading-8 text-ink">
                   <Markdown content={text} allowHtml />
                 </dd>
               </div>
@@ -152,13 +152,18 @@ function ExtractedTextPreview({
   const warnings = warningsList.length;
 
   return (
-    <div role="tabpanel" aria-label="Extracted text" className="h-full overflow-auto p-4 sm:p-8">
+    <div role="region" aria-label="Extracted text" className="h-full overflow-auto p-4 sm:p-8">
       <div className="mx-auto max-w-3xl space-y-6">
+        {readByOcr(source) && (
+          <p className="text-sm leading-6 text-ink-secondary">
+            Read by OCR. Check names, dates and numbers against the original.
+          </p>
+        )}
         {(warnings > 0 || pages.length >= PAGE_JUMP_THRESHOLD || onRetry) && (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               {warnings > 0 && (
-                <details className="group rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[13px] text-unresolved">
+                <details className="group rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-sm text-unresolved">
                   <summary className="flex cursor-pointer items-center gap-1.5 font-medium select-none">
                     <Icon name="alert" className="h-4 w-4 shrink-0" />
                     <span>{plural(warnings, "extraction warning")}</span>
@@ -219,6 +224,11 @@ function ExtractedTextPreview({
           return (
             <div key={page.pageNumber} id={`ocr-page-${page.pageNumber}`} className="scroll-mt-4">
               <Paper label={`Page ${page.pageNumber}`}>
+                {page.needsReview && (
+                  <p className="mb-3 text-xs font-medium text-unresolved">
+                    This page needs review against the original.
+                  </p>
+                )}
                 {page.text.trim() ? (
                   <Markdown content={page.text} allowHtml />
                 ) : (

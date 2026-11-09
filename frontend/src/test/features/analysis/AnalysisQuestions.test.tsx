@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AnalysisQuestions } from "@/features/analysis/AnalysisQuestions";
+import { AnalysisQuestions, AnalysisQuestionsCard } from "@/features/analysis/AnalysisQuestions";
 import type { CaseAnalysisClaim, CaseAnalysisGap } from "@/lib/api/types";
 import {
   analysisResult,
@@ -54,7 +54,7 @@ describe("AnalysisQuestions", () => {
     state.gaps = [gap({})];
     render(<AnalysisQuestions />);
 
-    expect(screen.getByRole("heading", { name: "How much" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "How much · Missing" })).toBeInTheDocument();
     expect(screen.queryByText("how_much")).not.toBeInTheDocument();
     expect(screen.getByText("The total value taken from room 503 is unknown.")).toBeInTheDocument();
     expect(screen.getByText("Needs an answer")).toBeInTheDocument();
@@ -63,10 +63,18 @@ describe("AnalysisQuestions", () => {
   });
 
   it("keeps a topic the analysis wrote in words", () => {
-    state.gaps = [gap({ gap_key: "log_file", topic: "Whether a log file exists" })];
+    state.gaps = [
+      gap({
+        gap_key: "log_file",
+        topic: "Whether a log file exists",
+        status: "EXPLICITLY_UNKNOWN",
+      }),
+    ];
     render(<AnalysisQuestions />);
 
-    expect(screen.getByRole("heading", { name: "Whether a log file exists" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Whether a log file exists · Unknown" }),
+    ).toBeInTheDocument();
   });
 
   it("says nothing is missing when the analysis left no questions", () => {
@@ -108,5 +116,46 @@ describe("AnalysisQuestions", () => {
 
     expect(screen.getAllByRole("button", { name: /Why it matters/ })).toHaveLength(2);
     expect(screen.queryByRole("button", { name: /Affected findings/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("AnalysisQuestionsCard", () => {
+  beforeEach(() => {
+    state.claims = [];
+  });
+
+  const card = () =>
+    screen.getByRole("heading", { name: "Open questions" }).closest("section") as HTMLElement;
+
+  it("counts the open questions and lists them under their own heading", () => {
+    state.gaps = [gap({})];
+    render(<AnalysisQuestionsCard />);
+
+    expect(card()).toHaveAttribute("id", "section-attention");
+    expect(within(card()).getByText("1")).toBeInTheDocument();
+    expect(
+      within(card()).getByText("The total value taken from room 503 is unknown."),
+    ).toBeInTheDocument();
+  });
+
+  it("leaves flagged findings to the findings list", () => {
+    state.claims = [
+      claim("Room 503 was broken into.", source.id, {
+        semantic_grounding: { verdict: "not_supported", reason: "lr_not_supported" },
+      }),
+    ];
+    state.gaps = [gap({})];
+    render(<AnalysisQuestionsCard />);
+
+    expect(within(card()).queryByText("Room 503 was broken into.")).not.toBeInTheDocument();
+    expect(within(card()).queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("says when no question is open, with no count", () => {
+    state.gaps = [];
+    render(<AnalysisQuestionsCard />);
+
+    expect(within(card()).getByText("Nothing is missing from this analysis.")).toBeInTheDocument();
+    expect(within(card()).queryByText("0")).not.toBeInTheDocument();
   });
 });
