@@ -35,7 +35,7 @@ const units: SummaryUnit[] = [
   unit({
     text: "but someone is to blame",
     closing: ".",
-    supportNote: "Not linked to any claim.",
+    supportNote: "Not linked to any finding.",
     noteMark: "b",
   }),
 ];
@@ -102,9 +102,9 @@ describe("Summary units", () => {
     expect(notes).toEqual([
       "Raised numbers are finding numbers; each opens its finding.",
       "a Some cited quotations were not found in the sources.",
-      "b Not linked to any claim.",
+      "b Not linked to any finding.",
     ]);
-    expect(screen.getAllByText("Not linked to any claim.", { exact: false })).toHaveLength(1);
+    expect(screen.getAllByText("Not linked to any finding.", { exact: false })).toHaveLength(1);
   });
 
   it("gives a unit whose claims are all checked no letter and no note", () => {

@@ -102,7 +102,7 @@ export function CaseLibraryPage() {
           </span>
           CyberCase
         </span>
-        <span aria-hidden="true" className="mx-3 -mt-2 mb-4 h-px bg-primary" />
+        <span aria-hidden="true" className="mx-3 -mt-2 mb-4 h-px bg-espresso-line" />
         <span
           aria-current="page"
           className="flex min-h-11 items-center gap-3.5 rounded-lg bg-primary px-3.5 text-sm font-semibold"
@@ -126,10 +126,7 @@ export function CaseLibraryPage() {
                 href={caseDestination(caseRecord)}
                 className="group flex min-h-11 items-center gap-3.5 rounded-lg px-3.5 text-sm text-white/85 transition-colors hover:bg-espresso-raised hover:text-white focus-visible:outline-white"
               >
-                <Icon
-                  name="case"
-                  className="shrink-0 text-[22px] transition-transform duration-200 group-hover:translate-x-0.5"
-                />
+                <Icon name="case" className="shrink-0 text-[22px]" />
                 <span className="truncate" title={caseRecord.title}>
                   {caseRecord.title}
                 </span>
@@ -138,7 +135,7 @@ export function CaseLibraryPage() {
           </nav>
         )}
       </aside>
-      <main className="rise-in min-w-0 flex-1 px-3 pt-4 pb-12 sm:px-6 lg:px-8 lg:pt-5">
+      <main className="min-w-0 flex-1 px-3 pt-4 pb-12 sm:px-6 lg:px-8 lg:pt-5">
         <header className="flex min-h-12 items-center gap-3 border-b border-line-strong pb-4">
           <span className="flex items-center gap-2.5 text-base font-semibold text-ink lg:hidden">
             <CyberCaseLogo size={26} />
@@ -153,7 +150,7 @@ export function CaseLibraryPage() {
 
         {cases.length > 0 && (
           <>
-            <div className="ruled rise-in relative mt-5 overflow-hidden rounded-xl bg-primary px-5 py-6 text-white sm:px-8 sm:py-7">
+            <div className="relative mt-5 overflow-hidden rounded-xl bg-primary px-5 py-6 text-white sm:px-8 sm:py-7">
               <div className="relative flex flex-wrap items-center gap-5">
                 <div className="min-w-0 flex-1">
                   <p className="text-2xl font-bold tracking-[-0.01em] sm:text-3xl">
@@ -179,7 +176,7 @@ export function CaseLibraryPage() {
 
             <div
               role="group"
-              aria-label="Show cases"
+              aria-label="Filter by status"
               className="mt-5 grid grid-cols-2 gap-5 xl:grid-cols-4"
             >
               {STATUS_CARDS.map((card, index) => (
@@ -189,7 +186,7 @@ export function CaseLibraryPage() {
                   aria-pressed={status === card.status}
                   onClick={() => setStatus(card.status)}
                   style={{ ["--i" as string]: index + 1, ["--step" as string]: "60ms" }}
-                  className={`sheet stagger lift px-5 py-4 text-left active:scale-[0.99] ${
+                  className={`sheet px-5 py-4 text-left transition-colors hover:bg-surface-nested ${
                     status === card.status ? "ring-2 ring-primary" : ""
                   }`}
                 >
@@ -266,6 +263,7 @@ export function CaseLibraryPage() {
                       aria-hidden="true"
                       className="-mx-5 mt-4 flex gap-4 border-t border-line bg-surface-nested px-5 py-2.5 text-xs font-semibold tracking-[0.08em] text-ink-muted uppercase sm:-mx-6 sm:px-6"
                     >
+                      <span className="w-7 shrink-0">No.</span>
                       <span className="flex-1">Case</span>
                       <span>Status</span>
                       <span className="hidden w-32 text-right sm:block">Updated</span>

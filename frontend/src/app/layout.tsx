@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, Mitr, Red_Hat_Mono } from "next/font/google";
 import "./globals.css";
-import "boxicons/css/boxicons.min.css";
 import Providers from "./providers";
 
 const dmSans = DM_Sans({

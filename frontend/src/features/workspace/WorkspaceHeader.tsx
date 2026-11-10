@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useCountUp } from "@/lib/motion";
 import { Icon, type IconName } from "@/components/icons";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { formatDate } from "@/lib/format";
@@ -27,17 +27,26 @@ interface WorkspaceHeaderProps {
   onRenameCase?: (title: string) => void;
   isChatOpen?: boolean;
   onToggleChat?: () => void;
+  waitingQuestions?: number;
 }
 
 const viewLabels: Record<WorkspaceView, string> = {
-  analysis: "Reading",
-  legal: "Reading",
+  analysis: "Findings",
+  legal: "Findings",
   sources: "Sources",
   report: "Report",
 };
 
+const sectionLabels: Record<string, string> = {
+  timeline: "Timeline",
+  people: "People",
+  impact: "Impact",
+  technical: "ATT&CK techniques",
+  legal: "Related laws",
+};
+
 const compactTabs: Array<{ view: WorkspaceView; label: string; icon: IconName }> = [
-  { view: "analysis", label: "Reading", icon: "findings" },
+  { view: "analysis", label: "Findings", icon: "findings" },
   { view: "sources", label: "Sources", icon: "sources" },
   { view: "report", label: "Report", icon: "report" },
 ];
@@ -60,11 +69,13 @@ export function WorkspaceHeader({
   onRenameCase,
   isChatOpen = true,
   onToggleChat,
+  waitingQuestions = 0,
 }: WorkspaceHeaderProps) {
   const [renaming, setRenaming] = useState(false);
   const displayCaseTitle = activeCase?.title || "New case";
   const currentView: WorkspaceView = activeView === "legal" ? "analysis" : activeView;
   const caseId = activeCase?.id;
+  const section = usePathname()?.match(/\/analysis\/([^/?#]+)/)?.[1];
 
   const titleRow = (onBand: boolean) => (
     <div className="flex min-w-0 items-center gap-2">
@@ -146,19 +157,41 @@ export function WorkspaceHeader({
           <span aria-hidden="true" className="px-2">
             ›
           </span>
-          {viewLabels[activeView]}
+          {(currentView === "analysis" && sectionLabels[section ?? ""]) || viewLabels[activeView]}
         </p>
         {onToggleChat && (
           <button
+            id="ask-toggle"
             type="button"
             onClick={onToggleChat}
-            aria-label={isChatOpen ? "Close Ask" : "Open Ask"}
+            aria-label={
+              isChatOpen
+                ? "Close Ask"
+                : waitingQuestions > 0
+                  ? `Open Ask, ${waitingQuestions} question waiting`
+                  : "Open Ask"
+            }
             aria-pressed={isChatOpen}
             aria-controls="workspace-chat-panel"
-            className={`btn-ghost ${isChatOpen ? "bg-primary-soft text-primary hover:bg-primary-soft" : ""}`}
+            className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-lg px-3.5 text-sm font-semibold transition-[background-color,border-color,transform] active:scale-[0.98] ${
+              isChatOpen
+                ? "border border-line-strong bg-surface text-ink hover:bg-surface-hover"
+                : "bg-espresso text-white hover:bg-espresso-raised"
+            }`}
           >
             <Icon name="chat" className="text-xl" />
-            <span className="hidden sm:inline">Ask about this case</span>
+            <span className="hidden sm:inline">
+              {isChatOpen
+                ? "Close Ask"
+                : waitingQuestions > 0
+                  ? "Question waiting"
+                  : "Ask about this case"}
+            </span>
+            {!isChatOpen && waitingQuestions > 0 && (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-primary px-1.5 text-xs font-bold text-white tabular-nums">
+                {waitingQuestions}
+              </span>
+            )}
           </button>
         )}
         <AccountMenu
@@ -188,35 +221,32 @@ export function WorkspaceHeader({
           )}
         </div>
       ) : (
-        <div className="ruled relative overflow-hidden rounded-xl bg-primary px-5 py-6 text-white sm:px-8 sm:py-7">
+        <div className="relative overflow-hidden rounded-xl bg-primary px-5 py-6 text-white sm:px-8 sm:py-7">
           <div className="relative flex flex-wrap items-center gap-6">
             <div className="min-w-0 flex-1 basis-full sm:basis-0">
               {titleRow(true)}
-              <div className="mt-3 flex flex-wrap gap-2 text-xs whitespace-nowrap">
+              <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white">
                 {sourceCount !== undefined && (
-                  <span className="hidden items-center gap-1.5 rounded-md border border-white/40 px-3 py-1 sm:inline-flex">
-                    <Icon name="sources" />
-                    {sourceCount} {sourceCount === 1 ? "source" : "sources"}
+                  <span className="hidden sm:inline">
+                    {sourceCount} {sourceCount === 1 ? "source" : "sources"} ·
                   </span>
                 )}
                 {analysedAt && (
-                  <span className="hidden items-center gap-1.5 rounded-md border border-white/40 px-3 py-1 sm:inline-flex">
-                    <Icon name="timeline" />
-                    Analyzed {formatDate(analysedAt, "dayTime")}
+                  <span className="hidden sm:inline">
+                    Analyzed {formatDate(analysedAt, "dayTime")} ·
                   </span>
                 )}
                 <span
                   role="status"
-                  className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1 ${
+                  className={
                     statusNeedsAttention
-                      ? "border-white bg-white font-semibold text-primary"
-                      : "border-white/40"
-                  }`}
+                      ? "rounded-md bg-white px-2 py-0.5 font-semibold text-primary"
+                      : undefined
+                  }
                 >
-                  <Icon name={statusNeedsAttention ? "alert" : "check"} />
                   {status}
                 </span>
-              </div>
+              </p>
               <div className="mt-5 flex flex-wrap gap-3">
                 {onAnalyze && (
                   <button
@@ -292,8 +322,6 @@ const RING_RADIUS = 50;
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 
 function FlagRing({ flagged, total }: { flagged: number; total: number }) {
-  const countRef = useRef<HTMLSpanElement | null>(null);
-  useCountUp(countRef, flagged, 700);
   const offset = RING_LENGTH * (1 - (total ? flagged / total : 0));
   return (
     <div className="relative flex h-28 w-28 items-center justify-center">
@@ -317,13 +345,11 @@ function FlagRing({ flagged, total }: { flagged: number; total: number }) {
           strokeLinecap="round"
           strokeDasharray={RING_LENGTH}
           strokeDashoffset={offset}
-          className="ring-draw"
-          style={{ ["--ring-len" as string]: `${RING_LENGTH}` }}
         />
       </svg>
       <div className="relative flex flex-col items-center leading-tight">
         <span className="text-2xl font-bold tabular-nums">
-          <span ref={countRef}>{flagged}</span>/{total}
+          <span>{flagged}</span>/{total}
         </span>
         <span className="text-xs text-white">to check</span>
       </div>

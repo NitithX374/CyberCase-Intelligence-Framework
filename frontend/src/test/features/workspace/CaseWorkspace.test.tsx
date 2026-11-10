@@ -156,8 +156,8 @@ describe("a case that does not exist", () => {
   it("says so in Thai and points back to the case list, with nothing to retry", () => {
     renderLayout();
 
-    expect(screen.getByRole("heading", { name: "ไม่พบคดีนี้" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "กลับไปที่รายการคดี" })).toHaveAttribute(
+    expect(screen.getByRole("heading", { name: "ไม่พบเคสนี้" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "กลับไปที่รายการเคส" })).toHaveAttribute(
       "href",
       "/case",
     );
@@ -178,7 +178,7 @@ describe("a case that does not exist", () => {
     renderLayout(<p>the case page</p>);
 
     expect(screen.getByText("the case page")).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "ไม่พบคดีนี้" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "ไม่พบเคสนี้" })).not.toBeInTheDocument();
   });
 
   it("keeps the workspace when a different refusal shares the status", () => {
@@ -224,7 +224,7 @@ describe("an analysis run started from a page", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog.querySelector("#meaningful-error-message")).toHaveTextContent(
-      "แหล่งข้อมูลของคดีเปลี่ยนไประหว่างการวิเคราะห์ กรุณาวิเคราะห์อีกครั้ง",
+      "Source ของเคสเปลี่ยนไประหว่างการวิเคราะห์ กรุณาวิเคราะห์อีกครั้ง",
     );
     expect(state.push).not.toHaveBeenCalled();
   });

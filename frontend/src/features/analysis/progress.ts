@@ -19,14 +19,14 @@ export interface ProgressRow {
 }
 
 const STEP_LABELS: Record<AnalysisStepName, string> = {
-  warmup: "Start the model server",
+  warmup: "Wake the analysis service",
   assess: "Check what is missing",
-  gate: "Check if ATT&CK applies",
-  retrieve: "Fetch ATT&CK context",
+  gate: "Look for technical signs",
+  retrieve: "Look up ATT&CK and Thai law",
   read: "Read the sources",
   bind: "Link findings to sources",
-  verify: "Check source support",
-  views: "Prepare case details",
+  verify: "Screen findings against the sources",
+  views: "List people, dates and impacts",
   judge: "Write the summary",
 };
 

@@ -87,7 +87,7 @@ describe("the steps an analysis has reached", () => {
       { step: "gate", state: "waiting" },
     ]);
     expect(rows[0].seconds).toBeCloseTo(274.8);
-    expect(rows[0].label).toBe("Start the model server");
+    expect(rows[0].label).toBe("Wake the analysis service");
     expect(
       progressRows([{ step: "warmup", elapsed: 0, reachedAt: 1_000 }], 5_000).map(
         (row) => row.step,

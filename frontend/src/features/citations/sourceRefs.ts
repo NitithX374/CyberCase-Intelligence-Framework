@@ -100,6 +100,8 @@ function sourceRef(source: CaseSourceRef, citation: CaseSourceCitation | null): 
     filename: source.filename,
     pageNumbers,
     sourcePages: pages,
+    sourceText: source.text,
+    allPages: source.pages,
     question: source.question,
     ...(quote && citation
       ? {
@@ -113,8 +115,9 @@ function sourceRef(source: CaseSourceRef, citation: CaseSourceCitation | null): 
 
 function sourceIdentity(source: CaseSourceRef): string {
   if (source.filename) return source.filename;
-  if (source.kind === "followup_answer") return `Follow-up answer ${source.id}`;
-  return `Case narrative #${source.ordinal}`;
+  if (source.kind === "followup_answer")
+    return `Your answer ${Number(source.id.replace(/[^0-9]/g, "")) || source.ordinal}`;
+  return `Narrative ${source.ordinal}`;
 }
 
 function sourcePages(row: CaseSourceRead): SourcePage[] {
@@ -124,6 +127,7 @@ function sourcePages(row: CaseSourceRead): SourcePage[] {
   return spans.map((span) => ({
     pageNumber: span.page_number,
     text: characters.slice(span.start_offset, span.end_offset).join(""),
+    start: span.start_offset,
   }));
 }
 

@@ -61,13 +61,11 @@ function FindingRow({
   caseId,
   finding,
   showClaimType = false,
-  index = 0,
   ...sourceActions
 }: FindingSourceActions & {
   caseId: string;
   finding: CaseFinding;
   showClaimType?: boolean;
-  index?: number;
 }) {
   const number = finding.number;
   const flagged = finding.traceability.semanticSupport === "not_supported";
@@ -78,8 +76,7 @@ function FindingRow({
     <article
       id={`finding-${finding.id}`}
       aria-label={`Finding ${number}`}
-      style={{ ["--i" as string]: Math.min(index, 8) }}
-      className="stagger grid scroll-mt-5 grid-cols-[2.75rem_minmax(0,1fr)] gap-x-4 gap-y-3 border-t border-line px-6 py-5 @min-[42rem]:grid-cols-[2.75rem_minmax(0,1fr)_17rem]"
+      className="grid scroll-mt-5 grid-cols-[2.75rem_minmax(0,1fr)] gap-x-4 gap-y-3 border-t border-line px-6 py-5 @min-[42rem]:grid-cols-[2.75rem_minmax(0,1fr)_17rem]"
     >
       <span
         aria-hidden="true"
@@ -93,18 +90,8 @@ function FindingRow({
         <p className="text-base text-ink [overflow-wrap:anywhere]">{finding.text}</p>
         {(flagged || linked || (showClaimType && finding.claimType !== "reported")) && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            {flagged && (
-              <span className="badge-check">
-                <Icon name="alert" />
-                Check against the source
-              </span>
-            )}
-            {linked && (
-              <span className="badge-linked">
-                <Icon name="check" />
-                Linked to the source
-              </span>
-            )}
+            {flagged && <span className="badge-check">Check against the source</span>}
+            {linked && <span className="badge-linked">Linked to the source</span>}
             {showClaimType && finding.claimType !== "reported" && (
               <span className="text-xs font-semibold text-ink-secondary">
                 {claimTypeLabels[finding.claimType]}
@@ -131,7 +118,7 @@ function FindingRow({
           {finding.techniqueIds.map((techniqueId) => (
             <Link
               key={techniqueId}
-              href={`${analysisPath(caseId, "details")}#mitre-${techniqueId}`}
+              href={`${analysisPath(caseId, "technical")}#mitre-${techniqueId}`}
               title={`ATT&CK ${techniqueId}`}
               className="inline-flex h-6 items-center px-2 rounded bg-surface-nested text-xs font-mono font-medium text-ink-secondary hover:text-ink hover:bg-surface-hover transition-colors"
             >
@@ -145,7 +132,7 @@ function FindingRow({
             {finding.unverifiedQuotes.map((item, index) => (
               <p key={`passage-${finding.id}-${index}`} className="text-sm font-semibold text-mark">
                 {item.evidenceUnitId
-                  ? "The source unit reference could not be resolved."
+                  ? "The cited place in the source could not be found."
                   : "Not found word for word in the source."}
               </p>
             ))}
@@ -244,10 +231,9 @@ export function CaseFindingsSection({
               </h3>
             </div>
             <div id={`findings-${group.id}`}>
-              {visible.map((finding, index) => (
+              {visible.map((finding) => (
                 <FindingRow
                   key={finding.id}
-                  index={index}
                   caseId={caseId}
                   finding={finding}
                   showClaimType={showClaimType}
@@ -269,7 +255,7 @@ export function CaseFindingsSection({
                   className="btn-ghost h-8"
                 >
                   {expanded ? "Show fewer" : `Show all ${group.findings.length}`}{" "}
-                  <span className="sr-only">{group.title.toLowerCase()}</span>
+                  <span className="sr-only">findings, {group.title.toLowerCase()}</span>
                   <Icon
                     name="chevron"
                     className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}

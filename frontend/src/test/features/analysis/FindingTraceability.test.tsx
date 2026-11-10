@@ -67,6 +67,12 @@ function Findings({
   );
 }
 
+function markedText(): string[] {
+  return Array.from(screen.getByRole("dialog").querySelectorAll("mark"), (mark) =>
+    (mark.textContent ?? "").trim(),
+  );
+}
+
 describe("Finding traceability", () => {
   it.each([
     [
@@ -74,8 +80,12 @@ describe("Finding traceability", () => {
       "lr_not_supported",
       "Source check: the cited Source did not clearly support this finding. Check it before relying on it.",
     ],
-    ["unassessed", "no_resolved_source", "Support could not be assessed — not used in the summary"],
-    ["unassessed", "verifier_unavailable", "Source check unavailable — not assessed"],
+    [
+      "unassessed",
+      "no_resolved_source",
+      "Support could not be assessed, so it was left out of the summary.",
+    ],
+    ["unassessed", "verifier_unavailable", "Source check unavailable. Not assessed."],
   ] as const)(
     "shows the saved semantic verdict %s independently of Source binding",
     (verdict, reason, label) => {
@@ -87,7 +97,7 @@ describe("Finding traceability", () => {
       render(<Findings result={result} />);
       expect(screen.getByText(label)).toBeVisible();
       expect(screen.queryByText(/directly linked passage/)).not.toBeInTheDocument();
-      expect(screen.queryByText("Meaning support not assessed")).not.toBeInTheDocument();
+      expect(screen.queryByText("Support not checked")).not.toBeInTheDocument();
     },
   );
 
@@ -108,7 +118,7 @@ describe("Finding traceability", () => {
     expect(supported.firstElementChild!.className).toBe(other.firstElementChild!.className);
     expect(within(supported).queryByLabelText("Finding traceability")).not.toBeInTheDocument();
     expect(within(other).getByLabelText("Finding traceability")).toBeInTheDocument();
-    expect(supported.querySelector("svg")).toBeNull();
+    expect(supported.querySelectorAll("svg")).toHaveLength(other.querySelectorAll("svg").length);
     expect(supported).not.toHaveTextContent(/support/i);
     expect(container.innerHTML).not.toMatch(/established|accent-soft/);
   });
@@ -134,10 +144,7 @@ describe("Finding traceability", () => {
     expect(chips).toHaveLength(1);
     expect(chips[0]).toHaveAccessibleName("statement.pdf · p. 1 · 2 passages");
     fireEvent.click(chips[0]);
-    const passages = within(screen.getByRole("region", { name: "Cited Source passages" }));
-    expect(passages.getByText(first)).toBeVisible();
-    expect(passages.getByText(second)).toBeVisible();
-    expect(passages.getAllByText("Linked directly")).toHaveLength(2);
+    expect(markedText()).toEqual([first, second]);
     expect(screen.getByRole("dialog")).not.toHaveTextContent("U001-revision");
     expect(screen.getByRole("dialog")).not.toHaveTextContent("U002-revision");
   });
@@ -145,7 +152,7 @@ describe("Finding traceability", () => {
   it("shows semantic support without inventing confidence", () => {
     const { container } = render(<Findings />);
     expect(screen.queryByText(/directly linked passage/)).not.toBeInTheDocument();
-    expect(screen.getByText("Meaning support not assessed")).toBeVisible();
+    expect(screen.getByText("Support not checked")).toBeVisible();
     expect(container.textContent).not.toMatch(
       /\b\d+(?:\.\d+)?%|semantically verified|confirmed true/i,
     );
@@ -156,7 +163,7 @@ describe("Finding traceability", () => {
     result.trace_json!.claims[0].epistemic_status = "not_confirmed";
     render(<Findings result={result} />);
     expect(screen.queryByText(/directly linked passage/)).not.toBeInTheDocument();
-    expect(screen.getByText("Meaning support not assessed")).toBeVisible();
+    expect(screen.getByText("Support not checked")).toBeVisible();
     expect(screen.queryByText("No linked supporting Source passage")).not.toBeInTheDocument();
   });
 
@@ -183,7 +190,7 @@ describe("Finding traceability", () => {
     render(<Findings result={result} />);
     expect(screen.queryByText(/unresolved reference/)).not.toBeInTheDocument();
     expect(screen.queryByText("No linked supporting Source passage")).not.toBeInTheDocument();
-    expect(screen.getByText("Meaning support not assessed")).toBeVisible();
+    expect(screen.getByText("Support not checked")).toBeVisible();
     expect(screen.queryByText("Not found word for word in the source.")).not.toBeInTheDocument();
   });
 
@@ -220,9 +227,7 @@ describe("Finding traceability", () => {
     expect(screen.queryByText(/ค้นคืนตำแหน่งใน Source/)).not.toBeInTheDocument();
     expect(screen.getByText("ยังไม่ได้ตรวจว่า Source รองรับข้อค้นพบนี้หรือไม่")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: /statement\.pdf/ }));
-    const passages = within(screen.getByRole("region", { name: "Cited Source passages" }));
-    expect(passages.getByText(firstThai)).toBeVisible();
-    expect(passages.getByText(secondThai)).toBeVisible();
+    expect(markedText()).toEqual([firstThai, secondThai]);
   });
 
   it("keeps supporting and conflicting passages in separate drawers", () => {
@@ -255,9 +260,7 @@ describe("Finding traceability", () => {
     expect(screen.queryByText(/directly linked passage/)).not.toBeInTheDocument();
     expect(screen.queryByText(/recovered passage/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Conflicts with statement.pdf · p. 1" }));
-    const passages = within(screen.getByRole("region", { name: "Cited Source passages" }));
-    expect(passages.getByText(second)).toBeVisible();
-    expect(passages.queryByText(first)).not.toBeInTheDocument();
+    expect(markedText()).toEqual([second]);
     expect(screen.getByText("Conflicting source")).toBeVisible();
   });
 });

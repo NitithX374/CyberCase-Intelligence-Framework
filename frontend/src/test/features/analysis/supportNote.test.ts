@@ -10,12 +10,14 @@ describe("supportNote", () => {
 
   it("describes the citation in the language the analysis was written in", () => {
     expect(supportNote("unbound", "A file share was encrypted.")).toBe(
-      "None of the linked claims has a resolved source citation.",
+      "None of the findings behind this sentence has a located passage.",
     );
     expect(supportNote("mixed", "A file share was encrypted.")).toBe(
-      "Only some linked claims have resolved source citations.",
+      "Only some findings behind this sentence have a located passage.",
     );
-    expect(supportNote("no_claim", "A file share was encrypted.")).toBe("Not linked to any claim.");
+    expect(supportNote("no_claim", "A file share was encrypted.")).toBe(
+      "Not linked to any finding.",
+    );
     expect(supportNote("unbound", "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน")).toBe(
       "ยังระบุตำแหน่งข้อความอ้างอิงใน Source ของข้อค้นพบที่เชื่อมไว้ไม่ได้",
     );
@@ -23,7 +25,7 @@ describe("supportNote", () => {
       "ระบุตำแหน่งข้อความอ้างอิงใน Source ได้สำหรับข้อค้นพบที่เชื่อมไว้บางข้อ",
     );
     expect(supportNote("no_claim", "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน")).toBe(
-      "ไม่ได้เชื่อมกับข้อสังเกตใด",
+      "ไม่ได้เชื่อมกับข้อค้นพบใด",
     );
   });
 
@@ -42,7 +44,7 @@ describe("supportNote", () => {
 
   it("keeps both reasons in one note when a sentence has both", () => {
     expect(supportNote("mixed", "A file share was encrypted.", true)).toBe(
-      "Only some linked claims have resolved source citations. A finding behind this sentence was not clearly supported by its cited Source. Check it before relying on the sentence.",
+      "Only some findings behind this sentence have a located passage. A finding behind this sentence was not clearly supported by its cited Source. Check it before relying on the sentence.",
     );
   });
 

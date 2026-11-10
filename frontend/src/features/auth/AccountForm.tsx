@@ -43,7 +43,14 @@ export function AccountForm({ register = false }: { register?: boolean }) {
       const route = localStorage.getItem(`cybercase:${user.id}:route`);
       window.location.assign(route?.startsWith("/case/") ? route : "/case");
     } catch (err) {
-      setError(detailMessage(err, "Unable to sign in. Please try again."));
+      setError(
+        detailMessage(
+          err,
+          register
+            ? "Couldn't create the account. Try again."
+            : "Couldn't sign in. Check your email and password.",
+        ),
+      );
     } finally {
       setBusy(false);
     }
@@ -51,34 +58,24 @@ export function AccountForm({ register = false }: { register?: boolean }) {
 
   return (
     <main className="grid min-h-dvh bg-surface text-ink lg:grid-cols-[minmax(0,1fr)_35rem]">
-      <section className="ruled relative hidden flex-col overflow-hidden bg-primary px-14 py-12 text-white lg:flex">
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-28 -bottom-28 opacity-[0.14] mix-blend-multiply"
-        >
-          <CyberCaseLogo size={460} />
-        </span>
+      <section className="relative hidden flex-col overflow-hidden bg-primary px-14 py-12 text-white lg:flex">
         <div className="relative flex items-center gap-3 text-2xl font-bold">
           <span className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-surface">
             <CyberCaseLogo size={30} />
           </span>
           CyberCase
         </div>
-        <div
-          className="stagger relative mt-20 max-w-xl"
-          style={{ ["--i" as string]: 1, ["--step" as string]: "90ms" }}
-        >
+        <div className="relative mt-20 max-w-xl">
           <p className="text-[44px] leading-[1.15] font-bold tracking-[-0.01em]">
             Every finding, next to the words it came from.
           </p>
           <p className="mt-4 text-lg leading-relaxed text-white/90">
-            อ่านคดี ตรวจทุกข้อค้นพบกับถ้อยคำในเอกสารต้นทาง แล้วออกรายงาน
+            อ่านเคส ตรวจทุกข้อค้นพบกับถ้อยคำในเอกสารต้นทาง แล้วออกรายงาน
           </p>
         </div>
         <div
           aria-hidden="true"
-          style={{ ["--i" as string]: 2, ["--step" as string]: "90ms" }}
-          className="stagger relative mt-11 grid max-w-2xl grid-cols-[2.25rem_minmax(0,1fr)_15rem] gap-4 rounded-[10px] bg-surface p-5 text-ink shadow-[0_10px_30px_rgba(0,0,0,0.18)]"
+          className="relative mt-11 grid max-w-2xl grid-cols-[2.25rem_minmax(0,1fr)_15rem] gap-4 rounded-[10px] bg-surface p-5 text-ink shadow-[0_10px_30px_rgba(0,0,0,0.18)]"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-primary text-sm font-bold text-white">
             2
@@ -97,13 +94,13 @@ export function AccountForm({ register = false }: { register?: boolean }) {
         </div>
         <ul className="relative mt-auto flex flex-wrap gap-x-7 gap-y-2 pt-10 text-sm text-white/85">
           <li>Thai and English sources</li>
-          <li>PDF, Word and photos</li>
+          <li>PDF, Word or a photo (JPG, PNG)</li>
           <li>Report in PDF or HTML</li>
         </ul>
       </section>
 
       <section className="flex flex-col justify-center px-6 py-12 sm:px-16">
-        <div className="rise-in mx-auto w-full max-w-sm">
+        <div className="mx-auto w-full max-w-sm">
           <div className="flex items-center gap-3 lg:hidden">
             <CyberCaseLogo size={36} />
             <span className="text-xl font-bold">CyberCase</span>

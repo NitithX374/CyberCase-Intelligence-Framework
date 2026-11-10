@@ -35,7 +35,7 @@ afterEach(() => {
 });
 
 function fileItem(filename: string, mimeType: string): RailItem {
-  const source: CaseSourceRead = narrativeSource("Extracted text", {
+  const source: CaseSourceRead = narrativeSource("Text read from the file", {
     id: `source-${filename}`,
     source_kind: "document",
     document_id: `document-${filename}`,
@@ -145,7 +145,7 @@ describe("the original file of a source", () => {
       </StrictMode>,
     );
 
-    const retryBtn = screen.getByRole("button", { name: "Retry extraction" });
+    const retryBtn = screen.getByRole("button", { name: "Read the file again" });
     fireEvent.click(retryBtn);
 
     expect(onRetryDocument).toHaveBeenCalledWith("document-scanned.pdf");

@@ -111,7 +111,7 @@ describe("AnalysisDetails", () => {
     sourcesState.claimsOnly = true;
     render(<AnalysisDetails />);
     expect(
-      screen.getByText("People, dates, events and impacts are recorded in the claims."),
+      screen.getByText("People, dates, events and impacts are drawn from the findings."),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Findings and their sources" })).toHaveAttribute(
       "href",
@@ -140,7 +140,7 @@ describe("AnalysisDetails", () => {
       attack.getByRole("heading", { name: "Exploit Public-Facing Application" }),
     ).toBeInTheDocument();
     expect(attack.getByText(`“${answer}”`)).toBeInTheDocument();
-    expect(attack.getByText("Follow-up answer QA-01")).toBeInTheDocument();
+    expect(attack.getByText("Your answer 1")).toBeInTheDocument();
   });
 
   it("says when people, timeline and impacts could not be prepared, without model details", () => {

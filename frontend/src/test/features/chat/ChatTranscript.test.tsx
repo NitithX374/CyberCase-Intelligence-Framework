@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CaseAnalysisClaim, ChatAnswerUnit, ChatMessageRead } from "@/lib/api/types";
 import {
@@ -59,7 +59,56 @@ describe("ChatTranscript", () => {
     );
     expect(screen.getByText("When did the incident happen?")).toBeInTheDocument();
     expect(screen.getByText("Around two in the morning.")).toBeInTheDocument();
-    expect(screen.getByText("Question")).toBeInTheDocument();
+    expect(screen.getByText(/^Question 1 · /)).toBeInTheDocument();
+    expect(screen.queryByText(/If you don't know, say so/)).not.toBeInTheDocument();
+  });
+
+  it("frames the question still waiting for an answer and says how to answer it", () => {
+    const [question] = followupExchange("Who carried out the attack?", "", "who_responsible");
+    render(
+      <ChatTranscript messages={[question]} isProcessing={false} pendingQuestionId={question.id} />,
+    );
+    expect(screen.getByText("Question 1 · Who carried it out")).toBeInTheDocument();
+    expect(screen.getByText("Answer below, or press Don't know.")).toBeVisible();
+  });
+
+  it("offers starter questions for a case with sources, in the case's language", () => {
+    const onSuggest = vi.fn();
+    render(
+      <ChatTranscript
+        messages={[]}
+        isProcessing={false}
+        sources={[narrativeSource("ผู้เสียหายโอนเงินให้คนร้าย")]}
+        onSuggest={onSuggest}
+      />,
+    );
+    const suggestions = within(screen.getByRole("list", { name: "Suggested questions" }));
+    fireEvent.click(suggestions.getByRole("button", { name: "เคสนี้ยังขาดข้อมูลอะไรบ้าง" }));
+    expect(onSuggest).toHaveBeenCalledWith("เคสนี้ยังขาดข้อมูลอะไรบ้าง");
+  });
+
+  it("labels the summary an analysis posted as coming from the analysis, not as an answer", () => {
+    render(<ChatTranscript messages={[analysisMessage([])]} isProcessing={false} />);
+    expect(screen.getByText("From the analysis")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Open findings/ })).toHaveAttribute(
+      "href",
+      "/case/case-123/analysis",
+    );
+    expect(screen.queryByText("Answer")).not.toBeInTheDocument();
+  });
+
+  it("names an answer to a question as the system's answer", () => {
+    const answer = message("answer-1", 2, "assistant", "Noted.", {
+      answer_units: [{ text: "Noted.", basis: "general" }],
+    });
+    render(<ChatTranscript messages={[answer]} isProcessing={false} />);
+    expect(screen.getByText("Answer")).toBeInTheDocument();
+    expect(screen.queryByText("From the analysis")).not.toBeInTheDocument();
+  });
+
+  it("offers no starter questions before the case has a source", () => {
+    render(<ChatTranscript messages={[]} isProcessing={false} sources={[]} onSuggest={vi.fn()} />);
+    expect(screen.queryByRole("list", { name: "Suggested questions" })).not.toBeInTheDocument();
   });
 
   it("reads assistant messages as Markdown and keeps what the reader typed as written", () => {
@@ -125,7 +174,7 @@ describe("ChatTranscript", () => {
       expect(scrolled).toEqual([]);
 
       rerender(<ChatTranscript messages={[first, second]} isProcessing={false} />);
-      expect(scrolled).toEqual([container.firstElementChild]);
+      expect(scrolled).toEqual([container.firstElementChild!.firstElementChild]);
       expect(scrollIntoView).not.toHaveBeenCalled();
     });
   });
@@ -152,10 +201,52 @@ describe("ChatTranscript source references", () => {
     ]);
 
     render(<ChatTranscript messages={[analysis]} isProcessing={false} sources={[narrative]} />);
-    expect(screen.getByRole("button", { name: "Case narrative #1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Narrative 1" })).toBeInTheDocument();
     expect(screen.queryByText(/p\. 1/i)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Case narrative #1" }));
-    expect(screen.getByRole("dialog")).toHaveTextContent("seeing a blue vehicle");
+    fireEvent.click(screen.getByRole("button", { name: "Narrative 1" }));
+    const reader = screen.getByRole("region", { name: "Source: Narrative 1" });
+    expect(reader).toHaveTextContent(
+      "The witness reported seeing a blue vehicle near the entrance.",
+    );
+    expect(reader.querySelector("mark")).toHaveTextContent("seeing a blue vehicle");
+  });
+
+  it("opens a raised number as a short passage, then reads it in the source and comes back", () => {
+    const narrative = narrativeSource(
+      "The witness reported seeing a blue vehicle near the entrance.",
+    );
+    const analysis = analysisMessage([
+      {
+        supporting_source_ids: [narrative.id],
+        contradicting_source_ids: [],
+        supporting_citations: [
+          {
+            source_id: narrative.id,
+            exact_quote: "seeing a blue vehicle",
+            pointer_state: "recovered",
+            context: {
+              before: "The witness reported ",
+              after: " near the entrance.",
+              cut_before: false,
+              cut_after: false,
+            },
+          },
+        ],
+        contradicting_citations: [],
+      },
+    ]);
+    render(<ChatTranscript messages={[analysis]} isProcessing={false} sources={[narrative]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Source 1: Narrative 1" }));
+    const peek = screen.getByRole("dialog", { name: "Source 1" });
+    expect(peek).toHaveTextContent("The witness reported seeing a blue vehicle near the entrance.");
+
+    fireEvent.click(within(peek).getByRole("button", { name: /Show in the full source/ }));
+    expect(screen.queryByRole("dialog", { name: "Source 1" })).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Source: Narrative 1" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to answer" }));
+    expect(screen.queryByRole("region", { name: "Source: Narrative 1" })).not.toBeInTheDocument();
   });
 
   it("shows a page citation, and a follow-up answer that conflicts with it", () => {
@@ -199,11 +290,12 @@ describe("ChatTranscript source references", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "Conflicts with Follow-up answer QA-03" }),
+      screen.getByRole("button", { name: "Conflicts with Your answer 3" }),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "statement.pdf · p. 4" }));
-    expect(screen.getByRole("dialog")).toHaveTextContent("Page 4");
-    expect(screen.getByRole("dialog")).toHaveTextContent("records the transfer");
+    const reader = screen.getByRole("region", { name: "Source: statement.pdf" });
+    expect(reader).toHaveTextContent("statement.pdf · p. 4");
+    expect(reader.querySelector("mark")).toHaveTextContent("records the transfer");
   });
 });
 
@@ -254,8 +346,8 @@ describe("ChatTranscript claims that are not settled", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Case narrative #1" })).toBeInTheDocument();
-    expect(screen.queryByText(/ยังไม่ยืนยัน|อยู่ระหว่างตรวจสอบ/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Narrative 1" })).toBeInTheDocument();
+    expect(screen.queryByText(/ยังไม่ยืนยัน|ยังไม่แน่ชัด/)).not.toBeInTheDocument();
   });
 
   it("gives a claim that is not confirmed no source chip, and says so", () => {
@@ -267,9 +359,11 @@ describe("ChatTranscript claims that are not settled", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Case narrative #1" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Case narrative #2" })).not.toBeInTheDocument();
-    expect(screen.getByText("ยังไม่ยืนยัน ไม่มี quote ที่ตรวจแล้ว")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Narrative 1" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Narrative 2" })).not.toBeInTheDocument();
+    expect(
+      screen.getByText("ยังไม่ยืนยัน: ไม่มีข้อความอ้างอิงที่หาตำแหน่งได้"),
+    ).toBeInTheDocument();
   });
 
   it("keeps a suspected claim's chip only for a checked quote, and says it is under review", () => {
@@ -283,9 +377,9 @@ describe("ChatTranscript claims that are not settled", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Case narrative #2" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Case narrative #1" })).not.toBeInTheDocument();
-    expect(screen.getByText("อยู่ระหว่างตรวจสอบ")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Narrative 2" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Narrative 1" })).not.toBeInTheDocument();
+    expect(screen.getByText("ยังไม่แน่ชัด")).toBeInTheDocument();
     expect(screen.queryByText(/ยังไม่ยืนยัน/)).not.toBeInTheDocument();
   });
 
@@ -311,9 +405,11 @@ describe("ChatTranscript claims that are not settled", () => {
       />,
     );
 
-    expect(screen.getByText("ยังไม่ยืนยัน ไม่มี quote ที่ตรวจแล้ว")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Case narrative #1" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Case narrative #2" })).not.toBeInTheDocument();
+    expect(
+      screen.getByText("ยังไม่ยืนยัน: ไม่มีข้อความอ้างอิงที่หาตำแหน่งได้"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Narrative 1" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Narrative 2" })).not.toBeInTheDocument();
   });
 
   it("leaves a statement alone when the claims it rests on are settled or it names none", () => {
@@ -336,9 +432,11 @@ describe("ChatTranscript claims that are not settled", () => {
       />,
     );
 
-    expect(screen.getAllByRole("button", { name: "Case narrative #1" })).toHaveLength(1);
-    expect(screen.getAllByRole("button", { name: "Case narrative #2" })).toHaveLength(2);
-    expect(screen.queryByText(/ยังไม่ยืนยัน|อยู่ระหว่างตรวจสอบ/)).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Narrative 1" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Narrative 2" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Source 1: Narrative 1" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Source 2: Narrative 2" })).toHaveLength(2);
+    expect(screen.queryByText(/ยังไม่ยืนยัน|ยังไม่แน่ชัด/)).not.toBeInTheDocument();
   });
 });
 
@@ -425,11 +523,11 @@ describe("ChatTranscript answer units", () => {
       />,
     );
 
-    expect(screen.getAllByText("หลักฐานบางส่วนที่อ้างไว้หาไม่พบใน Source")).toHaveLength(1);
+    expect(screen.getAllByText("ข้อความบางส่วนที่อ้างไว้หาไม่พบใน Source")).toHaveLength(1);
   });
 
   it.each([
-    ["add_source", "ถ้าต้องการให้ข้อมูลนี้ถูกนำไปวิเคราะห์ ให้เพิ่มเป็น source ที่หน้า Sources"],
+    ["add_source", "เพิ่มเป็น Source ที่หน้า Sources เพื่อให้การวิเคราะห์ใช้ข้อมูลนี้"],
     ["run_analysis", "กด Analyze เพื่อวิเคราะห์เคสอีกครั้ง"],
   ] as const)("tells the reader what to do next for %s", (suggestion, line) => {
     render(

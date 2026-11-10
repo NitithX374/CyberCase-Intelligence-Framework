@@ -223,10 +223,10 @@ function attackDescription(description: string): string {
 export function technicalContextMessage(data: TechnicalContextData): string {
   const stage = data.failureStage ? ` during ${data.failureStage}` : "";
   const messages: Record<TechnicalContextStatus, string> = {
-    not_applicable: "Not applicable — the case has no technical indicators.",
-    insufficient_context: "No supported ATT&CK context was found.",
+    not_applicable: "Not applicable. The case has no technical signs.",
+    insufficient_context: "No ATT&CK technique was matched to this case.",
     retrieved_with_matches: "",
-    retrieved_from_rag: "Suggested by the knowledge base. Not tied to a case source.",
+    retrieved_from_rag: "Suggested by the ATT&CK lookup. Not tied to a sentence of this case.",
     failed: `The ATT&CK lookup failed${stage}.`,
     invalid_trace: "The saved ATT&CK context could not be verified, so it is not shown.",
     unavailable: "No ATT&CK context is available for this analysis.",

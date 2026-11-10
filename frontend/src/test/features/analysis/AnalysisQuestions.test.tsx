@@ -81,7 +81,7 @@ describe("AnalysisQuestions", () => {
     state.gaps = [];
     render(<AnalysisQuestions />);
 
-    expect(screen.getByText("Nothing is missing from this analysis.")).toBeInTheDocument();
+    expect(screen.getByText("No open questions in this analysis.")).toBeInTheDocument();
   });
 
   it("lists the findings a gap affects behind a toggle that counts them", () => {
@@ -155,7 +155,7 @@ describe("AnalysisQuestionsCard", () => {
     state.gaps = [];
     render(<AnalysisQuestionsCard />);
 
-    expect(within(card()).getByText("Nothing is missing from this analysis.")).toBeInTheDocument();
+    expect(within(card()).getByText("No open questions in this analysis.")).toBeInTheDocument();
     expect(within(card()).queryByText("0")).not.toBeInTheDocument();
   });
 });

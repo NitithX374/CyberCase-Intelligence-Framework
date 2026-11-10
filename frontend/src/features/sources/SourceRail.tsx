@@ -53,7 +53,7 @@ export function railGroups(sources: CaseSourceRead[], followups: FollowupAnswer[
     { label: "Files", items: sourceItems(current, "file") },
     { label: "Case narrative", items: sourceItems(current, "narrative") },
     {
-      label: "Follow-up answers",
+      label: "Your answers (not sources)",
       items: followups.map((followup): RailItem => ({
         id: followup.qaId,
         kind: "followup_answer",
@@ -319,7 +319,7 @@ function UploadingItem({ filename }: { filename?: string | null }) {
         <span className="block truncate text-sm font-medium text-ink">
           {filename || "Uploading file…"}
         </span>
-        <span className="mt-0.5 block text-xs text-ink-muted">Extracting text…</span>
+        <span className="mt-0.5 block text-xs text-ink-muted">Reading the file…</span>
       </span>
     </div>
   );

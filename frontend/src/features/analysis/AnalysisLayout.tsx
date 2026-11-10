@@ -14,11 +14,9 @@ import { analysisSourceIds } from "./analysisRecord";
 import { useCaseOverview } from "./useCaseOverview";
 import { Icon } from "@/components/icons";
 import { EmptyState } from "@/components/EmptyState";
-import { useCountUp } from "@/lib/motion";
 
 const SECTION_TARGETS: Record<string, string> = {
   findings: "section-findings",
-  details: "section-references",
   questions: "section-attention",
 };
 
@@ -127,7 +125,12 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
   const flaggedCount = overview.findings.filter(
     (finding) => finding.traceability.semanticSupport === "not_supported",
   ).length;
-  const onFactPage = section === "timeline" || section === "people" || section === "impact";
+  const onFactPage =
+    section === "timeline" ||
+    section === "people" ||
+    section === "impact" ||
+    section === "technical" ||
+    section === "legal";
   const readCount = analysisResult ? analysisSourceIds(analysisResult).length : 0;
 
   return (
@@ -156,14 +159,10 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
       )}
 
       <div className="grid grid-cols-2 gap-5 @min-[56rem]:grid-cols-4">
-        <StatCard index={0} value={overview.findings.length} label="findings" />
-        <StatCard index={1} value={flaggedCount} label="to check" strong={flaggedCount > 0} />
-        <StatCard index={2} value={overview.gaps.length} label="open questions" />
-        <StatCard
-          index={3}
-          value={readCount}
-          label={readCount === 1 ? "source read" : "sources read"}
-        />
+        <StatCard value={overview.findings.length} label="findings" />
+        <StatCard value={flaggedCount} label="to check" strong={flaggedCount > 0} />
+        <StatCard value={overview.gaps.length} label="open questions" />
+        <StatCard value={readCount} label={readCount === 1 ? "source read" : "sources read"} />
       </div>
 
       {onFactPage ? (
@@ -183,26 +182,18 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
 }
 
 function StatCard({
-  index,
   value,
   label,
   strong = false,
 }: {
-  index: number;
   value: number;
   label: string;
   strong?: boolean;
 }) {
-  const valueRef = useRef<HTMLParagraphElement | null>(null);
-  useCountUp(valueRef, value);
   return (
-    <div
-      className="sheet stagger px-5 py-4"
-      style={{ ["--i" as string]: index, ["--step" as string]: "60ms" }}
-    >
+    <div className="sheet px-5 py-4">
       <div>
         <p
-          ref={valueRef}
           className={`text-2xl leading-tight font-bold tabular-nums ${strong ? "text-primary" : "text-ink"}`}
         >
           {value}

@@ -22,7 +22,7 @@ export function AppSkeleton({
           </span>
           CyberCase
         </span>
-        <span className="mx-3 mt-1 mb-3 h-px bg-primary" />
+        <span className="mx-3 mt-1 mb-3 h-px bg-espresso-line" />
         {[70, 55, 62, 48, 58].map((width, index) => (
           <span
             key={index}
@@ -42,7 +42,7 @@ export function AppSkeleton({
         <section
           role="status"
           aria-live="polite"
-          className="ruled rise-in relative shrink-0 overflow-hidden rounded-xl bg-primary px-5 py-6 text-white sm:px-8 sm:py-7"
+          className="relative shrink-0 overflow-hidden rounded-xl bg-primary px-5 py-6 text-white sm:px-8 sm:py-7"
         >
           <div className="relative flex items-start gap-4">
             <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center">

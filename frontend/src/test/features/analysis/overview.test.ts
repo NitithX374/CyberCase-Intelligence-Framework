@@ -104,12 +104,12 @@ describe("Case overview projection", () => {
     ]);
 
     expect(overview.parties.map((row) => row.supportNote)).toEqual([
-      "Only some linked claims have resolved source citations.",
+      "Only some findings behind this sentence have a located passage.",
       null,
     ]);
     expect(overview.timeline.map((row) => row.supportNote)).toEqual([
-      "None of the linked claims has a resolved source citation.",
-      "Not linked to any claim.",
+      "None of the findings behind this sentence has a located passage.",
+      "Not linked to any finding.",
     ]);
     expect(overview.impacts.map((row) => row.supportNote)).toEqual([null]);
   });
@@ -121,7 +121,7 @@ describe("Case overview projection", () => {
 
     expect(overview.timeline.map((row) => row.supportNote)).toEqual([
       "ยังระบุตำแหน่งข้อความอ้างอิงใน Source ของข้อค้นพบที่เชื่อมไว้ไม่ได้",
-      "ไม่ได้เชื่อมกับข้อสังเกตใด",
+      "ไม่ได้เชื่อมกับข้อค้นพบใด",
     ]);
   });
 
@@ -169,19 +169,19 @@ describe("Case overview projection", () => {
           { number: 1, claimId: "A-01" },
           { number: 2, claimId: "A-02" },
         ],
-        supportNote: "Only some linked claims have resolved source citations.",
+        supportNote: "Only some findings behind this sentence have a located passage.",
         noteMark: "a",
       },
       {
         text: "Ten bitcoin",
         marks: [{ number: 3, claimId: "A-03" }],
-        supportNote: "None of the linked claims has a resolved source citation.",
+        supportNote: "None of the findings behind this sentence has a located passage.",
         noteMark: "b",
       },
       {
         text: "Someone is to blame",
         marks: [],
-        supportNote: "Not linked to any claim.",
+        supportNote: "Not linked to any finding.",
         noteMark: "c",
       },
     ]);
@@ -194,7 +194,7 @@ describe("Case overview projection", () => {
       null,
       "ระบุตำแหน่งข้อความอ้างอิงใน Source ได้สำหรับข้อค้นพบที่เชื่อมไว้บางข้อ",
       "ยังระบุตำแหน่งข้อความอ้างอิงใน Source ของข้อค้นพบที่เชื่อมไว้ไม่ได้",
-      "ไม่ได้เชื่อมกับข้อสังเกตใด",
+      "ไม่ได้เชื่อมกับข้อค้นพบใด",
     ]);
   });
 
@@ -219,7 +219,7 @@ describe("Case overview projection", () => {
     );
     const source = overview.findings[0].supportingSources[0];
     expect(overview.incidentSummary).toContain("blue vehicle");
-    expect(source).toMatchObject({ id: sourceId, label: "Case narrative #1", exactQuote: quote });
+    expect(source).toMatchObject({ id: sourceId, label: "Narrative 1", exactQuote: quote });
   });
 
   it("shows the pages the stored citation names", () => {
@@ -264,7 +264,7 @@ describe("Case overview projection", () => {
     const overview = buildCaseOverview(result(second, pagedCitation(second, [2])), [source]);
 
     expect(overview.findings[0].supportingSources[0].sourcePages).toEqual([
-      { pageNumber: 2, text: second },
+      { pageNumber: 2, text: second, start: firstLength },
     ]);
   });
 
@@ -298,7 +298,7 @@ describe("Case overview projection", () => {
 
     expect(overview.findings[0].supportingSources[0]).toMatchObject({
       id: "QA-02",
-      label: "Follow-up answer QA-02",
+      label: "Your answer 2",
       question: "When did the incident occur?",
       exactQuote: answer,
     });

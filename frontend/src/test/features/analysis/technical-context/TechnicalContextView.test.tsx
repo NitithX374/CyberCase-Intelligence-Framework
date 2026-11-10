@@ -116,11 +116,11 @@ describe("TechnicalContextView", () => {
       <TechnicalContextView analysisResult={projection.result} sources={projection.sources} />,
     );
 
-    expect(screen.getByText("ไม่มี quote ที่ตรวจแล้ว")).toBeInTheDocument();
+    expect(screen.getByText("ไม่มีข้อความอ้างอิงที่หาตำแหน่งได้")).toBeInTheDocument();
     expect(screen.queryByText(/“|”/)).not.toBeInTheDocument();
     expect(screen.queryByText(new RegExp(exactQuote.slice(0, 20)))).not.toBeInTheDocument();
     expect(screen.queryByText("No quotation recorded.")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Case narrative #1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Narrative 1/ }));
     expect(screen.getByRole("dialog")).toHaveTextContent(exactQuote);
   });
 
@@ -140,10 +140,10 @@ describe("TechnicalContextView", () => {
     );
 
     expect(screen.getByText(`“${exactQuote}”`)).toBeInTheDocument();
-    expect(screen.getAllByText("ไม่มี quote ที่ตรวจแล้ว")).toHaveLength(1);
+    expect(screen.getAllByText("ไม่มีข้อความอ้างอิงที่หาตำแหน่งได้")).toHaveLength(1);
     expect(screen.queryByText(new RegExp(other.slice(0, 20)))).not.toBeInTheDocument();
-    expect(screen.getByText("Case narrative #1")).toBeInTheDocument();
-    expect(screen.getByText("Case narrative #2")).toBeInTheDocument();
+    expect(screen.getByText("Narrative 1")).toBeInTheDocument();
+    expect(screen.getByText("Narrative 2")).toBeInTheDocument();
   });
 
   it("keeps a non-technical Case valid without MITRE rows", () => {
@@ -166,7 +166,7 @@ describe("TechnicalContextView", () => {
       <TechnicalContextView analysisResult={projection.result} sources={projection.sources} />,
     );
     expect(
-      screen.getByText("Not applicable — the case has no technical indicators."),
+      screen.getByText("Not applicable. The case has no technical signs."),
     ).toBeInTheDocument();
     expect(screen.queryByText("PowerShell")).not.toBeInTheDocument();
   });

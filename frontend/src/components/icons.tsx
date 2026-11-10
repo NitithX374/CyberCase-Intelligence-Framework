@@ -1,4 +1,42 @@
-import type { HTMLAttributes } from "react";
+import {
+  Activity,
+  BookOpen,
+  BriefcaseBusiness,
+  Check,
+  ChevronDown,
+  Clock,
+  Cpu,
+  Download,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  FileText,
+  Flag,
+  Folder,
+  FolderOpen,
+  Info,
+  LayoutGrid,
+  Link2,
+  List,
+  ListChecks,
+  LoaderCircle,
+  LogOut,
+  MessageSquareMore,
+  PenLine,
+  Play,
+  Plus,
+  RefreshCw,
+  Scale,
+  Search,
+  SendHorizontal,
+  Trash2,
+  TriangleAlert,
+  Upload,
+  User,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 
 export type IconName =
   | "overview"
@@ -34,55 +72,57 @@ export type IconName =
   | "summary"
   | "findings"
   | "references"
+  | "technical"
+  | "legal"
   | "play";
 
-const nameToBoxicon: Record<IconName, string> = {
-  overview: "bx-grid-alt",
-  chat: "bx-message-square-dots",
-  plus: "bx-plus",
-  send: "bx-send",
-  trash: "bx-trash",
-  close: "bx-x",
-  chevron: "bx-chevron-down",
-  external: "bx-link-external",
-  alert: "bx-error",
-  account: "bx-user",
-  search: "bx-search",
-  list: "bx-list-ul",
-  edit: "bx-edit-alt",
-  eye: "bx-show",
-  "eye-off": "bx-hide",
-  check: "bx-check",
-  "log-out": "bx-log-out",
-  folder: "bx-folder",
-  upload: "bx-upload",
-  download: "bx-download",
-  refresh: "bx-refresh",
-  info: "bx-info-circle",
-  spinner: "bx-loader-alt bx-spin",
-  case: "bx-briefcase-alt-2",
-  sources: "bx-folder-open",
-  report: "bx-file",
-  timeline: "bx-time-five",
-  people: "bx-group",
-  impact: "bx-pulse",
-  attention: "bx-flag",
-  summary: "bx-book-open",
-  findings: "bx-list-check",
-  references: "bx-link-alt",
-  play: "bx-play",
+const icons: Record<IconName, LucideIcon> = {
+  overview: LayoutGrid,
+  chat: MessageSquareMore,
+  plus: Plus,
+  send: SendHorizontal,
+  trash: Trash2,
+  close: X,
+  chevron: ChevronDown,
+  external: ExternalLink,
+  alert: TriangleAlert,
+  account: User,
+  search: Search,
+  list: List,
+  edit: PenLine,
+  eye: Eye,
+  "eye-off": EyeOff,
+  check: Check,
+  "log-out": LogOut,
+  folder: Folder,
+  upload: Upload,
+  download: Download,
+  refresh: RefreshCw,
+  info: Info,
+  spinner: LoaderCircle,
+  case: BriefcaseBusiness,
+  sources: FolderOpen,
+  report: FileText,
+  timeline: Clock,
+  people: Users,
+  impact: Activity,
+  attention: Flag,
+  summary: BookOpen,
+  findings: ListChecks,
+  references: Link2,
+  technical: Cpu,
+  legal: Scale,
+  play: Play,
 };
 
-interface IconProps extends HTMLAttributes<HTMLElement> {
-  name: IconName;
-}
-
-export function Icon({ name, className = "", ...props }: IconProps) {
+export function Icon({ name, className = "" }: { name: IconName; className?: string }) {
+  const Glyph = icons[name];
   return (
-    <i
+    <Glyph
       aria-hidden="true"
-      className={`bx ${nameToBoxicon[name]} inline-flex items-center justify-center leading-none ${className}`}
-      {...props}
+      size="1em"
+      strokeWidth={1.75}
+      className={`inline-block shrink-0 ${name === "spinner" ? "animate-spin motion-reduce:animate-none" : ""} ${className}`}
     />
   );
 }

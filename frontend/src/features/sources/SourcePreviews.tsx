@@ -152,7 +152,11 @@ function ExtractedTextPreview({
   const warnings = warningsList.length;
 
   return (
-    <div role="region" aria-label="Extracted text" className="h-full overflow-auto p-4 sm:p-8">
+    <div
+      role="region"
+      aria-label="Text read from the file"
+      className="h-full overflow-auto p-4 sm:p-8"
+    >
       <div className="mx-auto max-w-3xl space-y-6">
         {readByOcr(source) && (
           <p className="text-sm leading-6 text-ink-secondary">
@@ -184,10 +188,10 @@ function ExtractedTextPreview({
                   onClick={() => void onRetry()}
                   disabled={isRetrying}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-surface-nested disabled:opacity-50"
-                  aria-label="Retry extraction"
+                  aria-label="Read the file again"
                 >
                   <Icon name={isRetrying ? "spinner" : "refresh"} className="h-3.5 w-3.5" />
-                  <span>{isRetrying ? "Retrying extraction..." : "Retry OCR extraction"}</span>
+                  <span>{isRetrying ? "Reading the file again…" : "Read the file again"}</span>
                 </button>
               )}
             </div>
@@ -245,7 +249,7 @@ function ExtractedTextPreview({
                         className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink transition-colors hover:bg-surface-nested disabled:opacity-50"
                       >
                         <Icon name={isRetrying ? "spinner" : "refresh"} className="h-3 w-3" />
-                        <span>{isRetrying ? "Retrying..." : "Retry OCR"}</span>
+                        <span>{isRetrying ? "Retrying..." : "Read the file again"}</span>
                       </button>
                     )}
                   </div>

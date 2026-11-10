@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { useSourceDrawer } from "@/features/citations/useSourceDrawer";
 import type { SourceMessageRef } from "@/features/citations/types";
 
-const sourceRef = { id: "source-1", label: "Case narrative #1" } as SourceMessageRef;
+const sourceRef = { id: "source-1", label: "Narrative 1" } as SourceMessageRef;
 const citation = (key: string) => ({
   sourceRef,
   anchorElement: document.createElement("button"),

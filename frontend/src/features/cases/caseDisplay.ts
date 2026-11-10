@@ -5,9 +5,9 @@ export type CaseLibrarySort = "recent" | "oldest" | "title";
 export type CaseLibraryViewMode = "grid" | "list";
 
 const freshnessLabels: Record<CaseRead["analysis_freshness"], string> = {
-  missing: "Not analyzed",
+  missing: "Not analyzed yet",
   current: "Analyzed",
-  stale: "Out of date",
+  stale: "Sources changed since the analysis",
 };
 
 export function caseDestination(caseRecord: CaseRead): string {

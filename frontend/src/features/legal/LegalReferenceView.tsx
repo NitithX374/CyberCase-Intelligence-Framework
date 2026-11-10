@@ -46,7 +46,7 @@ export function LegalReferenceView({
         title="No legal references"
         description={
           legalLookupSkipped(analysisResult)
-            ? "The legal lookup runs with the ATT&CK retrieval, and this case was judged not to need it."
+            ? "Thai law is looked up only when the case has technical signs. This case had none."
             : "This analysis made no legal lookup."
         }
       />
@@ -74,7 +74,7 @@ function LegalProvisions({ reference }: { reference: LegalReference }) {
         <div className="w-full pt-6">
           <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
             <div className="flex items-baseline gap-2">
-              <h2 className="text-base font-semibold text-ink">Legal references</h2>
+              <h2 className="text-base font-semibold text-ink">Provisions</h2>
               <span className="text-sm font-medium text-ink-muted">
                 {reference.provisions.length}
               </span>

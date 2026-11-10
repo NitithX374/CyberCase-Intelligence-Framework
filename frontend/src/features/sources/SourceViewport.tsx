@@ -60,7 +60,7 @@ export function SourceViewport({
           >
             {PREVIEW_MODES.map(([value, label]) => (
               <PreviewTab key={value} selected={mode === value} onClick={() => onModeChange(value)}>
-                {value === "ocr" && readByOcr(item.source) ? "Machine-read text" : label}
+                {value === "ocr" && readByOcr(item.source) ? "Text read from the file" : label}
               </PreviewTab>
             ))}
           </div>

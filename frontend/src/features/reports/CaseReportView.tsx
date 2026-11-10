@@ -218,7 +218,7 @@ function ReportPreview({ caseId, report }: { caseId: string; report: CaseReportR
   };
 
   return (
-    <article aria-label="Persisted report" className="mt-4">
+    <article aria-label="Saved report" className="mt-4">
       {isLoading ? (
         <div
           role="status"
@@ -230,7 +230,7 @@ function ReportPreview({ caseId, report }: { caseId: string; report: CaseReportR
       ) : loadError || !blob ? (
         <>
           <div
-            aria-label="Report Preview Unavailable"
+            aria-label="Preview unavailable"
             className="flex h-[320px] w-full flex-col items-center justify-center gap-3 rounded-xl bg-surface-nested p-6 text-center"
           >
             <p className="text-sm font-medium text-ink">ไม่สามารถแสดงตัวอย่างรายงานได้</p>
@@ -247,7 +247,7 @@ function ReportPreview({ caseId, report }: { caseId: string; report: CaseReportR
         </>
       ) : (
         <div
-          aria-label="HTML Report Viewer"
+          aria-label="Report preview"
           className="overflow-hidden rounded-xl border border-line bg-ground"
         >
           <iframe

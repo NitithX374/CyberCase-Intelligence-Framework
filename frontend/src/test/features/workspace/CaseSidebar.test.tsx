@@ -52,13 +52,13 @@ beforeEach(() => {
 });
 
 const casePages = () => within(screen.getByRole("navigation", { name: "Case pages" }));
-const material = () => within(screen.getByRole("navigation", { name: "Case material" }));
+const material = () => within(screen.getByRole("navigation", { name: "Case file" }));
 
 describe("CaseSidebar", () => {
   it("lists Timeline, People and Impact as pages of their own", () => {
     render(<CaseSidebar caseId={caseId} caseTitle="Dormitory theft" />);
 
-    expect(casePages().getByRole("link", { name: /^Reading/ })).toHaveAttribute(
+    expect(casePages().getByRole("link", { name: /^Findings/ })).toHaveAttribute(
       "href",
       `${base}/analysis`,
     );
@@ -74,9 +74,14 @@ describe("CaseSidebar", () => {
       "href",
       `${base}/analysis/impact`,
     );
-    expect(casePages().getByRole("link", { name: "Outside references" })).toHaveAttribute(
+    const outside = within(screen.getByRole("navigation", { name: "Outside references" }));
+    expect(outside.getByRole("link", { name: "ATT&CK techniques" })).toHaveAttribute(
       "href",
-      `${base}/analysis#section-references`,
+      `${base}/analysis/technical`,
+    );
+    expect(outside.getByRole("link", { name: "Related laws" })).toHaveAttribute(
+      "href",
+      `${base}/analysis/legal`,
     );
     expect(material().getByRole("link", { name: /^Sources/ })).toHaveAttribute(
       "href",
@@ -95,7 +100,7 @@ describe("CaseSidebar", () => {
       .getAllByRole("link")
       .filter((link) => link.getAttribute("aria-current") === "page");
     expect(current).toHaveLength(1);
-    expect(current[0]).toHaveAccessibleName(/^Reading\s*2$/);
+    expect(current[0]).toHaveAccessibleName(/^Findings\s*2$/);
   });
 
   it("marks a fact page as current, not the reading page", () => {
@@ -106,7 +111,9 @@ describe("CaseSidebar", () => {
       "aria-current",
       "page",
     );
-    expect(casePages().getByRole("link", { name: /^Reading/ })).not.toHaveAttribute("aria-current");
+    expect(casePages().getByRole("link", { name: /^Findings/ })).not.toHaveAttribute(
+      "aria-current",
+    );
   });
 
   it("marks the sources page as current", () => {
@@ -117,7 +124,9 @@ describe("CaseSidebar", () => {
       "aria-current",
       "page",
     );
-    expect(casePages().getByRole("link", { name: /^Reading/ })).not.toHaveAttribute("aria-current");
+    expect(casePages().getByRole("link", { name: /^Findings/ })).not.toHaveAttribute(
+      "aria-current",
+    );
   });
 
   it("counts the findings to check", () => {

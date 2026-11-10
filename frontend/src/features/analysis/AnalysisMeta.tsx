@@ -50,7 +50,7 @@ export function AnalysisMeta({
           Last analysis
         </h2>
         <span className={isStale ? "badge-check" : "badge-linked"}>
-          {isStale ? "Out of date" : "Up to date"}
+          {isStale ? "Sources changed since the analysis" : "Up to date"}
         </span>
       </div>
       <div className="flex flex-col gap-1 px-6 py-4 text-sm text-ink-secondary">
@@ -75,15 +75,11 @@ export function AnalysisMeta({
         {isOpen && (
           <dl className="mt-1 space-y-2 rounded-lg bg-surface-nested p-4 text-sm text-ink">
             <RecordRow label="Completed" value={formatDate(result?.created_at, "full")} />
-            <RecordRow
-              label="Source revision"
-              value={result ? String(result.source_revision) : "Unavailable"}
-            />
             <RecordRow label="Sources" value={`${readCount} · ${citedSourceCount} cited`} />
             {documentNames.length > 0 && (
               <RecordRow label="Documents" value={documentNames.join(", ")} />
             )}
-            <RecordRow label="Result" value={result?.id ?? "Unavailable"} mono />
+            <RecordRow label="Analysis ID" value={result?.id ?? "Unavailable"} mono />
           </dl>
         )}
       </div>

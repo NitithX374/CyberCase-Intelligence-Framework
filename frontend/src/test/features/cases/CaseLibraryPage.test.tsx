@@ -93,7 +93,7 @@ describe("CaseLibraryPage", () => {
     expect(titles[0]).toContain("Police Investigation Report");
     expect(titles[1]).toContain("SpeedFood System Architecture");
     expect(screen.getByText("Analyzed")).toBeInTheDocument();
-    expect(screen.getByText("Not analyzed")).toBeInTheDocument();
+    expect(screen.getByText("Not analyzed yet")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "New case" })).toBeInTheDocument();
   });
 
@@ -119,7 +119,7 @@ describe("CaseLibraryPage", () => {
   it("counts the cases by status, filters by a status card and lists the recent ones", () => {
     render(<CaseLibraryPage />);
 
-    const cards = within(screen.getByRole("group", { name: "Show cases" }));
+    const cards = within(screen.getByRole("group", { name: "Filter by status" }));
     expect(cards.getByRole("button", { name: /^2 ?all cases$/ })).toHaveAttribute(
       "aria-pressed",
       "true",

@@ -1,13 +1,22 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspaceChatPanel } from "@/features/chat/WorkspaceChatPanel";
+import type { ChatMessageRead } from "@/lib/api/types";
+import { followupExchange } from "@/test/fixtures";
 
-const state = vi.hoisted(() => ({ sourcesFailed: false, input: "", submit: vi.fn() }));
+const state = vi.hoisted(() => ({
+  sourcesFailed: false,
+  input: "",
+  submit: vi.fn(),
+  submitContent: vi.fn(),
+  messages: [] as ChatMessageRead[],
+  pendingQuestionId: null as string | null,
+}));
 
 vi.mock("@/features/chat/useCaseChat", () => ({
   useCaseChat: () => ({
-    messages: [],
-    pendingQuestionId: null,
+    messages: state.messages,
+    pendingQuestionId: state.pendingQuestionId,
     isSending: false,
     isAnsweringQuestion: false,
     input: state.input,
@@ -15,7 +24,7 @@ vi.mock("@/features/chat/useCaseChat", () => ({
     queryError: null,
     clearQueryError: vi.fn(),
     retryQuery: vi.fn(),
-    submitContent: vi.fn(),
+    submitContent: state.submitContent,
     submitMessage: state.submit,
   }),
 }));
@@ -43,9 +52,33 @@ beforeEach(() => {
   state.sourcesFailed = false;
   state.input = "";
   state.submit.mockReset();
+  state.submitContent.mockReset();
+  state.messages = [];
+  state.pendingQuestionId = null;
 });
 
 describe("WorkspaceChatPanel", () => {
+  it("says above the input which question is being answered", () => {
+    const [question] = followupExchange("Who did it?", "", "who_responsible");
+    state.messages = [question];
+    state.pendingQuestionId = question.id;
+    renderPanel();
+    expect(screen.getByText("Answering question 1")).toBeInTheDocument();
+    expect(screen.getByLabelText("Chat message")).toHaveAttribute(
+      "placeholder",
+      "Type your answer…",
+    );
+  });
+
+  it("skips a question by answering that it is not known, in the question's language", () => {
+    const [question] = followupExchange("ใครเป็นผู้กระทำ?", "", "who_responsible");
+    state.messages = [question];
+    state.pendingQuestionId = question.id;
+    renderPanel();
+    fireEvent.click(screen.getByRole("button", { name: "Don't know" }));
+    expect(state.submitContent).toHaveBeenCalledWith("ไม่ทราบ");
+  });
+
   it("points an empty case to its sources", () => {
     renderPanel();
     expect(screen.getByText("This case has no sources yet.")).toBeInTheDocument();

@@ -182,7 +182,7 @@ describe("SourcesPage", () => {
     const dialog = await screen.findByRole("dialog");
     const message = dialog.querySelector("#meaningful-error-message");
     expect(message).toHaveTextContent("แบ่งไฟล์");
-    expect(message).toHaveTextContent("ทั้งหมดของคดีนี้");
+    expect(message).toHaveTextContent("ทั้งหมดของเคสนี้");
     expect(message).not.toHaveTextContent("exceed");
     expect(within(dialog).queryByRole("button", { name: "ลองอีกครั้ง" })).not.toBeInTheDocument();
   });

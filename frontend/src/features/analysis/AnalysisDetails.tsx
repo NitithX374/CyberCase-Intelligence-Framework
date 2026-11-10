@@ -66,8 +66,8 @@ export function AnalysisDetails({
           <section aria-label="Case details" className="text-sm leading-7 text-ink-secondary">
             <p>
               {overview.findings.length > 0
-                ? "People, dates, events and impacts are recorded in the claims."
-                : "No claims were recorded in this analysis."}
+                ? "People, dates, events and impacts are drawn from the findings."
+                : "No findings were recorded in this analysis."}
             </p>
             <Link
               href={analysisPath(caseId, "findings")}

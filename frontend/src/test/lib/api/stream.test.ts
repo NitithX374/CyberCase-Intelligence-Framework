@@ -106,7 +106,7 @@ describe("reading the progress of work the backend is still doing", () => {
 
     expect(toUserFacingError(error)).toMatchObject({
       category: "refused",
-      message: "กรุณาเพิ่มหรือเปิดแหล่งข้อมูลของคดีก่อนเริ่มการวิเคราะห์",
+      message: "กรุณาเพิ่มหรือเปิด Source ของเคสก่อนเริ่มการวิเคราะห์",
     });
   });
 
@@ -120,7 +120,7 @@ describe("reading the progress of work the backend is still doing", () => {
 
     expect(toUserFacingError(error)).toMatchObject({
       category: "refused",
-      message: "ไม่พบคดีนี้ หรือคดีถูกลบไปแล้ว",
+      message: "ไม่พบเคสนี้ หรือเคสถูกลบไปแล้ว",
     });
   });
 

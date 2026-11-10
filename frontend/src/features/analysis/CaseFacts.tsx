@@ -18,7 +18,7 @@ const PAGES: Record<
   people: {
     title: "People",
     icon: "people",
-    note: "Who appears in the findings. Each line is a finding that mentions them, numbered as in Findings; open it for the full text and its source.",
+    note: "Who appears in the findings. Open a line to see the finding and its source.",
     empty: "No people or organisations were drawn from the findings of this analysis.",
   },
   impact: {

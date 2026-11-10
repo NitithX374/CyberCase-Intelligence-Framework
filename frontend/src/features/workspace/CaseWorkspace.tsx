@@ -1,8 +1,7 @@
 "use client";
 
-import { useParams, usePathname, useRouter, useSelectedLayoutSegment } from "next/navigation";
-import { useCallback, useRef, useState, type ReactNode } from "react";
-import { useEnterOnChange } from "@/lib/motion";
+import { useParams, useRouter, useSelectedLayoutSegment } from "next/navigation";
+import { useCallback, useState, type ReactNode } from "react";
 import { casePath, type WorkspaceView } from "@/lib/casePaths";
 import { useCase, useCaseMutations } from "@/features/cases/queries";
 import { useAnalysisAvailability } from "@/features/analysis/queries";
@@ -21,9 +20,6 @@ export function CaseWorkspace({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { caseId } = useParams<{ caseId: string }>();
   const activeView = (useSelectedLayoutSegment() ?? "analysis") as WorkspaceView;
-  const pathname = usePathname() ?? "";
-  const pageRef = useRef<HTMLDivElement | null>(null);
-  useEnterOnChange(pageRef, pathname);
 
   const [isChatOpen, setIsChatOpen] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -48,7 +44,7 @@ export function CaseWorkspace({ children }: { children: ReactNode }) {
     : isWaitingForFollowup
       ? "Waiting for your answer in Ask"
       : freshness === "stale"
-        ? "Out of date: sources changed"
+        ? "Sources changed since the analysis"
         : freshness === "current"
           ? "Analysis up to date"
           : "Not analyzed yet";
@@ -140,10 +136,9 @@ export function CaseWorkspace({ children }: { children: ReactNode }) {
           onRenameCase={(title) => void renameCase(title)}
           isChatOpen={isChatOpen}
           onToggleChat={() => setChatOpen(!isChatOpen)}
+          waitingQuestions={isWaitingForFollowup && !isUpdating ? 1 : 0}
         />
-        <div ref={pageRef} className="flex flex-1 flex-col">
-          {children}
-        </div>
+        <div className="flex flex-1 flex-col">{children}</div>
       </main>
 
       <WorkspaceChatPanel

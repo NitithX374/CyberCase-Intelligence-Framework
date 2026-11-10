@@ -109,7 +109,7 @@ describe("AnalysisSummary with a finding the source check flagged", () => {
     );
     expect(
       within(section).getByText(
-        `Only some linked claims have resolved source citations. ${flaggedNote}`,
+        `Only some findings behind this sentence have a located passage. ${flaggedNote}`,
         { exact: false },
       ),
     ).toBeInTheDocument();

@@ -15,8 +15,8 @@ function caseRecord(analysisFreshness: CaseRead["analysis_freshness"]): CaseRead
 
 describe("caseStatusLabel", () => {
   it("names the state of the case's analysis from its freshness alone", () => {
-    expect(caseStatusLabel(caseRecord("missing"))).toBe("Not analyzed");
+    expect(caseStatusLabel(caseRecord("missing"))).toBe("Not analyzed yet");
     expect(caseStatusLabel(caseRecord("current"))).toBe("Analyzed");
-    expect(caseStatusLabel(caseRecord("stale"))).toBe("Out of date");
+    expect(caseStatusLabel(caseRecord("stale"))).toBe("Sources changed since the analysis");
   });
 });

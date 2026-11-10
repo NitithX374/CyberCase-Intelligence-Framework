@@ -214,7 +214,7 @@ describe("CaseSourcesView", () => {
     expect(screen.getByRole("heading", { level: 3, name: "Files" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: "Case narrative" })).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 3, name: "Follow-up answers" }),
+      screen.getByRole("heading", { level: 3, name: "Your answers (not sources)" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "In this case 3" })).toBeInTheDocument();
   });
@@ -299,7 +299,7 @@ describe("CaseSourcesView", () => {
 
     const answers = screen.getByRole("heading", {
       level: 3,
-      name: "Follow-up answers",
+      name: "Your answers (not sources)",
     }).parentElement!;
     expect(within(answers).queryByRole("checkbox")).not.toBeInTheDocument();
     expect(screen.getAllByRole("checkbox")).toHaveLength(1);
@@ -376,7 +376,7 @@ describe("CaseSourcesView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Text" }));
 
-    expect(screen.queryByRole("button", { name: "Retry extraction" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Read the file again" })).not.toBeInTheDocument();
   });
 
   it("keeps a source switched as it is while an analysis runs", () => {
@@ -756,7 +756,7 @@ describe("CaseSourcesView", () => {
     });
 
     expect(screen.queryByRole("button", { name: "Text" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Machine-read text" }));
+    fireEvent.click(screen.getByRole("button", { name: "Text read from the file" }));
 
     expect(
       screen.getByText("Read by OCR. Check names, dates and numbers against the original."),
@@ -785,7 +785,9 @@ describe("CaseSourcesView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Text" }));
 
-    expect(screen.queryByRole("button", { name: "Machine-read text" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Text read from the file" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/Read by OCR/)).not.toBeInTheDocument();
   });
 
@@ -807,7 +809,7 @@ describe("CaseSourcesView", () => {
         }),
       ],
     });
-    fireEvent.click(screen.getByRole("button", { name: "Machine-read text" }));
+    fireEvent.click(screen.getByRole("button", { name: "Text read from the file" }));
 
     const page = (number: number) =>
       screen.getByText(`Page ${number}`).closest("section") as HTMLElement;
@@ -834,7 +836,7 @@ describe("CaseSourcesView", () => {
     renderSources({ isUploading: true, uploadingFilename: "forensic_report.pdf" });
 
     expect(screen.getByText("forensic_report.pdf")).toBeInTheDocument();
-    expect(screen.getByText("Extracting text…")).toBeInTheDocument();
+    expect(screen.getByText("Reading the file…")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "In this case 1" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "No sources yet" })).not.toBeInTheDocument();
   });

@@ -10,6 +10,9 @@ import { useCaseAnalysis } from "@/features/analysis/queries";
 import { toUserFacingError } from "@/lib/userFacingError";
 import { ChatTranscript } from "./ChatTranscript";
 import { useCaseSources } from "@/features/sources/queries";
+import { gapTopic } from "@/features/analysis/overview";
+import type { ChatMessageRead } from "@/lib/api/types";
+import { hasThai } from "@/lib/language";
 
 interface WorkspaceChatPanelProps {
   caseId: string | null;
@@ -62,7 +65,7 @@ export function WorkspaceChatPanel({
   const handleClose = () => {
     onCloseChat();
     window.requestAnimationFrame(() => {
-      document.querySelector<HTMLButtonElement>('[aria-label="Open Ask"]')?.focus();
+      document.getElementById("ask-toggle")?.focus();
     });
   };
 
@@ -78,7 +81,7 @@ export function WorkspaceChatPanel({
       className={`${isOpen ? "panel-in" : "panel-out"} fixed inset-0 z-50 flex h-full w-full shrink-0 flex-col overflow-hidden bg-surface text-ink md:static md:z-auto md:my-4 md:mr-4 md:h-auto md:w-[clamp(360px,30vw,420px)] md:rounded-[10px] md:shadow-[0_4px_24px_rgba(24,24,28,0.07)]`}
     >
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-line pr-3 pl-6">
-        <h2 className="text-lg font-semibold text-ink">Ask</h2>
+        <h2 className="text-lg font-semibold text-ink">Ask about this case</h2>
         <button
           type="button"
           onClick={handleClose}
@@ -109,15 +112,22 @@ export function WorkspaceChatPanel({
         isAnsweringQuestion={isAnsweringQuestion}
         leadResult={leadResult}
         sources={sources}
+        pendingQuestionId={pendingQuestionId}
+        onSuggest={(question) => {
+          chat.changeInput(question);
+          document.getElementById("chat-composer-input")?.focus();
+        }}
       />
 
-      <div className="shrink-0 px-4 pt-2 pb-4">
+      <div className="shrink-0 border-t border-line px-4 pt-3 pb-4">
         <ChatComposer
           input={chat.input}
           isSubmitting={isSending}
           onInputChange={chat.changeInput}
           onSubmit={chat.submitMessage}
           placeholder={pendingQuestionId ? "Type your answer…" : "Ask about this case…"}
+          answering={answeringQuestion(messages, pendingQuestionId)}
+          onSkip={chat.submitContent}
         />
       </div>
 
@@ -133,18 +143,47 @@ export function WorkspaceChatPanel({
 
 const MESSAGE_MAX_LENGTH = 4_000;
 
+function answeringQuestion(
+  messages: ChatMessageRead[],
+  pendingQuestionId: string | null,
+): Answering | null {
+  const question = messages.find((message) => message.id === pendingQuestionId);
+  if (!question?.gap_key) return null;
+  const number = messages.filter(
+    (message) =>
+      message.gap_key &&
+      message.analysis_result_id === question.analysis_result_id &&
+      message.ordinal <= question.ordinal,
+  ).length;
+  return {
+    label: `question ${number}`,
+    topic: gapTopic(question.gap_key, question.gap_key),
+    unknown: hasThai(question.content) ? "ไม่ทราบ" : "I don't know",
+  };
+}
+
+interface Answering {
+  label: string;
+  topic: string;
+  unknown: string;
+}
+
 function ChatComposer({
   input,
   isSubmitting,
   onInputChange,
   onSubmit,
   placeholder,
+  answering,
+  onSkip,
 }: {
   input: string;
   isSubmitting: boolean;
   onInputChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   placeholder: string;
+  answering: Answering | null;
+  onSkip: (answer: string) => void;
 }) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -166,7 +205,22 @@ function ChatComposer({
 
   return (
     <form ref={formRef} onSubmit={onSubmit} className="relative w-full">
-      <div className="flex items-end gap-2 rounded-xl border border-line-strong bg-surface py-2 pr-2 pl-3.5 transition-colors focus-within:border-ink">
+      <div className="overflow-hidden rounded-2xl border border-line-strong bg-surface shadow-[0_1px_3px_rgba(24,24,28,0.06)] transition-[border-color,box-shadow] focus-within:border-primary focus-within:shadow-[0_0_0_4px_var(--color-primary-soft)]">
+        {answering && (
+          <p className="flex items-center gap-1.5 border-b border-line bg-surface-nested px-4 py-2 text-xs">
+            <span className="shrink-0 font-semibold text-primary">Answering {answering.label}</span>
+            <span className="min-w-0 flex-1 truncate text-ink-muted">· {answering.topic}</span>
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => onSkip(answering.unknown)}
+              title={`Answer "${answering.unknown}" and move on`}
+              className="shrink-0 rounded-md px-2 py-0.5 font-semibold text-ink-secondary transition-colors hover:bg-surface-hover hover:text-ink disabled:cursor-not-allowed disabled:text-ink-disabled"
+            >
+              Don&apos;t know
+            </button>
+          </p>
+        )}
         <label htmlFor="chat-composer-input" className="sr-only">
           Chat message
         </label>
@@ -179,17 +233,22 @@ function ChatComposer({
           onKeyDown={handleKeyDown}
           onChange={(event) => onInputChange(event.target.value)}
           placeholder={placeholder}
-          className="max-h-[160px] min-h-6 flex-1 resize-none self-center border-none bg-transparent py-1 text-base leading-6 text-ink shadow-none outline-none placeholder:text-ink-muted focus:ring-0 disabled:text-ink-disabled"
+          className="block max-h-[160px] min-h-12 w-full resize-none border-none bg-transparent px-4 pt-3 pb-1 text-base leading-6 text-ink shadow-none outline-none placeholder:text-ink-muted focus:ring-0 disabled:text-ink-disabled"
         />
-        <button
-          type="submit"
-          disabled={isSubmitting || !input.trim() || isTooLong}
-          aria-label="Send message"
-          title="Send (Enter)"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-ivory transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled"
-        >
-          <Icon name="send" className="h-4 w-4" />
-        </button>
+        <div className="flex items-center justify-between gap-3 py-2 pr-2 pl-4">
+          <span className="hidden text-xs text-ink-muted sm:inline">
+            Enter to send · Shift+Enter for a new line
+          </span>
+          <button
+            type="submit"
+            disabled={isSubmitting || !input.trim() || isTooLong}
+            aria-label="Send message"
+            title="Send (Enter)"
+            className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-ivory transition-[background-color,transform] hover:bg-primary-hover active:scale-95 disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled"
+          >
+            <Icon name="send" className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       {isTooLong && (
         <p role="status" className="mt-1.5 px-1 text-xs text-ink-muted">

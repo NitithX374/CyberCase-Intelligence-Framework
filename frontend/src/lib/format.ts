@@ -1,6 +1,7 @@
-type DateStyle = "day" | "dayTime" | "monthDay" | "full";
+type DateStyle = "day" | "dayTime" | "monthDay" | "full" | "time";
 
 const DATE_FORMATS: Record<DateStyle, Intl.DateTimeFormatOptions> = {
+  time: { hour: "numeric", minute: "2-digit" },
   day: { month: "short", day: "numeric", year: "numeric" },
   dayTime: { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" },
   monthDay: { month: "short", day: "numeric" },

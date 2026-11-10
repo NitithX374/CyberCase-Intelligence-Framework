@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { casePath } from "@/lib/casePaths";
+import { analysisPath } from "@/lib/casePaths";
 
 export default function CaseLegalPage() {
   const params = useParams();
@@ -11,7 +11,7 @@ export default function CaseLegalPage() {
 
   useEffect(() => {
     if (caseId) {
-      router.replace(`${casePath(caseId, "analysis")}#section-references`);
+      router.replace(analysisPath(caseId, "legal"));
     }
   }, [caseId, router]);
 

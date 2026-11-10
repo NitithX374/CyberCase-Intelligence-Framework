@@ -24,8 +24,8 @@ import type {
 } from "./types";
 
 export const claimTypeLabels: Record<ClaimType, string> = {
-  reported: "Reported information",
-  unknown: "Unknown information",
+  reported: "Reported in the sources",
+  unknown: "Stated as unknown",
 };
 
 const checklistTopics: Record<string, string> = {
@@ -53,8 +53,8 @@ const groupDefinitions = [
   { id: "unknown", title: "Unknown", collapsible: false },
   { id: "contradicted", title: "Contradicted", collapsible: false },
   { id: "suspected", title: "Suspected", collapsible: false },
-  { id: "reported", title: "Reported information", collapsible: true },
-  { id: "unknown_claim", title: "Unknown information", collapsible: false },
+  { id: "reported", title: "Reported in the sources", collapsible: true },
+  { id: "unknown_claim", title: "Stated as unknown", collapsible: false },
 ] as const;
 
 export function groupCaseFindings(findings: CaseFinding[]) {

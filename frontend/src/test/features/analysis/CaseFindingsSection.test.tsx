@@ -82,10 +82,14 @@ describe("Grouped case findings", () => {
     expect(within(uncertainty).getAllByRole("article")).toHaveLength(7);
     expect(within(uncertainty).queryByRole("button", { name: /Show/ })).not.toBeInTheDocument();
     expect(screen.queryByText("Original finding reported-11")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Show all 12 reported information" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show all 12 findings, reported in the sources" }),
+    );
     expect(screen.getByText("Original finding reported-11")).toBeVisible();
     expect(screen.getAllByRole("article")).toHaveLength(19);
-    fireEvent.click(screen.getByRole("button", { name: "Show fewer reported information" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show fewer findings, reported in the sources" }),
+    );
     expect(screen.getAllByRole("article")).toHaveLength(12);
   });
 
@@ -101,13 +105,13 @@ describe("Grouped case findings", () => {
       />,
     );
     const unsettled = screen.getByRole("region", { name: "Not established 1" });
-    expect(within(unsettled).getByRole("article")).toHaveTextContent("Unknown information");
+    expect(within(unsettled).getByRole("article")).toHaveTextContent("Stated as unknown");
     expect(screen.getByRole("region", { name: "Unknown 1" })).toHaveTextContent(
       "Original finding missing",
     );
   });
 
-  it("links a technique to its entry on the Details page, where the ATT&CK table lives", () => {
+  it("links a technique to its entry on the ATT&CK techniques page", () => {
     render(
       <CaseFindingsSection
         caseId={caseId}
@@ -118,7 +122,7 @@ describe("Grouped case findings", () => {
 
     expect(screen.getByRole("link", { name: "T1566" })).toHaveAttribute(
       "href",
-      `/case/${caseId}/analysis/details#mitre-T1566`,
+      `/case/${caseId}/analysis/technical#mitre-T1566`,
     );
   });
 
@@ -255,6 +259,6 @@ it("explains an unresolved evidence ID without claiming a quote mismatch", () =>
       onSelectSource={vi.fn()}
     />,
   );
-  expect(screen.getByText("The source unit reference could not be resolved.")).toBeInTheDocument();
+  expect(screen.getByText("The cited place in the source could not be found.")).toBeInTheDocument();
   expect(screen.queryByText("Not found word for word in the source.")).not.toBeInTheDocument();
 });

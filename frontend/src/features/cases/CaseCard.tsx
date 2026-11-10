@@ -36,7 +36,6 @@ export function CaseCard({
   onRequestDelete,
   index = 0,
 }: CaseCardProps) {
-  const stagger = { ["--i" as string]: Math.min(index, 8) };
   const deleteButton = onRequestDelete && (
     <button
       type="button"
@@ -52,14 +51,14 @@ export function CaseCard({
 
   if (viewMode === "list") {
     return (
-      <li
-        style={stagger}
-        className="group stagger row-accent relative flex items-center gap-3 px-5 transition-colors hover:bg-primary-wash sm:px-6"
-      >
+      <li className="group relative flex items-center gap-3 px-5 transition-colors hover:bg-primary-wash sm:px-6">
         <Link
           href={caseDestination(caseRecord)}
           className="flex min-w-0 flex-1 items-center gap-4 py-4 after:absolute after:inset-0 after:content-['']"
         >
+          <span className="w-7 shrink-0 text-sm font-semibold text-ink-muted tabular-nums">
+            {index + 1}
+          </span>
           <span
             className="min-w-0 flex-1 truncate text-base font-semibold text-ink"
             title={caseRecord.title}
@@ -79,12 +78,12 @@ export function CaseCard({
   }
 
   return (
-    <li
-      style={stagger}
-      className="group stagger lift relative flex min-h-36 flex-col justify-between rounded-[10px] border border-line bg-surface p-5 hover:border-primary-line hover:bg-primary-wash"
-    >
+    <li className="group relative flex min-h-36 flex-col justify-between rounded-[10px] border border-line bg-surface p-5 hover:border-primary-line hover:bg-primary-wash">
       <div className="flex items-start justify-between gap-3 text-sm text-ink-muted">
-        <CaseStatus caseRecord={caseRecord} />
+        <span className="flex items-center gap-2.5">
+          <span className="font-semibold tabular-nums">{index + 1}</span>
+          <CaseStatus caseRecord={caseRecord} />
+        </span>
         <span className="-mt-1.5 -mr-2">{deleteButton}</span>
       </div>
       <Link

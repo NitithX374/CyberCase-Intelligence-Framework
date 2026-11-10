@@ -61,7 +61,7 @@ describe("LegalReferenceView", () => {
     expect(screen.getByRole("heading", { name: FRAUD_SECTION })).toBeInTheDocument();
     const region = screen.getByRole("region", { name: "Legal references" });
     expect(region).toHaveTextContent("รายการอ้างอิงตัวบทที่อาจเกี่ยวข้อง ไม่ใช่ความเห็นทางกฎหมาย");
-    expect(within(region).getByRole("heading", { name: "Legal references" })).toBeInTheDocument();
+    expect(within(region).getByRole("heading", { name: "Provisions" })).toBeInTheDocument();
   });
 
   it("links only to web addresses the provider gave", () => {
@@ -105,7 +105,7 @@ describe("LegalReferenceView", () => {
     expect(
       screen.getByRole("heading", { name: "Thai legal provisions: No legal references" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/judged not to need it/)).toBeInTheDocument();
+    expect(screen.getByText(/This case had none/)).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 

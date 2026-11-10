@@ -5,11 +5,11 @@ export function CaseNotFound() {
   return (
     <main className="flex h-dvh flex-col justify-center bg-surface px-6 py-16 text-ink">
       <EmptyState
-        title="ไม่พบคดีนี้"
-        description="คดีนี้อาจถูกลบไปแล้ว หรือลิงก์ไม่ถูกต้อง กรุณากลับไปเลือกคดีจากรายการคดี"
+        title="ไม่พบเคสนี้"
+        description="เคสนี้อาจถูกลบไปแล้ว หรือลิงก์ไม่ถูกต้อง กรุณากลับไปเลือกเคสจากรายการเคส"
       >
         <Link href="/case" className="btn-primary mt-5">
-          กลับไปที่รายการคดี
+          กลับไปที่รายการเคส
         </Link>
       </EmptyState>
     </main>

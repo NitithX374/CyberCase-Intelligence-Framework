@@ -24,8 +24,8 @@ export function ClaimViewReview({ row, caseId }: { row: ClaimBacked; caseId?: st
               </Link>
             ) : (
               <span className="font-medium">Finding</span>
-            )}{" "}
-            — {claim.text}
+            )}
+            : {claim.text}
           </li>
         ))}
       </ul>
@@ -143,7 +143,7 @@ export function CaseDetails({
                   <p
                     className={`pt-0.5 text-right font-mono text-xs leading-5 [overflow-wrap:anywhere] ${clock ? "font-bold text-ink" : "text-ink-secondary"}`}
                   >
-                    {item.time ?? "No date or time extracted; check the linked claim"}
+                    {item.time ?? "No date or time given; see the linked finding"}
                   </p>
                   <div aria-hidden="true" className="flex flex-col items-center">
                     <span

@@ -34,6 +34,7 @@ interface HeaderOptions {
   onRenameCase?: (title: string) => void;
   isChatOpen?: boolean;
   onToggleChat?: () => void;
+  waitingQuestions?: number;
 }
 
 function renderHeader(options: HeaderOptions = {}) {
@@ -52,6 +53,7 @@ function renderHeader(options: HeaderOptions = {}) {
       onRenameCase={options.onRenameCase}
       isChatOpen={options.isChatOpen}
       onToggleChat={options.onToggleChat}
+      waitingQuestions={options.waitingQuestions}
     />,
   );
 }
@@ -60,14 +62,29 @@ const viewButtons = () =>
   within(screen.getByRole("navigation", { name: "Case workspace views" })).getAllByRole("button");
 
 describe("WorkspaceHeader", () => {
+  it("says on the Ask button that a question is waiting, and hides the count once Ask is open", () => {
+    const closed = renderHeader({ isChatOpen: false, onToggleChat: vi.fn(), waitingQuestions: 1 });
+    expect(screen.getByRole("button", { name: "Open Ask, 1 question waiting" })).toHaveTextContent(
+      "Question waiting1",
+    );
+    closed.unmount();
+
+    renderHeader({ isChatOpen: true, onToggleChat: vi.fn(), waitingQuestions: 1 });
+    expect(screen.getByRole("button", { name: "Close Ask" })).toHaveTextContent("Close Ask");
+  });
+
   it("names the three views and marks the current one", () => {
     const onViewChange = vi.fn();
     renderHeader({ onViewChange, isChatOpen: false, onToggleChat: vi.fn() });
 
     expect(screen.getByRole("heading", { name: "Payment Review" })).toBeInTheDocument();
     const views = within(screen.getByRole("navigation", { name: "Case workspace views" }));
-    expect(viewButtons().map((item) => item.textContent)).toEqual(["Reading", "Sources", "Report"]);
-    expect(views.getByRole("button", { name: "Reading" })).toHaveAttribute("aria-current", "page");
+    expect(viewButtons().map((item) => item.textContent)).toEqual([
+      "Findings",
+      "Sources",
+      "Report",
+    ]);
+    expect(views.getByRole("button", { name: "Findings" })).toHaveAttribute("aria-current", "page");
     expect(views.getByRole("button", { name: "Sources" })).not.toHaveAttribute("aria-current");
     expect(views.queryByRole("button", { name: "Legal" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Ask" })).toBeInTheDocument();
@@ -76,15 +93,15 @@ describe("WorkspaceHeader", () => {
     expect(onViewChange).toHaveBeenCalledWith("sources");
     fireEvent.click(views.getByRole("button", { name: "Report" }));
     expect(onViewChange).toHaveBeenCalledWith("report");
-    fireEvent.click(views.getByRole("button", { name: "Reading" }));
+    fireEvent.click(views.getByRole("button", { name: "Findings" }));
     expect(onViewChange).toHaveBeenCalledWith("analysis");
   });
 
-  it("counts the legal route as the Reading view", () => {
+  it("counts the legal route as the Findings view", () => {
     renderHeader({ activeView: "legal" });
 
     const current = viewButtons().filter((item) => item.getAttribute("aria-current") === "page");
-    expect(current.map((item) => item.textContent)).toEqual(["Reading"]);
+    expect(current.map((item) => item.textContent)).toEqual(["Findings"]);
   });
 
   it("shows the case's counts and how many findings to check", () => {
@@ -105,7 +122,7 @@ describe("WorkspaceHeader", () => {
       />,
     );
 
-    expect(screen.getByText("1 source")).toBeInTheDocument();
+    expect(screen.getByText(/^1 source /)).toBeInTheDocument();
     expect(screen.getByText("to check").previousElementSibling).toHaveTextContent("2/5");
     expect(screen.getByRole("link", { name: "Create report" })).toHaveAttribute(
       "href",
@@ -122,7 +139,7 @@ describe("WorkspaceHeader", () => {
           activeCase={sampleCase}
           activeView={activeView}
           creatingCase={false}
-          status="Out of date: sources changed"
+          status="Sources changed since the analysis"
           statusNeedsAttention
           analyzeLabel="Analyze"
           canAnalyze
@@ -139,7 +156,7 @@ describe("WorkspaceHeader", () => {
 
       expect(screen.getByRole("heading", { level: 1, name: "Payment Review" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Rename case" })).toBeInTheDocument();
-      expect(screen.getByRole("status")).toHaveTextContent("Out of date: sources changed");
+      expect(screen.getByRole("status")).toHaveTextContent("Sources changed since the analysis");
       const analyze = screen.getByRole("button", { name: "Analyze" });
       expect(analyze).toHaveClass("btn-primary");
       fireEvent.click(analyze);
@@ -184,12 +201,16 @@ describe("WorkspaceHeader", () => {
   it("says where the analysis stands beside the views, never on a tab", () => {
     renderHeader({
       activeView: "sources",
-      status: "Out of date: sources changed",
+      status: "Sources changed since the analysis",
       statusNeedsAttention: true,
     });
 
-    expect(screen.getByRole("status")).toHaveTextContent("Out of date: sources changed");
-    expect(viewButtons().map((item) => item.textContent)).toEqual(["Reading", "Sources", "Report"]);
+    expect(screen.getByRole("status")).toHaveTextContent("Sources changed since the analysis");
+    expect(viewButtons().map((item) => item.textContent)).toEqual([
+      "Findings",
+      "Sources",
+      "Report",
+    ]);
   });
 
   it("offers one Analyze button that runs the analysis", () => {
@@ -230,12 +251,11 @@ describe("WorkspaceHeader", () => {
     const onNewCase = vi.fn();
     renderHeader({ onNewCase });
 
-    expect(screen.queryByRole("button", { name: "New case" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Open account menu" }));
-    const libraryLinks = screen.getAllByRole("link", { name: "All cases" });
-    expect(libraryLinks).toHaveLength(2);
-    libraryLinks.forEach((link) => expect(link).toHaveAttribute("href", "/case"));
-    fireEvent.click(screen.getByRole("button", { name: "New case" }));
+    expect(screen.queryByRole("menuitem", { name: "New case" })).not.toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole("button", { name: "Open account menu" }), { key: "Enter" });
+    const menu = within(screen.getByRole("menu"));
+    expect(menu.getByRole("menuitem", { name: "All cases" })).toHaveAttribute("href", "/case");
+    fireEvent.click(menu.getByRole("menuitem", { name: "New case" }));
     expect(onNewCase).toHaveBeenCalledOnce();
   });
 });

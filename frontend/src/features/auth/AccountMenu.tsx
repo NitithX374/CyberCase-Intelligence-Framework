@@ -1,44 +1,11 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import * as Menu from "@radix-ui/react-dropdown-menu";
 import { useAuth } from "./useAuth";
-import { useDismiss } from "@/lib/useDismiss";
 import { Icon, type IconName } from "@/components/icons";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-
-export function AccountMenu({ actions = [] }: { actions?: AccountMenuAction[] }) {
-  const { user } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const close = useCallback(() => setIsOpen(false), []);
-  useDismiss(containerRef, isOpen, close);
-
-  const initial = (user?.name || user?.email || "?").trim().charAt(0).toUpperCase();
-
-  return (
-    <div ref={containerRef} className="relative shrink-0">
-      <button
-        type="button"
-        aria-label="Open account menu"
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        onClick={() => setIsOpen((open) => !open)}
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary transition-colors hover:bg-primary-line"
-      >
-        {initial}
-      </button>
-      {isOpen && (
-        <div
-          style={{ ["--origin" as string]: "top right" }}
-          className="pop-in absolute right-0 top-11 z-50 w-64 rounded-xl border border-line bg-surface p-1.5 shadow-lg shadow-black/5"
-        >
-          <UserProfileMenu actions={actions} onAction={close} />
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface AccountMenuAction {
   label: string;
@@ -49,115 +16,123 @@ interface AccountMenuAction {
 }
 
 const itemClass =
-  "flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm text-ink transition-colors hover:bg-surface-hover disabled:cursor-wait disabled:opacity-50";
+  "flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-left text-sm text-ink outline-none transition-colors data-[highlighted]:bg-surface-hover data-[disabled]:cursor-wait data-[disabled]:opacity-50";
 
-export function UserProfileMenu({
-  actions = [],
-  onAction,
-}: {
-  actions?: AccountMenuAction[];
-  onAction?: () => void;
-}) {
+export function AccountMenu({ actions = [] }: { actions?: AccountMenuAction[] }) {
   const { user, isLoading, logout, isLoggingOut } = useAuth();
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
+  const initial = (user?.name || user?.email || "?").trim().charAt(0).toUpperCase();
 
-  const handleSignOut = async () => {
+  const signOut = async () => {
     setError(null);
     try {
       await logout();
-      setIsSignOutDialogOpen(false);
     } catch {
       setError("Sign out failed. Try again.");
-      setIsSignOutDialogOpen(false);
     }
+    setConfirming(false);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-2 px-2.5 py-2 text-sm text-ink-muted" role="status">
-        <span className="h-2 w-2 animate-pulse rounded-full bg-ink-muted/40" />
-        <span>Loading…</span>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <Link href="/login" className={itemClass}>
-        <Icon name="account" className="h-4 w-4 text-ink-muted" />
-        <span>Sign in</span>
-      </Link>
-    );
-  }
-
   return (
-    <div className="flex w-full flex-col">
-      <div className="min-w-0 px-2.5 pt-1.5 pb-2.5">
-        <p className="truncate text-sm font-semibold text-ink" title={user.name}>
-          {user.name}
-        </p>
-        <p className="truncate text-xs text-ink-muted" title={user.email}>
-          {user.email}
-        </p>
-      </div>
-
-      {actions.length > 0 && (
-        <div className="border-t border-line py-1">
-          {actions.map((action) =>
-            action.href ? (
-              <Link key={action.label} href={action.href} onClick={onAction} className={itemClass}>
-                <Icon name={action.icon} className="h-4 w-4 text-ink-muted" />
-                {action.label}
-              </Link>
+    <span className="relative shrink-0">
+      <Menu.Root modal={false}>
+        <Menu.Trigger asChild>
+          <button
+            type="button"
+            aria-label="Open account menu"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary transition-colors hover:bg-primary-line data-[state=open]:bg-primary-line"
+          >
+            {initial}
+          </button>
+        </Menu.Trigger>
+        <Menu.Portal>
+          <Menu.Content
+            align="end"
+            sideOffset={6}
+            className="pop-in z-50 w-64 rounded-xl border border-line bg-surface p-1.5 shadow-lg shadow-black/5 [--origin:top_right]"
+          >
+            {isLoading ? (
+              <p role="status" className="px-2.5 py-2 text-sm text-ink-muted">
+                Loading…
+              </p>
+            ) : !user ? (
+              <Menu.Item asChild className={itemClass}>
+                <Link href="/login">
+                  <Icon name="account" className="h-4 w-4 text-ink-muted" />
+                  Sign in
+                </Link>
+              </Menu.Item>
             ) : (
-              <button
-                key={action.label}
-                type="button"
-                disabled={action.disabled}
-                onClick={() => {
-                  onAction?.();
-                  action.onSelect?.();
-                }}
-                className={itemClass}
-              >
-                <Icon name={action.icon} className="h-4 w-4 text-ink-muted" />
-                {action.label}
-              </button>
-            ),
-          )}
-        </div>
-      )}
-
-      <div className="border-t border-line pt-1">
-        <button
-          type="button"
-          disabled={isLoggingOut}
-          onClick={() => {
-            setError(null);
-            setIsSignOutDialogOpen(true);
-          }}
-          className={itemClass}
-        >
-          <Icon name="log-out" className="h-4 w-4 text-ink-muted" />
-          {isLoggingOut ? "Signing out…" : "Sign out"}
-        </button>
-      </div>
+              <>
+                <Menu.Label className="min-w-0 px-2.5 pt-1.5 pb-2.5">
+                  <span className="block truncate text-sm font-semibold text-ink" title={user.name}>
+                    {user.name}
+                  </span>
+                  <span className="block truncate text-xs text-ink-muted" title={user.email}>
+                    {user.email}
+                  </span>
+                </Menu.Label>
+                {actions.length > 0 && (
+                  <>
+                    <Menu.Separator className="my-1 h-px bg-line" />
+                    {actions.map((action) =>
+                      action.href ? (
+                        <Menu.Item key={action.label} asChild className={itemClass}>
+                          <Link href={action.href}>
+                            <Icon name={action.icon} className="h-4 w-4 text-ink-muted" />
+                            {action.label}
+                          </Link>
+                        </Menu.Item>
+                      ) : (
+                        <Menu.Item
+                          key={action.label}
+                          disabled={action.disabled}
+                          onSelect={action.onSelect}
+                          className={itemClass}
+                        >
+                          <Icon name={action.icon} className="h-4 w-4 text-ink-muted" />
+                          {action.label}
+                        </Menu.Item>
+                      ),
+                    )}
+                  </>
+                )}
+                <Menu.Separator className="my-1 h-px bg-line" />
+                <Menu.Item
+                  disabled={isLoggingOut}
+                  onSelect={() => {
+                    setError(null);
+                    setConfirming(true);
+                  }}
+                  className={itemClass}
+                >
+                  <Icon name="log-out" className="h-4 w-4 text-ink-muted" />
+                  {isLoggingOut ? "Signing out…" : "Sign out"}
+                </Menu.Item>
+              </>
+            )}
+          </Menu.Content>
+        </Menu.Portal>
+      </Menu.Root>
       {error && (
-        <span role="alert" className="px-2.5 pb-1.5 text-xs text-critical">
+        <span
+          role="alert"
+          className="absolute top-12 right-0 z-50 w-max rounded-lg border border-line bg-surface px-3 py-2 text-xs text-critical shadow-lg shadow-black/5"
+        >
           {error}
         </span>
       )}
       <ConfirmDialog
-        isOpen={isSignOutDialogOpen}
+        isOpen={confirming}
         title="Sign out of CyberCase?"
         confirmLabel="Sign out"
         confirmLoadingLabel="Signing out…"
         isProcessing={isLoggingOut}
-        onCancel={() => setIsSignOutDialogOpen(false)}
-        onConfirm={() => void handleSignOut()}
+        onCancel={() => setConfirming(false)}
+        onConfirm={() => void signOut()}
         titleId="signout-dialog-title"
       />
-    </div>
+    </span>
   );
 }

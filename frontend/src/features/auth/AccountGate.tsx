@@ -62,7 +62,7 @@ function ServerUnreachable({ attempts, onRetry }: { attempts: number; onRetry: (
   return (
     <AppSkeleton
       title="Unable to check your session."
-      detail="The server is not answering yet. Right after the computer starts it is still loading its reading models, which takes about a minute. This page keeps trying on its own."
+      detail="The server is still starting up, which can take about a minute. This page keeps trying on its own."
     >
       <div className="mt-5 flex flex-wrap items-center gap-4">
         <button type="button" onClick={() => void onRetry()} className="btn-on-band">

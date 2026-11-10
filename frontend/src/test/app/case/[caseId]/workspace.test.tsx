@@ -258,7 +258,7 @@ describe("the case workspace", () => {
     workspace.show("sources", () => <SourcesPage />);
     await screen.findByRole("button", { name: "Upload file" });
     writeNarrative("A second narrative.");
-    expect(await screen.findByText("Out of date: sources changed")).toBeInTheDocument();
+    expect(await screen.findByText("Sources changed since the analysis")).toBeInTheDocument();
     expect(topBar().getByRole("button", { name: "Analyze" })).toBeEnabled();
 
     workspace.show("analysis", () => (
@@ -268,8 +268,9 @@ describe("the case workspace", () => {
     ));
     await act(async () => {});
 
-    expect(await screen.findByText("Out of date")).toBeInTheDocument();
-    expect(screen.getByText("Out of date: sources changed")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getAllByText("Sources changed since the analysis")).toHaveLength(2),
+    );
     expect(screen.getAllByRole("button", { name: /Analyze/ })).toHaveLength(1);
   });
 

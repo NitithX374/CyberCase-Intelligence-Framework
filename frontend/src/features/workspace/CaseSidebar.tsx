@@ -13,6 +13,7 @@ interface NavItem {
   icon: IconName;
   count?: number;
   current: boolean;
+  tone?: string;
 }
 
 export function CaseSidebar({
@@ -32,7 +33,9 @@ export function CaseSidebar({
     pathname.startsWith(analysis) &&
     !onFactPage("timeline") &&
     !onFactPage("people") &&
-    !onFactPage("impact");
+    !onFactPage("impact") &&
+    !onFactPage("technical") &&
+    !onFactPage("legal");
   const flagged = overview.findings.filter(
     (finding) => finding.traceability.semanticSupport === "not_supported",
   ).length;
@@ -40,7 +43,7 @@ export function CaseSidebar({
   const activeSources = sources?.filter((source) => !source.deactivated_at).length;
 
   const caseItems: NavItem[] = [
-    { href: analysis, label: "Reading", icon: "findings", count: total, current: onReading },
+    { href: analysis, label: "Findings", icon: "findings", count: total, current: onReading },
     {
       href: analysisPath(caseId, "timeline"),
       label: "Timeline",
@@ -62,11 +65,21 @@ export function CaseSidebar({
       count: overview.impacts.length,
       current: onFactPage("impact"),
     },
+  ];
+  const outsideItems: NavItem[] = [
     {
-      href: `${analysis}#section-references`,
-      label: "Outside references",
-      icon: "references",
-      current: false,
+      href: analysisPath(caseId, "technical"),
+      label: "ATT&CK techniques",
+      icon: "technical",
+      current: onFactPage("technical"),
+      tone: "text-technical",
+    },
+    {
+      href: analysisPath(caseId, "legal"),
+      label: "Related laws",
+      icon: "legal",
+      current: onFactPage("legal"),
+      tone: "text-legal",
     },
   ];
   const materialItems: NavItem[] = [
@@ -105,7 +118,7 @@ export function CaseSidebar({
       </Link>
       <span
         aria-hidden="true"
-        className={`mt-4 mb-4 h-px shrink-0 bg-primary ${compact ? "mx-2" : "mx-3"}`}
+        className={`mt-4 mb-4 h-px shrink-0 bg-espresso-line ${compact ? "mx-2" : "mx-3"}`}
       />
 
       <SidebarLink
@@ -132,7 +145,7 @@ export function CaseSidebar({
           <>
             <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/15">
               <div
-                className="grow-x h-full rounded-full bg-primary-soft"
+                className="h-full rounded-full bg-primary-soft"
                 style={{ width: `${total ? Math.round((flagged / total) * 100) : 0}%` }}
               />
             </div>
@@ -154,10 +167,23 @@ export function CaseSidebar({
         <span aria-hidden="true" className="mx-2 my-3 border-t border-espresso-line" />
       ) : (
         <p className="px-3.5 pt-5 pb-2 text-xs font-semibold tracking-[0.1em] text-espresso-muted uppercase">
-          Material
+          Outside references
         </p>
       )}
-      <nav aria-label="Case material" className="flex flex-col gap-1">
+      <nav aria-label="Outside references" className="flex flex-col gap-1">
+        {outsideItems.map((item) => (
+          <SidebarLink key={item.label} item={item} compact={compact} />
+        ))}
+      </nav>
+
+      {compact ? (
+        <span aria-hidden="true" className="mx-2 my-3 border-t border-espresso-line" />
+      ) : (
+        <p className="px-3.5 pt-5 pb-2 text-xs font-semibold tracking-[0.1em] text-espresso-muted uppercase">
+          Case file
+        </p>
+      )}
+      <nav aria-label="Case file" className="flex flex-col gap-1">
         {materialItems.map((item) => (
           <SidebarLink key={item.label} item={item} compact={compact} />
         ))}
@@ -188,7 +214,7 @@ function SidebarLink({ item, compact = false }: { item: NavItem; compact?: boole
     >
       <Icon
         name={item.icon}
-        className="shrink-0 text-[22px] transition-transform duration-200 group-hover:translate-x-0.5"
+        className={`shrink-0 text-[22px] ${item.tone && !item.current ? item.tone : ""}`}
       />
       <span className={compact ? "sr-only" : undefined}>{item.label}</span>
       {!compact && item.count !== undefined && item.count > 0 && (

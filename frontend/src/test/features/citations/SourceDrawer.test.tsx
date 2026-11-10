@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CaseSourceCitation, CaseSourceRead } from "@/lib/api/types";
 import { caseId, followupExchange } from "@/test/fixtures";
@@ -33,9 +33,7 @@ describe("SourceDrawer", () => {
 
     render(<SourceDrawer sourceRef={answer} anchorElement={anchor} onClose={vi.fn()} />);
 
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
-      /^Source: Follow-up answer QA-01$/,
-    );
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(/^Source: Your answer 1$/);
     const terms = screen.getAllByRole("term").map((term) => term.textContent);
     const definitions = screen.getAllByRole("definition").map((item) => item.textContent);
     expect(terms).toEqual(["Question", "Answer"]);
@@ -57,7 +55,7 @@ describe("SourceDrawer", () => {
       sources,
     ).supporting.map((source) => source.label);
 
-    expect(labels).toEqual(["statement.pdf", "Case narrative #1", "Case narrative #2"]);
+    expect(labels).toEqual(["statement.pdf", "Narrative 1", "Narrative 2"]);
   });
 
   const narrative = {
@@ -74,12 +72,10 @@ describe("SourceDrawer", () => {
     ).supporting;
     const anchor = document.body.appendChild(document.createElement("button"));
     render(<SourceDrawer sourceRef={cited} anchorElement={anchor} onClose={vi.fn()} />);
-    return screen.getByRole("heading", { level: 3, name: "Quoted" })
-      .nextElementSibling as HTMLElement;
   }
 
-  it("shows the quotation inside the sentence it was cut from", () => {
-    const quoted = openCited({
+  it("shows the whole source with the quotation marked once, in place", () => {
+    openCited({
       source_id: "narrative-1",
       exact_quote: "a transfer of 52,000 baht",
       pointer_state: "recovered",
@@ -91,13 +87,11 @@ describe("SourceDrawer", () => {
       },
     });
 
-    expect(quoted).toHaveTextContent(
-      /^The caller said the account had been frozen\. He asked for a transfer of 52,000 baht to a safe account\.$/,
-    );
-    expect(within(quoted).getByText("a transfer of 52,000 baht").tagName).toBe("STRONG");
-    expect(
-      screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent),
-    ).toEqual(["Quoted", "Source text"]);
+    expect(screen.getByLabelText("Source text")).toHaveTextContent(narrative.exact_text);
+    expect(Array.from(document.querySelectorAll("mark"), (mark) => mark.textContent)).toEqual([
+      "a transfer of 52,000 baht",
+    ]);
+    expect(screen.queryByRole("heading", { level: 3 })).not.toBeInTheDocument();
   });
 
   it("labels nothing for a source cited without a quotation", () => {
@@ -112,15 +106,35 @@ describe("SourceDrawer", () => {
     expect(screen.queryAllByRole("heading", { level: 3 })).toEqual([]);
   });
 
-  it("shows the quotation alone when the analysis stored no context for it", () => {
-    const quoted = openCited({
-      source_id: "narrative-1",
-      exact_quote: "a transfer of 52,000 baht",
-      pointer_state: "recovered",
-    });
+  it("marks the quotation where its offsets point, not at an earlier repeat of the words", () => {
+    const repeated = {
+      ...caseSource("narrative-2", "narrative"),
+      exact_text: "He asked for 500 baht. Later he asked for 500 baht again.",
+    };
+    const start = repeated.exact_text.lastIndexOf("500 baht");
+    const [cited] = claimRefs(
+      {
+        supporting_source_ids: ["narrative-2"],
+        supporting_citations: [
+          {
+            source_id: "narrative-2",
+            exact_quote: "500 baht",
+            pointer_state: "direct",
+            start,
+            end: start + "500 baht".length,
+          },
+        ],
+      },
+      parseCaseSources([repeated], []),
+    ).supporting;
+    const anchor = document.body.appendChild(document.createElement("button"));
+    render(<SourceDrawer sourceRef={cited} anchorElement={anchor} onClose={vi.fn()} />);
 
-    expect(quoted).toHaveTextContent(/^a transfer of 52,000 baht$/);
-    expect(quoted.querySelector("strong")).toBeNull();
+    const marks = document.querySelectorAll("mark");
+    expect(marks).toHaveLength(1);
+    expect(marks[0].previousSibling?.textContent).toBe(
+      "He asked for 500 baht. Later he asked for ",
+    );
   });
 
   it("renders page text with Markdown and HTML tables instead of raw tags", () => {
@@ -144,7 +158,7 @@ describe("SourceDrawer", () => {
     ).supporting;
     const anchor = document.body.appendChild(document.createElement("button"));
 
-    const { container } = render(
+    const { baseElement: container } = render(
       <SourceDrawer sourceRef={cited} anchorElement={anchor} onClose={vi.fn()} />,
     );
 
@@ -178,7 +192,7 @@ describe("SourceDrawer", () => {
     ).supporting;
     const anchor = document.body.appendChild(document.createElement("button"));
 
-    const { container } = render(
+    const { baseElement: container } = render(
       <SourceDrawer sourceRef={cited} anchorElement={anchor} onClose={vi.fn()} />,
     );
 
@@ -212,7 +226,7 @@ describe("SourceDrawer", () => {
     ).supporting;
     const anchor = document.body.appendChild(document.createElement("button"));
 
-    const { container } = render(
+    const { baseElement: container } = render(
       <SourceDrawer sourceRef={cited} anchorElement={anchor} onClose={vi.fn()} />,
     );
 
@@ -221,7 +235,7 @@ describe("SourceDrawer", () => {
     expect(tdMarks[0]).toHaveTextContent("นายถนอม รอดสุข");
     expect(tdMarks[1]).toHaveTextContent("ผู้กล่าวหา");
     const tr = container.querySelector("tr");
-    expect(tr?.className).toContain("bg-amber-100/50");
+    expect(tr?.className).toContain("bg-primary-wash");
   });
 
   it("highlights table content when quote is pipe-separated text without tags", () => {
@@ -249,7 +263,7 @@ describe("SourceDrawer", () => {
     ).supporting;
     const anchor = document.body.appendChild(document.createElement("button"));
 
-    const { container } = render(
+    const { baseElement: container } = render(
       <SourceDrawer sourceRef={cited} anchorElement={anchor} onClose={vi.fn()} />,
     );
 
@@ -284,11 +298,12 @@ describe("SourceDrawer", () => {
     ).supporting;
     const anchor1 = document.body.appendChild(document.createElement("button"));
 
-    const { container: c1 } = render(
+    const first = render(
       <SourceDrawer sourceRef={citedLeading} anchorElement={anchor1} onClose={vi.fn()} />,
     );
-    expect(c1.querySelector("td mark")).toHaveTextContent("นายถนอม รอดสุข");
-    expect(c1.querySelector("table")).not.toBeNull();
+    expect(document.body.querySelector("td mark")).toHaveTextContent("นายถนอม รอดสุข");
+    expect(document.body.querySelector("table")).not.toBeNull();
+    first.unmount();
 
     const [citedTrailing] = claimRefs(
       {
@@ -306,10 +321,8 @@ describe("SourceDrawer", () => {
     ).supporting;
     const anchor2 = document.body.appendChild(document.createElement("button"));
 
-    const { container: c2 } = render(
-      <SourceDrawer sourceRef={citedTrailing} anchorElement={anchor2} onClose={vi.fn()} />,
-    );
-    expect(c2.querySelector("td mark")).toHaveTextContent("นางสาวสุรัตนา");
-    expect(c2.querySelector("table")).not.toBeNull();
+    render(<SourceDrawer sourceRef={citedTrailing} anchorElement={anchor2} onClose={vi.fn()} />);
+    expect(document.body.querySelector("td mark")).toHaveTextContent("นางสาวสุรัตนา");
+    expect(document.body.querySelector("table")).not.toBeNull();
   });
 });

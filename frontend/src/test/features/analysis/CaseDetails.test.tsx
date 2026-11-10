@@ -44,7 +44,9 @@ describe("CaseDetails", () => {
       />,
     );
 
-    expect(screen.getByText("ยังไม่ยืนยัน ไม่มี quote ที่ตรวจแล้ว")).toBeInTheDocument();
+    expect(
+      screen.getByText("ยังไม่ยืนยัน: ไม่มีข้อความอ้างอิงที่หาตำแหน่งได้"),
+    ).toBeInTheDocument();
     expect(screen.getByText("No cited quotation was found in the sources.")).toBeInTheDocument();
   });
 
@@ -74,7 +76,7 @@ describe("CaseDetails", () => {
             description: "A transfer was made",
             sources: [],
             unconfirmed: [],
-            supportNote: "Not linked to any claim.",
+            supportNote: "Not linked to any finding.",
           },
           {
             description: "A bound impact",
@@ -91,8 +93,8 @@ describe("CaseDetails", () => {
     expect(
       screen.getByText("Some cited quotations were not found in the sources."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Not linked to any claim.")).toBeInTheDocument();
-    expect(screen.getAllByText(/quotation|claim\./)).toHaveLength(3);
+    expect(screen.getByText("Not linked to any finding.")).toBeInTheDocument();
+    expect(screen.getAllByText(/quotation|finding\./)).toHaveLength(3);
   });
 
   it("lists the timeline, parties and impacts under their own headings", () => {
@@ -172,16 +174,20 @@ describe("CaseDetails", () => {
     );
 
     const timeline = within(screen.getByRole("region", { name: "Timeline 1" }));
-    expect(timeline.getByText("ยังไม่ยืนยัน ไม่มี quote ที่ตรวจแล้ว")).toBeInTheDocument();
+    expect(
+      timeline.getByText("ยังไม่ยืนยัน: ไม่มีข้อความอ้างอิงที่หาตำแหน่งได้"),
+    ).toBeInTheDocument();
     expect(timeline.queryByRole("button")).not.toBeInTheDocument();
 
     const parties = within(screen.getByRole("region", { name: "Parties 1" }));
-    expect(parties.getByText("ยังไม่ยืนยัน ไม่มี quote ที่ตรวจแล้ว")).toBeInTheDocument();
-    expect(parties.getByText("อยู่ระหว่างตรวจสอบ")).toBeInTheDocument();
+    expect(
+      parties.getByText("ยังไม่ยืนยัน: ไม่มีข้อความอ้างอิงที่หาตำแหน่งได้"),
+    ).toBeInTheDocument();
+    expect(parties.getByText("ยังไม่แน่ชัด")).toBeInTheDocument();
     expect(parties.getByRole("button", { name: "statement.pdf · p. 4" })).toBeInTheDocument();
 
     const impacts = within(screen.getByRole("region", { name: "Impact 1" }));
-    expect(impacts.getByText("อยู่ระหว่างตรวจสอบ")).toBeInTheDocument();
+    expect(impacts.getByText("ยังไม่แน่ชัด")).toBeInTheDocument();
   });
 
   it("adds no note to a row whose claims are all settled", () => {
@@ -195,7 +201,7 @@ describe("CaseDetails", () => {
       />,
     );
 
-    expect(screen.queryByText(/ยังไม่ยืนยัน|อยู่ระหว่างตรวจสอบ/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ยังไม่ยืนยัน|ยังไม่แน่ชัด/)).not.toBeInTheDocument();
   });
 
   it("folds a long timeline and opens it on request", () => {
@@ -337,9 +343,7 @@ describe("extracted claim view context", () => {
         activeSourceKey={null}
       />,
     );
-    expect(
-      screen.getByText("No date or time extracted; check the linked claim"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("No date or time given; see the linked finding")).toBeInTheDocument();
     expect(screen.getAllByText("Related findings")).toHaveLength(1);
     fireEvent.click(screen.getAllByText("Related findings")[0]);
     expect(screen.getAllByRole("link", { name: "View finding" })[0]).toHaveAttribute(

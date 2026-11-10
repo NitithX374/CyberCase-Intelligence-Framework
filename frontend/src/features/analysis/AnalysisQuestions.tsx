@@ -57,7 +57,7 @@ export function AnalysisQuestions() {
   return (
     <>
       {overview.gaps.length === 0 ? (
-        <p className="py-6 text-sm text-ink-muted">Nothing is missing from this analysis.</p>
+        <p className="py-6 text-sm text-ink-muted">No open questions in this analysis.</p>
       ) : (
         <ul aria-label="Open questions" className="divide-y divide-line">
           {overview.gaps.map((gap) => (

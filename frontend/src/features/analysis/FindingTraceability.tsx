@@ -5,7 +5,7 @@ const SEMANTIC_LABELS = {
   english: {
     not_supported:
       "Source check: the cited Source did not clearly support this finding. Check it before relying on it.",
-    unassessed: "Meaning support not assessed",
+    unassessed: "Support not checked",
   },
   thai: {
     not_supported:
@@ -20,11 +20,11 @@ const SEMANTIC_REASONS: Record<
 > = {
   english: {
     lr_not_supported:
-      "Selected Source passages scored below the cutoff of the automatic check. This is a screening signal, not proof that the finding is wrong.",
+      "The automatic check scored the cited words low. It is a prompt to look, not proof the finding is wrong.",
     verifier_unavailable:
       "The support check could not run for this analysis, so this finding was neither confirmed nor flagged.",
-    no_resolved_source: "There are no resolved supporting Source passages to assess.",
-    unresolved_source_reference: "Some supporting Source references could not be resolved.",
+    no_resolved_source: "No cited passage could be found to check.",
+    unresolved_source_reference: "Some cited passages could not be found.",
     conflicting_source:
       "The finding has conflicting Source citations and was not used in the summary.",
     claim_uncertain:
@@ -65,17 +65,17 @@ export function FindingTraceability({
             ? SEMANTIC_REASONS[language][traceability.semanticReason]
             : thai
               ? "การเชื่อม Source ระบุตำแหน่งข้อความอ้างอิง ผลวิเคราะห์นี้ยังไม่มีการตรวจว่าข้อความเหล่านั้นรองรับเนื้อหาของข้อค้นพบครบหรือไม่"
-              : "Source linkage locates cited text. This analysis has no recorded check that the cited passages support the complete finding."
+              : "The link shows where the words are. Whether they support the whole finding was not checked in this analysis."
         }
       >
         {traceability.semanticSupport === "unassessed" && traceability.semanticReason
           ? traceability.semanticReason === "verifier_unavailable"
             ? thai
-              ? "ตัวตรวจอัตโนมัติไม่พร้อมใช้งาน — ยังไม่ได้ตรวจ"
-              : "Source check unavailable — not assessed"
+              ? "ตัวตรวจอัตโนมัติไม่พร้อมใช้งาน ยังไม่ได้ตรวจ"
+              : "Source check unavailable. Not assessed."
             : thai
-              ? "ตรวจการรองรับไม่ได้ — ไม่ได้นำไปใช้ในการสรุป"
-              : "Support could not be assessed — not used in the summary"
+              ? "ตรวจการรองรับไม่ได้ จึงไม่ได้นำไปใช้ในการสรุป"
+              : "Support could not be assessed, so it was left out of the summary."
           : SEMANTIC_LABELS[language][traceability.semanticSupport]}
       </p>
     </div>

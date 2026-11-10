@@ -50,10 +50,10 @@ describe("claims that are not confirmed or only suspected", () => {
   });
 
   it("pins the Thai wording of the notes", () => {
-    expect(NO_CHECKED_QUOTE).toBe("ไม่มี quote ที่ตรวจแล้ว");
+    expect(NO_CHECKED_QUOTE).toBe("ไม่มีข้อความอ้างอิงที่หาตำแหน่งได้");
     expect(UNCONFIRMED_NOTES).toEqual({
-      not_confirmed: "ยังไม่ยืนยัน ไม่มี quote ที่ตรวจแล้ว",
-      suspected: "อยู่ระหว่างตรวจสอบ",
+      not_confirmed: "ยังไม่ยืนยัน: ไม่มีข้อความอ้างอิงที่หาตำแหน่งได้",
+      suspected: "ยังไม่แน่ชัด",
     });
   });
 });

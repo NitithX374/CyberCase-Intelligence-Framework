@@ -233,7 +233,7 @@ describe("AnalysisLayout", () => {
     const projection = caseProjection({ stale: true });
     configureAndRender({ analysisResult: projection.result, sources: projection.sources });
 
-    expect(screen.getByText("Out of date")).toBeInTheDocument();
+    expect(screen.getByText("Sources changed since the analysis")).toBeInTheDocument();
     expect(screen.queryByText(/Analysis is based on older sources/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Analyze/ })).not.toBeInTheDocument();
   });
@@ -253,10 +253,11 @@ describe("AnalysisLayout", () => {
 
     const toggle = screen.getByRole("button", { name: "Analysis record" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByText("Source revision")).not.toBeInTheDocument();
+    expect(screen.queryByText("Completed")).not.toBeInTheDocument();
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("Source revision").nextElementSibling).toHaveTextContent("1");
+    expect(screen.getByText("Completed")).toBeInTheDocument();
+    expect(screen.queryByText("Source revision")).not.toBeInTheDocument();
   });
 
   it("names the case's files in the analysis record", () => {
@@ -387,20 +388,6 @@ describe("AnalysisLayout", () => {
       expect(scrolled).toEqual([]);
     });
 
-    it("opens and brings into view the outside references for the old details route", () => {
-      state.segment = "details";
-      configureAndRender(
-        {},
-        <details id="section-references">
-          <summary>Outside references</summary>
-        </details>,
-      );
-
-      const folded = document.getElementById("section-references") as HTMLDetailsElement;
-      expect(folded.open).toBe(true);
-      expect(scrolled).toEqual([folded]);
-    });
-
     it("brings the open questions card into view for the questions route", () => {
       state.segment = "questions";
       configureAndRender();
@@ -412,7 +399,7 @@ describe("AnalysisLayout", () => {
 
     it("brings a linked ATT&CK entry into view instead of the top of the section", () => {
       window.location.hash = "#mitre-T1566";
-      state.segment = "details";
+      state.segment = "technical";
       configureAndRender({}, <article id="mitre-T1566">T1566 Phishing</article>);
 
       expect(scrolled).toEqual([screen.getByRole("article")]);

@@ -75,9 +75,9 @@ describe("AnalysisSummary with a summary that names its claims", () => {
     render(<AnalysisSummary />);
 
     expect(
-      screen.getAllByText("None of the linked claims has a resolved source citation."),
+      screen.getAllByText("None of the findings behind this sentence has a located passage."),
     ).toHaveLength(1);
-    expect(screen.getAllByText("Not linked to any claim.")).toHaveLength(1);
+    expect(screen.getAllByText("Not linked to any finding.")).toHaveLength(1);
     expect(screen.queryByText(/Some cited quotations/)).not.toBeInTheDocument();
   });
 

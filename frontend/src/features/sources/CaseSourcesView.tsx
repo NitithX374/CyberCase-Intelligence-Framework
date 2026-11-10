@@ -156,7 +156,7 @@ function EmptySources({
           Upload file
         </button>
       </div>
-      <p className="mt-3 text-xs text-ink-muted">PDF, DOCX, PNG or JPG</p>
+      <p className="mt-3 text-xs text-ink-muted">PDF, Word or a photo (JPG, PNG)</p>
     </EmptyState>
   );
 }

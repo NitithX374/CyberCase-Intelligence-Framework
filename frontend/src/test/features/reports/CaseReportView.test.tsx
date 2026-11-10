@@ -58,7 +58,7 @@ describe("CaseReportView", () => {
     await waitFor(() =>
       expect(generate).toHaveBeenCalledWith("case-1", { analysis_result_id: "analysis-1" }),
     );
-    expect(await screen.findByRole("article", { name: "Persisted report" })).toBeInTheDocument();
+    expect(await screen.findByRole("article", { name: "Saved report" })).toBeInTheDocument();
   });
 
   it("previews the saved report as the backend rendered it", async () => {
@@ -167,7 +167,7 @@ describe("CaseReportView", () => {
       expect.objectContaining({ responseType: "blob" }),
     );
     expect(dialog.querySelector("#meaningful-error-message")).toHaveTextContent(
-      "การวิเคราะห์นี้ไม่ได้บันทึกแหล่งข้อมูลที่ใช้",
+      "การวิเคราะห์นี้ไม่ได้บันทึก Source ที่ใช้",
     );
     expect(dialog).toHaveTextContent("Reason: analysis_source_snapshot_missing");
     expect(screen.queryByRole("button", { name: "ลองอีกครั้ง" })).not.toBeInTheDocument();
@@ -188,7 +188,7 @@ describe("CaseReportView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 
-    expect(await screen.findByRole("article", { name: "Persisted report" })).toBeInTheDocument();
+    expect(await screen.findByRole("article", { name: "Saved report" })).toBeInTheDocument();
     expect(list).toHaveBeenCalledTimes(2);
   });
 

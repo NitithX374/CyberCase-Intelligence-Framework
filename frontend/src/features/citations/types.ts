@@ -7,6 +7,8 @@ export interface SourceMessageRef {
   filename: string | null;
   pageNumbers: number[];
   sourcePages: SourcePage[];
+  sourceText?: string;
+  allPages?: SourcePage[];
   question: string | null;
   pointerState?: SourcePointerState;
   start?: number | null;
@@ -34,6 +36,7 @@ export interface QuoteContext {
 export interface SourcePage {
   pageNumber: number;
   text: string;
+  start?: number;
 }
 
 export interface FollowupAnswer {

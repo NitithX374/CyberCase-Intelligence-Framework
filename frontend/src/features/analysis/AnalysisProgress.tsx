@@ -89,7 +89,7 @@ function StageNode({ stage, number }: { stage: ProgressStage; number: number }) 
   }
   if (stage.state === "current") {
     return (
-      <span className="node-pulse relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-primary bg-surface text-primary">
+      <span className="relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-primary bg-surface text-primary">
         <Icon name="spinner" className="text-lg" />
       </span>
     );

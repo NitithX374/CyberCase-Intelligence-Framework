@@ -34,11 +34,11 @@ describe("the progress of a running analysis", () => {
     const stages = Array.from(list.children);
     expect(stages.map((stage) => stage.textContent)).toEqual([
       "Check what is missing0:21",
-      "Check if ATT&CK applies0:04",
-      expect.stringMatching(/^Fetch ATT&CK context0:0\d$/),
+      "Look for technical signs0:04",
+      expect.stringMatching(/^Look up ATT&CK and Thai law0:0\d$/),
       "4Read the sources",
       "5Link findings to sources",
-      "6At the same timeCheck source supportPrepare case detailsWrite the summary",
+      "6At the same timeScreen findings against the sourcesList people, dates and impactsWrite the summary",
     ]);
     expect(stages[2]).toHaveAttribute("aria-current", "step");
     expect(stages[0]).not.toHaveAttribute("aria-current");
