@@ -106,7 +106,7 @@ describe("WorkspaceHeader", () => {
     );
 
     expect(screen.getByText("1 source")).toBeInTheDocument();
-    expect(screen.getByText("2/5")).toBeInTheDocument();
+    expect(screen.getByText("to check").previousElementSibling).toHaveTextContent("2/5");
     expect(screen.getByRole("link", { name: "Create report" })).toHaveAttribute(
       "href",
       "/case/case-1/report",
@@ -146,7 +146,7 @@ describe("WorkspaceHeader", () => {
       expect(onAnalyze).toHaveBeenCalledOnce();
       expect(screen.queryByText("1 source")).not.toBeInTheDocument();
       expect(screen.queryByText(/^Analyzed/)).not.toBeInTheDocument();
-      expect(screen.queryByText("2/5")).not.toBeInTheDocument();
+      expect(screen.queryByText("to check")).not.toBeInTheDocument();
       expect(screen.queryByRole("link", { name: "Create report" })).not.toBeInTheDocument();
     },
   );

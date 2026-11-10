@@ -34,7 +34,8 @@ export function ReportPage() {
         aria-label="Loading report"
         className="mx-auto w-full max-w-[52rem] px-5 pt-8 sm:px-8"
       >
-        <div className="h-[420px] animate-pulse rounded-xl bg-surface-nested" />
+        <p className="mb-3 text-sm text-ink-secondary">Loading the report…</p>
+        <div aria-hidden="true" className="shimmer h-[420px] rounded-xl" />
       </div>
     );
   }

@@ -29,7 +29,10 @@ export function AccountMenu({ actions = [] }: { actions?: AccountMenuAction[] })
         {initial}
       </button>
       {isOpen && (
-        <div className="absolute right-0 top-10 z-50 w-64 rounded-xl border border-line bg-surface p-1.5 shadow-lg shadow-black/5">
+        <div
+          style={{ ["--origin" as string]: "top right" }}
+          className="pop-in absolute right-0 top-11 z-50 w-64 rounded-xl border border-line bg-surface p-1.5 shadow-lg shadow-black/5"
+        >
           <UserProfileMenu actions={actions} onAction={close} />
         </div>
       )}

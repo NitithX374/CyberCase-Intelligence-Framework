@@ -50,7 +50,7 @@ export function SourceDrawer({
         )
           onClose();
       }}
-      className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-dvh w-full max-w-full overflow-hidden border-l border-line bg-surface p-0 text-ink shadow-2xl shadow-black/10 backdrop:bg-ink/20 sm:w-[400px]"
+      className="drawer-in fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-dvh w-full max-w-full overflow-hidden border-l border-line bg-surface p-0 text-ink shadow-2xl shadow-black/10 backdrop:bg-ink/20 sm:w-[400px]"
     >
       <div className="flex h-full min-h-0 flex-col">
         <header className="flex items-start justify-between gap-4 px-5 pt-5 pb-4 sm:px-6">

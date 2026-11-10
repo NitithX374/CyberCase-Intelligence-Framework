@@ -46,7 +46,7 @@ export function Dialog({
       onClose={() => {
         if (isOpen && !canDismiss) onDismiss();
       }}
-      className={`m-auto rounded-2xl border border-line bg-surface p-6 text-ink shadow-xl shadow-black/10 backdrop:bg-ink/30 ${className}`}
+      className={`pop-in m-auto rounded-2xl border border-line bg-surface p-6 text-ink shadow-xl shadow-black/10 backdrop:bg-ink/30 ${className}`}
     >
       {children}
     </dialog>

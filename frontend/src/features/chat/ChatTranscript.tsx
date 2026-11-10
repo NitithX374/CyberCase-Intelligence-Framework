@@ -104,7 +104,7 @@ function Messages({
 
         if (isUser) {
           return (
-            <article key={message.id} className="flex justify-end">
+            <article key={message.id} className="rise-in flex justify-end">
               <p className="max-w-[88%] rounded-2xl rounded-br-md bg-surface-nested px-4 py-2.5 text-base leading-7 whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
                 {message.content}
               </p>
@@ -114,7 +114,7 @@ function Messages({
 
         if (isQuestion) {
           return (
-            <article key={message.id}>
+            <article key={message.id} className="rise-in">
               <p className="mb-1 text-xs font-semibold text-unresolved">Question</p>
               <Markdown content={message.content} />
             </article>
@@ -124,7 +124,7 @@ function Messages({
         const units = message.metadata_json.answer_units ?? [];
         const claims = message.metadata_json.analysis_trace?.claims ?? [];
         return (
-          <article key={message.id}>
+          <article key={message.id} className="rise-in">
             {units.length > 0 ? (
               <AnswerUnits units={units} claims={claims} sources={citable} />
             ) : (

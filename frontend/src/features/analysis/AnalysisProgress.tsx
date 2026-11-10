@@ -38,10 +38,12 @@ export function AnalysisProgress({
           {index > 0 && (
             <span
               aria-hidden="true"
-              className={`absolute top-[18px] right-1/2 h-0.5 w-full ${
-                stage.state === "waiting" ? "bg-line-strong" : "bg-primary"
-              }`}
-            />
+              className="absolute top-[18px] right-1/2 h-0.5 w-full overflow-hidden bg-line-strong"
+            >
+              {stage.state !== "waiting" && (
+                <span className="grow-x block h-full w-full bg-primary" />
+              )}
+            </span>
           )}
           <StageNode stage={stage} number={index + 1} />
           {stage.rows.length > 1 ? (
@@ -80,14 +82,14 @@ export function AnalysisProgress({
 function StageNode({ stage, number }: { stage: ProgressStage; number: number }) {
   if (stage.state === "done") {
     return (
-      <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white">
+      <span className="pop-in relative flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white">
         <Icon name="check" className="text-xl" />
       </span>
     );
   }
   if (stage.state === "current") {
     return (
-      <span className="relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-primary bg-surface text-primary">
+      <span className="node-pulse relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-primary bg-surface text-primary">
         <Icon name="spinner" className="text-lg" />
       </span>
     );

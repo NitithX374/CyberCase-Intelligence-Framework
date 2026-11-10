@@ -102,6 +102,7 @@ export function CaseLibraryPage() {
           </span>
           CyberCase
         </span>
+        <span aria-hidden="true" className="mx-3 -mt-2 mb-4 h-px bg-primary" />
         <span
           aria-current="page"
           className="flex min-h-11 items-center gap-3.5 rounded-lg bg-primary px-3.5 text-sm font-semibold"
@@ -123,9 +124,12 @@ export function CaseLibraryPage() {
               <Link
                 key={caseRecord.id}
                 href={caseDestination(caseRecord)}
-                className="flex min-h-11 items-center gap-3.5 rounded-lg px-3.5 text-sm text-white/85 transition-colors hover:bg-espresso-raised hover:text-white focus-visible:outline-white"
+                className="group flex min-h-11 items-center gap-3.5 rounded-lg px-3.5 text-sm text-white/85 transition-colors hover:bg-espresso-raised hover:text-white focus-visible:outline-white"
               >
-                <Icon name="case" className="shrink-0 text-[22px]" />
+                <Icon
+                  name="case"
+                  className="shrink-0 text-[22px] transition-transform duration-200 group-hover:translate-x-0.5"
+                />
                 <span className="truncate" title={caseRecord.title}>
                   {caseRecord.title}
                 </span>
@@ -134,7 +138,7 @@ export function CaseLibraryPage() {
           </nav>
         )}
       </aside>
-      <main className="min-w-0 flex-1 px-3 pt-4 pb-12 sm:px-6 lg:px-8 lg:pt-5">
+      <main className="rise-in min-w-0 flex-1 px-3 pt-4 pb-12 sm:px-6 lg:px-8 lg:pt-5">
         <header className="flex min-h-12 items-center gap-3 border-b border-line-strong pb-4">
           <span className="flex items-center gap-2.5 text-base font-semibold text-ink lg:hidden">
             <CyberCaseLogo size={26} />
@@ -149,7 +153,7 @@ export function CaseLibraryPage() {
 
         {cases.length > 0 && (
           <>
-            <div className="relative mt-5 overflow-hidden rounded-xl bg-primary px-5 py-6 text-white sm:px-8 sm:py-7">
+            <div className="ruled rise-in relative mt-5 overflow-hidden rounded-xl bg-primary px-5 py-6 text-white sm:px-8 sm:py-7">
               <div className="relative flex flex-wrap items-center gap-5">
                 <div className="min-w-0 flex-1">
                   <p className="text-2xl font-bold tracking-[-0.01em] sm:text-3xl">
@@ -178,13 +182,14 @@ export function CaseLibraryPage() {
               aria-label="Show cases"
               className="mt-5 grid grid-cols-2 gap-5 xl:grid-cols-4"
             >
-              {STATUS_CARDS.map((card) => (
+              {STATUS_CARDS.map((card, index) => (
                 <button
                   key={card.status}
                   type="button"
                   aria-pressed={status === card.status}
                   onClick={() => setStatus(card.status)}
-                  className={`sheet px-5 py-4 text-left transition-shadow hover:shadow-[0_6px_28px_rgba(24,24,28,0.12)] ${
+                  style={{ ["--i" as string]: index + 1, ["--step" as string]: "60ms" }}
+                  className={`sheet stagger lift px-5 py-4 text-left active:scale-[0.99] ${
                     status === card.status ? "ring-2 ring-primary" : ""
                   }`}
                 >
@@ -268,15 +273,17 @@ export function CaseLibraryPage() {
                     </div>
                   )}
                   <ul
+                    key={`${status}:${sort}:${viewMode}`}
                     className={
                       viewMode === "grid"
                         ? "mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
                         : "-mx-5 divide-y divide-line border-t border-line sm:-mx-6"
                     }
                   >
-                    {visibleCases.map((caseRecord) => (
+                    {visibleCases.map((caseRecord, index) => (
                       <CaseCard
                         key={caseRecord.id}
+                        index={index}
                         caseRecord={caseRecord}
                         viewMode={viewMode}
                         isDeleting={

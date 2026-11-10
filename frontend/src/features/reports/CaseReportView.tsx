@@ -144,11 +144,10 @@ export function CaseReportView({ caseId, analysisResult }: CaseReportViewProps) 
         </header>
 
         {reportsQuery.isLoading ? (
-          <div
-            role="status"
-            aria-label="Loading reports"
-            className="mt-4 h-[420px] animate-pulse rounded-xl bg-surface-nested"
-          />
+          <div role="status" aria-label="Loading reports" className="mt-4">
+            <p className="mb-3 text-sm text-ink-secondary">Loading saved reports…</p>
+            <div aria-hidden="true" className="shimmer h-[420px] rounded-xl" />
+          </div>
         ) : reportsQuery.isLoadingError ? (
           <EmptyState
             title="Reports could not be loaded"

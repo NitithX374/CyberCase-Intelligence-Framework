@@ -111,3 +111,20 @@ it("says so rather than guessing when the session cannot be checked", () => {
   expect(screen.getByText("Unable to check your session.")).toBeInTheDocument();
   expect(replace).not.toHaveBeenCalled();
 });
+
+it("keeps the server-starting screen while it retries", () => {
+  vi.mocked(useAuth).mockReturnValue({
+    user: null,
+    isLoading: true,
+    sessionError: null,
+    sessionFailures: 2,
+    refetchSession: vi.fn(),
+  } as never);
+
+  render(<AccountGate>workspace</AccountGate>);
+
+  expect(screen.getByText("Unable to check your session.")).toBeInTheDocument();
+  expect(screen.getByText("Tried 2 times, still waiting")).toBeInTheDocument();
+  expect(screen.queryByText("Opening CyberCase…")).not.toBeInTheDocument();
+  expect(replace).not.toHaveBeenCalled();
+});

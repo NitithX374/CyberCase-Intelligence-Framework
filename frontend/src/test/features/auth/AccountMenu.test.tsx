@@ -9,6 +9,7 @@ beforeEach(() => {
   vi.mocked(useAuth).mockReturnValue({
     user: null,
     sessionError: null,
+    sessionFailures: 0,
     isLoading: false,
     logout,
     isLoggingOut: false,

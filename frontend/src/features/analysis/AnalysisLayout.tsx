@@ -14,6 +14,7 @@ import { analysisSourceIds } from "./analysisRecord";
 import { useCaseOverview } from "./useCaseOverview";
 import { Icon } from "@/components/icons";
 import { EmptyState } from "@/components/EmptyState";
+import { useCountUp } from "@/lib/motion";
 
 const SECTION_TARGETS: Record<string, string> = {
   findings: "section-findings",
@@ -155,10 +156,14 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
       )}
 
       <div className="grid grid-cols-2 gap-5 @min-[56rem]:grid-cols-4">
-        <StatCard value={overview.findings.length} label="findings" />
-        <StatCard value={flaggedCount} label="to check" strong={flaggedCount > 0} />
-        <StatCard value={overview.gaps.length} label="open questions" />
-        <StatCard value={readCount} label={readCount === 1 ? "source read" : "sources read"} />
+        <StatCard index={0} value={overview.findings.length} label="findings" />
+        <StatCard index={1} value={flaggedCount} label="to check" strong={flaggedCount > 0} />
+        <StatCard index={2} value={overview.gaps.length} label="open questions" />
+        <StatCard
+          index={3}
+          value={readCount}
+          label={readCount === 1 ? "source read" : "sources read"}
+        />
       </div>
 
       {onFactPage ? (
@@ -178,18 +183,28 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
 }
 
 function StatCard({
+  index,
   value,
   label,
   strong = false,
 }: {
+  index: number;
   value: number;
   label: string;
   strong?: boolean;
 }) {
+  const valueRef = useRef<HTMLParagraphElement | null>(null);
+  useCountUp(valueRef, value);
   return (
-    <div className="sheet px-5 py-4">
+    <div
+      className="sheet stagger px-5 py-4"
+      style={{ ["--i" as string]: index, ["--step" as string]: "60ms" }}
+    >
       <div>
-        <p className={`text-2xl leading-tight font-bold ${strong ? "text-primary" : "text-ink"}`}>
+        <p
+          ref={valueRef}
+          className={`text-2xl leading-tight font-bold tabular-nums ${strong ? "text-primary" : "text-ink"}`}
+        >
           {value}
         </p>
         <p className="text-sm text-ink-muted">{label}</p>
@@ -203,18 +218,51 @@ function AnalysisSkeleton() {
     <div
       role="status"
       aria-label="Loading analysis"
-      className="mx-auto w-full max-w-[52rem] space-y-12 px-5 pt-8 sm:px-8 sm:pt-12"
+      className="@container flex w-full flex-col gap-7 px-3 pt-5 pb-16 sm:px-6 lg:px-8"
     >
-      <div className="space-y-4">
-        <div className="h-4 w-24 animate-pulse rounded bg-surface-nested" />
-        <div className="h-4 w-full animate-pulse rounded bg-surface-nested" />
-        <div className="h-4 w-11/12 animate-pulse rounded bg-surface-nested" />
-        <div className="h-4 w-4/6 animate-pulse rounded bg-surface-nested" />
+      <p className="flex items-center gap-2.5 text-sm text-ink-secondary">
+        <Icon name="spinner" className="text-lg text-primary" />
+        Loading the saved analysis and its sources…
+      </p>
+      <div aria-hidden="true" className="grid grid-cols-2 gap-5 @min-[56rem]:grid-cols-4">
+        {[0, 1, 2, 3].map((index) => (
+          <div key={index} className="sheet space-y-2.5 px-5 py-4">
+            <span className="shimmer block h-7 w-12 rounded" />
+            <span className="shimmer block h-3.5 w-24 rounded" />
+          </div>
+        ))}
       </div>
-      <div className="space-y-4">
-        <div className="h-4 w-40 animate-pulse rounded bg-surface-nested" />
-        <div className="h-14 w-full animate-pulse rounded bg-surface-nested" />
-        <div className="h-14 w-full animate-pulse rounded bg-surface-nested" />
+      <div
+        aria-hidden="true"
+        className="grid items-start gap-5 @min-[58rem]:grid-cols-[minmax(0,1fr)_22.5rem]"
+      >
+        <div className="sheet">
+          <div className="card-head">
+            <span className="shimmer block h-5 w-32 rounded" />
+          </div>
+          {[0, 1, 2].map((row) => (
+            <div
+              key={row}
+              className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-4 border-t border-line px-6 py-5"
+            >
+              <span className="shimmer block h-9 w-9 rounded-[9px]" />
+              <div className="space-y-2.5">
+                <span className="shimmer block h-4 w-11/12 rounded" />
+                <span className="shimmer block h-4 w-4/6 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="sheet space-y-3 px-6 py-5">
+          <span className="shimmer block h-5 w-36 rounded" />
+          {[96, 88, 92, 74, 85].map((width, index) => (
+            <span
+              key={index}
+              className="shimmer block h-4 rounded"
+              style={{ width: `${width}%` }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

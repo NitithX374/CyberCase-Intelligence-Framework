@@ -3,13 +3,14 @@ import { EmptyState } from "@/components/EmptyState";
 export function CaseLibraryLoading() {
   return (
     <div className="mt-4 space-y-1" role="status" aria-label="Loading cases">
+      <p className="px-3 pt-2 text-sm text-ink-secondary">Loading your cases…</p>
       {[1, 2, 3].map((placeholder) => (
         <div key={placeholder} className="flex items-center gap-4 px-3 py-4">
           <div className="flex-1 space-y-2">
-            <div className="h-4 w-2/5 animate-pulse rounded bg-surface-nested" />
-            <div className="h-3 w-24 animate-pulse rounded bg-surface-nested" />
+            <div className="h-4 w-2/5 shimmer rounded" />
+            <div className="h-3 w-24 shimmer rounded" />
           </div>
-          <div className="h-3 w-20 animate-pulse rounded bg-surface-nested" />
+          <div className="h-3 w-20 shimmer rounded" />
         </div>
       ))}
     </div>

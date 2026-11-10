@@ -51,6 +51,7 @@ export function useAuth() {
 
   return {
     sessionError: sessionQuery.error,
+    sessionFailures: sessionQuery.errorUpdateCount,
     user: sessionQuery.data ?? null,
     isLoading: sessionQuery.isLoading,
     logout: logoutMutation.mutateAsync,

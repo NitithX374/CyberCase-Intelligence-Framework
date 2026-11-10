@@ -51,14 +51,23 @@ export function AccountForm({ register = false }: { register?: boolean }) {
 
   return (
     <main className="grid min-h-dvh bg-surface text-ink lg:grid-cols-[minmax(0,1fr)_35rem]">
-      <section className="relative hidden flex-col overflow-hidden bg-primary px-14 py-12 text-white lg:flex">
+      <section className="ruled relative hidden flex-col overflow-hidden bg-primary px-14 py-12 text-white lg:flex">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-28 -bottom-28 opacity-[0.14] mix-blend-multiply"
+        >
+          <CyberCaseLogo size={460} />
+        </span>
         <div className="relative flex items-center gap-3 text-2xl font-bold">
           <span className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-surface">
             <CyberCaseLogo size={30} />
           </span>
           CyberCase
         </div>
-        <div className="relative mt-20 max-w-xl">
+        <div
+          className="stagger relative mt-20 max-w-xl"
+          style={{ ["--i" as string]: 1, ["--step" as string]: "90ms" }}
+        >
           <p className="text-[44px] leading-[1.15] font-bold tracking-[-0.01em]">
             Every finding, next to the words it came from.
           </p>
@@ -68,7 +77,8 @@ export function AccountForm({ register = false }: { register?: boolean }) {
         </div>
         <div
           aria-hidden="true"
-          className="relative mt-11 grid max-w-2xl grid-cols-[2.25rem_minmax(0,1fr)_15rem] gap-4 rounded-[10px] bg-surface p-5 text-ink shadow-[0_10px_30px_rgba(0,0,0,0.18)]"
+          style={{ ["--i" as string]: 2, ["--step" as string]: "90ms" }}
+          className="stagger relative mt-11 grid max-w-2xl grid-cols-[2.25rem_minmax(0,1fr)_15rem] gap-4 rounded-[10px] bg-surface p-5 text-ink shadow-[0_10px_30px_rgba(0,0,0,0.18)]"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-primary text-sm font-bold text-white">
             2
@@ -93,7 +103,7 @@ export function AccountForm({ register = false }: { register?: boolean }) {
       </section>
 
       <section className="flex flex-col justify-center px-6 py-12 sm:px-16">
-        <div className="mx-auto w-full max-w-sm">
+        <div className="rise-in mx-auto w-full max-w-sm">
           <div className="flex items-center gap-3 lg:hidden">
             <CyberCaseLogo size={36} />
             <span className="text-xl font-bold">CyberCase</span>
@@ -111,14 +121,14 @@ export function AccountForm({ register = false }: { register?: boolean }) {
             <Link
               href="/login"
               aria-current={register ? undefined : "page"}
-              className={`rounded-lg py-2.5 ${register ? "text-ink-muted hover:text-ink" : "bg-surface font-semibold text-primary shadow-[0_2px_6px_rgba(24,24,28,0.08)]"}`}
+              className={`rounded-lg py-2.5 transition-[color,background-color,box-shadow] duration-150 ${register ? "text-ink-muted hover:text-ink" : "bg-surface font-semibold text-primary shadow-[0_2px_6px_rgba(24,24,28,0.08)]"}`}
             >
               Sign in
             </Link>
             <Link
               href="/register"
               aria-current={register ? "page" : undefined}
-              className={`rounded-lg py-2.5 ${register ? "bg-surface font-semibold text-primary shadow-[0_2px_6px_rgba(24,24,28,0.08)]" : "text-ink-muted hover:text-ink"}`}
+              className={`rounded-lg py-2.5 transition-[color,background-color,box-shadow] duration-150 ${register ? "bg-surface font-semibold text-primary shadow-[0_2px_6px_rgba(24,24,28,0.08)]" : "text-ink-muted hover:text-ink"}`}
             >
               Create account
             </Link>

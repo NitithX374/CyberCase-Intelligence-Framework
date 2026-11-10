@@ -1,7 +1,8 @@
 "use client";
 
-import { useParams, useRouter, useSelectedLayoutSegment } from "next/navigation";
-import { useCallback, useState, type ReactNode } from "react";
+import { useParams, usePathname, useRouter, useSelectedLayoutSegment } from "next/navigation";
+import { useCallback, useRef, useState, type ReactNode } from "react";
+import { useEnterOnChange } from "@/lib/motion";
 import { casePath, type WorkspaceView } from "@/lib/casePaths";
 import { useCase, useCaseMutations } from "@/features/cases/queries";
 import { useAnalysisAvailability } from "@/features/analysis/queries";
@@ -20,6 +21,9 @@ export function CaseWorkspace({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { caseId } = useParams<{ caseId: string }>();
   const activeView = (useSelectedLayoutSegment() ?? "analysis") as WorkspaceView;
+  const pathname = usePathname() ?? "";
+  const pageRef = useRef<HTMLDivElement | null>(null);
+  useEnterOnChange(pageRef, pathname);
 
   const [isChatOpen, setIsChatOpen] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -137,7 +141,9 @@ export function CaseWorkspace({ children }: { children: ReactNode }) {
           isChatOpen={isChatOpen}
           onToggleChat={() => setChatOpen(!isChatOpen)}
         />
-        {children}
+        <div ref={pageRef} className="flex flex-1 flex-col">
+          {children}
+        </div>
       </main>
 
       <WorkspaceChatPanel

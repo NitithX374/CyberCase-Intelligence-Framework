@@ -188,9 +188,9 @@ function LegalState({ title, description }: { title: string; description: string
 function LegalSkeleton() {
   return (
     <div role="status" aria-label="Loading legal references" className="w-full space-y-6 pt-6">
-      <div className="h-4 w-40 animate-pulse rounded bg-surface-nested" />
-      <div className="h-16 w-full animate-pulse rounded bg-surface-nested" />
-      <div className="h-16 w-full animate-pulse rounded bg-surface-nested" />
+      <div className="h-4 w-40 shimmer rounded" />
+      <div className="h-16 w-full shimmer rounded" />
+      <div className="h-16 w-full shimmer rounded" />
     </div>
   );
 }

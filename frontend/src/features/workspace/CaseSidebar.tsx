@@ -87,14 +87,14 @@ export function CaseSidebar({
 
   return (
     <aside
-      className={`hidden shrink-0 flex-col gap-1 overflow-y-auto bg-espresso py-6 text-espresso-ink transition-[width] duration-200 lg:flex ${
+      className={`hidden shrink-0 flex-col gap-1 overflow-y-auto bg-espresso py-6 text-espresso-ink transition-[width,padding] duration-[250ms] ease-[cubic-bezier(0.16,1,0.3,1)] lg:flex ${
         compact ? "w-[4.5rem] px-2.5" : "w-[17.5rem] px-4"
       }`}
     >
       <Link
         href="/case"
         aria-label={compact ? "CyberCase, all cases" : undefined}
-        className={`mb-5 flex items-center gap-3 rounded-lg text-xl font-bold tracking-[-0.01em] ${
+        className={`flex items-center gap-3 rounded-lg text-xl font-bold tracking-[-0.01em] ${
           compact ? "justify-center" : "px-3"
         }`}
       >
@@ -103,6 +103,10 @@ export function CaseSidebar({
         </span>
         {!compact && "CyberCase"}
       </Link>
+      <span
+        aria-hidden="true"
+        className={`mt-4 mb-4 h-px shrink-0 bg-primary ${compact ? "mx-2" : "mx-3"}`}
+      />
 
       <SidebarLink
         compact={compact}
@@ -128,7 +132,7 @@ export function CaseSidebar({
           <>
             <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/15">
               <div
-                className="h-full rounded-full bg-primary-soft"
+                className="grow-x h-full rounded-full bg-primary-soft"
                 style={{ width: `${total ? Math.round((flagged / total) * 100) : 0}%` }}
               />
             </div>
@@ -174,7 +178,7 @@ function SidebarLink({ item, compact = false }: { item: NavItem; compact?: boole
       }}
       aria-current={item.current ? "page" : undefined}
       title={compact ? item.label : undefined}
-      className={`flex min-h-11 items-center gap-3.5 rounded-lg text-sm transition-colors focus-visible:outline-white ${
+      className={`group flex min-h-11 items-center gap-3.5 rounded-lg text-sm transition-colors focus-visible:outline-white ${
         compact ? "justify-center px-0" : "px-3.5"
       } ${
         item.current
@@ -182,7 +186,10 @@ function SidebarLink({ item, compact = false }: { item: NavItem; compact?: boole
           : "text-white/85 hover:bg-espresso-raised hover:text-white"
       }`}
     >
-      <Icon name={item.icon} className="text-[22px]" />
+      <Icon
+        name={item.icon}
+        className="shrink-0 text-[22px] transition-transform duration-200 group-hover:translate-x-0.5"
+      />
       <span className={compact ? "sr-only" : undefined}>{item.label}</span>
       {!compact && item.count !== undefined && item.count > 0 && (
         <span

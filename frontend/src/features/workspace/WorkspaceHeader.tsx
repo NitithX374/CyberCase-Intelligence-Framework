@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCountUp } from "@/lib/motion";
 import { Icon, type IconName } from "@/components/icons";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { formatDate } from "@/lib/format";
@@ -187,7 +188,7 @@ export function WorkspaceHeader({
           )}
         </div>
       ) : (
-        <div className="relative overflow-hidden rounded-xl bg-primary px-5 py-6 text-white sm:px-8 sm:py-7">
+        <div className="ruled relative overflow-hidden rounded-xl bg-primary px-5 py-6 text-white sm:px-8 sm:py-7">
           <div className="relative flex flex-wrap items-center gap-6">
             <div className="min-w-0 flex-1 basis-full sm:basis-0">
               {titleRow(true)}
@@ -241,19 +242,7 @@ export function WorkspaceHeader({
             </div>
             {findingCount > 0 && (
               <div className="hidden flex-col items-center gap-2 sm:flex">
-                <div
-                  className="flex h-28 w-28 items-center justify-center rounded-full"
-                  style={{
-                    background: `conic-gradient(#fff 0 ${(flaggedCount / findingCount) * 100}%, rgba(255,255,255,0.2) 0 100%)`,
-                  }}
-                >
-                  <div className="flex h-[5.5rem] w-[5.5rem] flex-col items-center justify-center rounded-full bg-primary leading-tight">
-                    <span className="text-2xl font-bold">
-                      {flaggedCount}/{findingCount}
-                    </span>
-                    <span className="text-xs text-white">to check</span>
-                  </div>
-                </div>
+                <FlagRing flagged={flaggedCount} total={findingCount} />
                 <span className="text-xs text-white">Findings to check against the source</span>
               </div>
             )}
@@ -296,5 +285,48 @@ function CaseTitleField({ title, onCommit }: { title: string; onCommit: (next: s
         className="h-11 w-full min-w-0 rounded-lg border border-line-strong bg-white px-3 text-xl font-semibold text-ink outline-none focus:border-primary"
       />
     </form>
+  );
+}
+
+const RING_RADIUS = 50;
+const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
+
+function FlagRing({ flagged, total }: { flagged: number; total: number }) {
+  const countRef = useRef<HTMLSpanElement | null>(null);
+  useCountUp(countRef, flagged, 700);
+  const offset = RING_LENGTH * (1 - (total ? flagged / total : 0));
+  return (
+    <div className="relative flex h-28 w-28 items-center justify-center">
+      <svg viewBox="0 0 112 112" aria-hidden="true" className="absolute inset-0 -rotate-90">
+        <circle
+          cx="56"
+          cy="56"
+          r={RING_RADIUS}
+          fill="none"
+          stroke="rgba(255,255,255,0.22)"
+          strokeWidth="6"
+        />
+        <circle
+          key={`${flagged}/${total}`}
+          cx="56"
+          cy="56"
+          r={RING_RADIUS}
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={RING_LENGTH}
+          strokeDashoffset={offset}
+          className="ring-draw"
+          style={{ ["--ring-len" as string]: `${RING_LENGTH}` }}
+        />
+      </svg>
+      <div className="relative flex flex-col items-center leading-tight">
+        <span className="text-2xl font-bold tabular-nums">
+          <span ref={countRef}>{flagged}</span>/{total}
+        </span>
+        <span className="text-xs text-white">to check</span>
+      </div>
+    </div>
   );
 }

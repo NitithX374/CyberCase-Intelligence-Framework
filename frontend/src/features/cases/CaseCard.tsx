@@ -26,9 +26,17 @@ interface CaseCardProps {
   viewMode: CaseLibraryViewMode;
   isDeleting?: boolean;
   onRequestDelete?: (caseRecord: CaseRead) => void;
+  index?: number;
 }
 
-export function CaseCard({ caseRecord, viewMode, isDeleting, onRequestDelete }: CaseCardProps) {
+export function CaseCard({
+  caseRecord,
+  viewMode,
+  isDeleting,
+  onRequestDelete,
+  index = 0,
+}: CaseCardProps) {
+  const stagger = { ["--i" as string]: Math.min(index, 8) };
   const deleteButton = onRequestDelete && (
     <button
       type="button"
@@ -44,7 +52,10 @@ export function CaseCard({ caseRecord, viewMode, isDeleting, onRequestDelete }: 
 
   if (viewMode === "list") {
     return (
-      <li className="group relative flex items-center gap-3 px-5 transition-colors hover:bg-primary-wash sm:px-6">
+      <li
+        style={stagger}
+        className="group stagger row-accent relative flex items-center gap-3 px-5 transition-colors hover:bg-primary-wash sm:px-6"
+      >
         <Link
           href={caseDestination(caseRecord)}
           className="flex min-w-0 flex-1 items-center gap-4 py-4 after:absolute after:inset-0 after:content-['']"
@@ -68,7 +79,10 @@ export function CaseCard({ caseRecord, viewMode, isDeleting, onRequestDelete }: 
   }
 
   return (
-    <li className="group relative flex min-h-36 flex-col justify-between rounded-[10px] border border-line bg-surface p-5 transition-colors hover:border-primary-line hover:bg-primary-wash">
+    <li
+      style={stagger}
+      className="group stagger lift relative flex min-h-36 flex-col justify-between rounded-[10px] border border-line bg-surface p-5 hover:border-primary-line hover:bg-primary-wash"
+    >
       <div className="flex items-start justify-between gap-3 text-sm text-ink-muted">
         <CaseStatus caseRecord={caseRecord} />
         <span className="-mt-1.5 -mr-2">{deleteButton}</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { AppSkeleton } from "@/components/AppSkeleton";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "./useAuth";
 
@@ -8,7 +9,8 @@ export function AccountGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isAuthPage = pathname === "/login" || pathname === "/register";
-  const { user, isLoading, sessionError, refetchSession } = useAuth();
+  const { user, isLoading, sessionError, sessionFailures = 0, refetchSession } = useAuth();
+  const waitingForServer = !user && (Boolean(sessionError) || (isLoading && sessionFailures > 0));
 
   useEffect(() => {
     if (isLoading) return;
@@ -31,29 +33,47 @@ export function AccountGate({ children }: { children: ReactNode }) {
 
   if (isAuthPage) return <>{children}</>;
 
-  if (sessionError && !user) {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-surface p-10 text-center text-ink">
-        <p className="text-base font-semibold text-ink">Unable to check your session.</p>
-        <p className="mt-1 text-sm text-ink-muted">The server could not be reached.</p>
-        <button type="button" onClick={() => void refetchSession()} className="btn-primary mt-6">
-          Try again
-        </button>
-      </main>
-    );
+  if (waitingForServer) {
+    return <ServerUnreachable attempts={sessionFailures} onRetry={refetchSession} />;
   }
 
   if (isLoading || !user) {
     return (
-      <main
-        className="flex min-h-screen items-center justify-center bg-surface p-10"
-        role="status"
-        aria-label="Checking your session"
-      >
-        <span className="h-5 w-5 animate-spin rounded-full border-2 border-line-strong border-t-ink" />
-      </main>
+      <AppSkeleton
+        title="Opening CyberCase…"
+        detail="Checking your session. Your cases appear in a moment."
+      />
     );
   }
 
   return <div key={user.id}>{children}</div>;
+}
+
+const RETRY_EVERY_MS = 5_000;
+
+function ServerUnreachable({ attempts, onRetry }: { attempts: number; onRetry: () => unknown }) {
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      void onRetry();
+    }, RETRY_EVERY_MS);
+    return () => window.clearInterval(timer);
+  }, [onRetry]);
+
+  return (
+    <AppSkeleton
+      title="Unable to check your session."
+      detail="The server is not answering yet. Right after the computer starts it is still loading its reading models, which takes about a minute. This page keeps trying on its own."
+    >
+      <div className="mt-5 flex flex-wrap items-center gap-4">
+        <button type="button" onClick={() => void onRetry()} className="btn-on-band">
+          Try again now
+        </button>
+        <span className="text-sm text-white">
+          {attempts <= 1
+            ? "Trying again in a few seconds"
+            : `Tried ${attempts} times, still waiting`}
+        </span>
+      </div>
+    </AppSkeleton>
+  );
 }

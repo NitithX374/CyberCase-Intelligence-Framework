@@ -61,11 +61,13 @@ function FindingRow({
   caseId,
   finding,
   showClaimType = false,
+  index = 0,
   ...sourceActions
 }: FindingSourceActions & {
   caseId: string;
   finding: CaseFinding;
   showClaimType?: boolean;
+  index?: number;
 }) {
   const number = finding.number;
   const flagged = finding.traceability.semanticSupport === "not_supported";
@@ -76,7 +78,8 @@ function FindingRow({
     <article
       id={`finding-${finding.id}`}
       aria-label={`Finding ${number}`}
-      className="grid scroll-mt-5 grid-cols-[2.75rem_minmax(0,1fr)] gap-x-4 gap-y-3 border-t border-line px-6 py-5 @min-[42rem]:grid-cols-[2.75rem_minmax(0,1fr)_17rem]"
+      style={{ ["--i" as string]: Math.min(index, 8) }}
+      className="stagger grid scroll-mt-5 grid-cols-[2.75rem_minmax(0,1fr)] gap-x-4 gap-y-3 border-t border-line px-6 py-5 @min-[42rem]:grid-cols-[2.75rem_minmax(0,1fr)_17rem]"
     >
       <span
         aria-hidden="true"
@@ -241,9 +244,10 @@ export function CaseFindingsSection({
               </h3>
             </div>
             <div id={`findings-${group.id}`}>
-              {visible.map((finding) => (
+              {visible.map((finding, index) => (
                 <FindingRow
                   key={finding.id}
+                  index={index}
                   caseId={caseId}
                   finding={finding}
                   showClaimType={showClaimType}
